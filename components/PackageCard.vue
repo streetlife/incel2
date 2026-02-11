@@ -1,7 +1,7 @@
 <template>
-  <div class="card group cursor-pointer">
+  <div class="card group cursor-pointer mb-10 sm:mb-20 h-full flex flex-col">
     <!-- Image -->
-    <div class="relative h-64 overflow-hidden">
+    <div class="relative h-64 overflow-hidden flex-shrink-0">
       <img 
         :src="package.image" 
         :alt="package.title"
@@ -26,7 +26,7 @@
     </div>
     
     <!-- Content -->
-    <div class="p-6">
+    <div class="p-6 flex flex-col flex-grow">
       <div v-if="package.location" class="text-sm text-gray-500 mb-2">
         {{ package.location }}
       </div>
@@ -60,8 +60,11 @@
         </div>
       </div>
       
+      <!-- Spacer to push price to bottom -->
+      <div class="flex-grow"></div>
+      
       <!-- Price -->
-      <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+      <div class="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
         <div>
           <p class="text-sm text-gray-500">Starting from</p>
           <div class="flex items-baseline space-x-2">

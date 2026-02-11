@@ -34,21 +34,23 @@
     </div>
     
     <!-- Hero Content -->
-    <div class="relative z-10 h-full flex items-center justify-center text-center px-4">
-      <div class="max-w-5xl mx-auto">
-        <p class="text-white/90 text-lg md:text-xl mb-4 tracking-widest uppercase animate-fade-in">
-          Redefining Luxury Travel
-        </p>
-        <h1 class="text-5xl md:text-7xl lg:text-8xl font-bold text-white mb-6 animate-slide-up animation-delay-200">
-          DISCOVER THE WORLD
-        </h1>
-        <p class="text-white/90 text-xl md:text-2xl mb-10 animate-slide-up animation-delay-400">
-          Visas, tours & curated packages at the best value
-        </p>
-        <button class="btn-primary text-lg animate-scale-in animation-delay-600">
-          Book Now
-        </button>
-      </div>
+    <div class="relative z-20 h-full flex flex-col items-center justify-center text-center px-4 max-w-7xl mx-auto">
+      <p class="px-6 py-2 mb-5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-white/90 text-sm tracking-[0.2em] uppercase font-light animate-fade-in">
+        Redefining Luxury Travel
+      </p>
+      <h1 class="text-6xl md:text-8xl lg:text-[10rem] font-bold text-white tracking-tighter leading-[0.9] mix-blend-overlay opacity-90">
+        DISCOVER
+        <br />
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-neutral-200 to-neutral-500">THE WORLD</span>
+      </h1>
+      <p class="text-lg md:text-xl text-white/70 max-w-xl mx-auto font-light leading-relaxed mt-8 mb-16 md:mb-10 animate-slide-up animation-delay-400">
+        Visas, tours & curated packages at the best value
+      </p>
+      <button 
+        class="h-16 px-10 rounded-full bg-white text-black hover:bg-neutral-200 font-bold text-lg tracking-wide transition-all shadow-xl hover:scale-105 animate-scale-in animation-delay-600"
+      >
+        Book Now
+      </button>
     </div>
     
     <!-- Scroll Indicator -->

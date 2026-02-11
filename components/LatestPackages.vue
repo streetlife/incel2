@@ -1,9 +1,13 @@
 <template>
-  <section class="py-20 bg-gray-50">
+  <section class="py-20 bg-gray-50 sm:px-14 px-4">
     <div class="container mx-auto px-4">
-      <div class="text-center mb-12 reveal">
-        <h2 class="section-title">Latest Packages</h2>
-        <p class="section-subtitle">Curated experiences just for you</p>
+      <div class="text-center mb-3 relative z-10">
+        <h2 class="mb-1 text-4xl lg:text-5xl font-bold text-neutral-900">
+          Latest <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Packages</span>
+        </h2>
+        <p class="text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto font-light">
+          Curated experiences just for you
+        </p>
       </div>
       
       <div class="reveal">

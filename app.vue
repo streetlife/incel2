@@ -1,6 +1,7 @@
 <template>
   <div>
     <NuxtLayout>
+      <ScrollProgress />
       <NuxtPage />
     </NuxtLayout>
   </div>

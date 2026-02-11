@@ -20,7 +20,6 @@
       <WhyChooseUs />
       <LocalTours />
       <WhatsAppContact />
-      <Newsletter />
     </main>
   </div>
 </template>
@@ -37,8 +36,6 @@ import PopularDestinations from '../components/PopularDestinations.vue'
 import WhyChooseUs from '../components/WhyChooseUs.vue'
 import LocalTours from '../components/LocalTours.vue'
 import WhatsAppContact from '../components/WhatsAppContact.vue'
-import Newsletter from '../components/Newsletter.vue'
-import Footer from '../components/Footer.vue'
 
 const { revealElements } = useScrollReveal()
 

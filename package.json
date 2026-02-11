@@ -10,7 +10,11 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@vueuse/core": "^14.2.1",
+    "@vueuse/motion": "^3.0.3",
+    "lucide-vue-next": "^0.563.0",
     "nuxt": "^3.13.0",
+    "nuxt-lucide-icons": "^2.0.0",
     "vue": "latest",
     "vue-router": "latest"
   },

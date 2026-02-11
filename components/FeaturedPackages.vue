@@ -1,5 +1,5 @@
 <template>
-  <section class="py-20 bg-white">
+  <section class="py-20 bg-white sm:px-24 px-4">
     <div class="container mx-auto px-4">
       <div class="text-center mb-4 reveal">
         <p class="text-primary font-semibold mb-2">Featured Packages</p>

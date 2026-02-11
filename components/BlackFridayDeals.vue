@@ -1,6 +1,6 @@
 <template>
   <section class="py-20 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-    <div class="container mx-auto px-4">
+    <div class="container mx-auto sm:px-16 px-4">
       <div class="text-center mb-12 reveal">
         <h2 class="text-4xl md:text-5xl font-bold mb-4">
           Black Friday Hot Deals

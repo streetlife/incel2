@@ -2,6 +2,7 @@
   <div class="">
     <main>
       <HeroSection />
+      <BookingSearch />
       <LatestPackages />
       <FeaturedPackages />
       <section class="py-16 bg-gradient-to-br from-primary to-primary-dark text-white">
@@ -28,6 +29,7 @@
 import { onMounted } from 'vue'
 import { useScrollReveal } from '~/composables/useScrollReveal'
 import HeroSection from '../components/HeroSection.vue'
+import BookingSearch from '../components/BookingSearch.vue'
 import LatestPackages from '../components/LatestPackages.vue'
 import FeaturedPackages from '../components/FeaturedPackages.vue'
 import BlackFridayDeals from '../components/BlackFridayDeals.vue'

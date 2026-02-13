@@ -20,22 +20,66 @@
         
         <!-- Desktop Navigation -->
         <div class="hidden lg:flex justify-center items-center space-x-8">
-          <NuxtLink 
-            v-for="link in navLinks" 
-            :key="link.name"
-            :to="link.path"
-            :class="[
-              'font-medium transition-colors duration-200',
-              scrolled ? 'text-white hover:text-gray-700' : 'text-white hover:text-accent'
-            ]"
-          >
-            {{ link.name }}
-          </NuxtLink>
-          
+          <template v-for="link in navLinks" :key="link.name">
+            <!-- Regular Link -->
+            <NuxtLink 
+              v-if="!link.dropdown"
+              :to="link.path"
+              :class="[
+                'font-medium transition-colors duration-200',
+                scrolled ? 'text-white hover:text-gray-200' : 'text-white hover:text-gray-200'
+              ]"
+            >
+              {{ link.name }}
+            </NuxtLink>
+            
+            <!-- Dropdown Link -->
+            <div 
+              v-else
+              class="relative group py-2"
+              @mouseenter="openDropdown = link.name"
+              @mouseleave="openDropdown = null"
+            >
+              <button
+                :class="[
+                  'font-medium transition-colors duration-200 flex items-center gap-1',
+                  scrolled ? 'text-white hover:text-gray-200' : 'text-white hover:text-gray-200'
+                ]"
+              >
+                {{ link.name }}
+                <svg 
+                  class="w-4 h-4 transition-transform duration-200"
+                  :class="{ 'rotate-180': openDropdown === link.name }"
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              <!-- Dropdown Menu -->
+              <div
+                v-show="openDropdown === link.name"
+                class="absolute left-0 pt-2 w-48"
+              >
+                <div class="bg-white rounded-lg shadow-xl py-2 animate-fade-in">
+                  <NuxtLink
+                    v-for="item in link.dropdown"
+                    :key="item.name"
+                    :to="item.path"
+                    class="block px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                  >
+                    {{ item.name }}
+                  </NuxtLink>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
 
         <div class="hidden lg:flex">
-            <button 
+          <button 
             :class="[
               'px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 shadow-lg hover:shadow-xl',
             ]"
@@ -60,23 +104,58 @@
       <!-- Mobile Menu -->
       <div 
         v-if="mobileMenuOpen"
-        class="lg:hidden mt-4 pb-4 animate-slide-up bg-gray-800 px-5"
+        class="lg:hidden mt-4 pb-4 animate-slide-up bg-gray-800 px-5 rounded-lg"
       >
-        <div class="flex flex-col space-y-4">
-          <NuxtLink 
-            v-for="link in navLinks" 
-            :key="link.name"
-            :to="link.path"
-            :class="[
-              'font-medium transition-colors duration-200 py-2',
-              scrolled ? 'text-gray-700 hover:text-[#0076ad]' : 'text-white hover:text-accent'
-            ]"
-            @click="mobileMenuOpen = false"
-          >
-            {{ link.name }}
-          </NuxtLink>
+        <div class="flex flex-col space-y-2">
+          <template v-for="link in navLinks" :key="link.name">
+            <!-- Regular Mobile Link -->
+            <NuxtLink 
+              v-if="!link.dropdown"
+              :to="link.path"
+              class="font-medium text-white hover:text-gray-200 transition-colors duration-200 py-2"
+              @click="mobileMenuOpen = false"
+            >
+              {{ link.name }}
+            </NuxtLink>
+            
+            <!-- Mobile Dropdown -->
+            <div v-else class="py-2">
+              <button
+                @click="toggleMobileDropdown(link.name)"
+                class="w-full flex items-center justify-between font-medium text-white hover:text-gray-200 transition-colors duration-200"
+              >
+                {{ link.name }}
+                <svg 
+                  class="w-4 h-4 transition-transform duration-200"
+                  :class="{ 'rotate-180': mobileOpenDropdown === link.name }"
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              <!-- Mobile Dropdown Items -->
+              <div
+                v-show="mobileOpenDropdown === link.name"
+                class="mt-2 ml-4 space-y-2"
+              >
+                <NuxtLink
+                  v-for="item in link.dropdown"
+                  :key="item.name"
+                  :to="item.path"
+                  class="block text-gray-300 hover:text-white transition-colors duration-200 py-1"
+                  @click="mobileMenuOpen = false"
+                >
+                  {{ item.name }}
+                </NuxtLink>
+              </div>
+            </div>
+          </template>
+          
           <button 
-            class="bg-yellow-400 hover:bg-yellow-500 text-neutral-900 px-6 rounded-full shadow-lg hover:shadow-xl transition-all"
+            class="bg-yellow-400 hover:bg-yellow-500 text-neutral-900 px-6 py-2 rounded-full shadow-lg hover:shadow-xl transition-all mt-4"
           >
             Login
           </button>
@@ -86,23 +165,63 @@
   </header>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 
 const scrolled = ref(false)
 const mobileMenuOpen = ref(false)
+const openDropdown = ref<string | null>(null)
+const mobileOpenDropdown = ref<string | null>(null)
 
-const navLinks = [
+interface NavLink {
+  name: string
+  path?: string
+  dropdown?: Array<{
+    name: string
+    path: string
+  }>
+}
+
+const navLinks: NavLink[] = [
   { name: 'Home', path: '/' },
   { name: 'About Us', path: '/about-us' },
-  { name: 'Packages', path: '/packages' },
-  { name: 'Local Tours', path: '/local-tours' },
-  { name: 'Visa', path: '/uae-visa' },
+  { 
+    name: 'Travel',
+    dropdown: [
+      { name: 'Flights', path: '/travel/flights' },
+      { name: 'Hotels', path: '/travel/hotels' },
+      { name: 'Tours', path: '/travel/tours' },
+      { name: 'Visas', path: '/travel/visas' },
+      { name: 'Services', path: '/travel/services' }
+    ]
+  },
+  { 
+    name: 'Services',
+    dropdown: [
+      { name: 'Vacation Packages', path: '/services/vacation-packages' },
+      { name: 'Travel Insurance', path: '/services/travel-insurance' },
+      { name: 'Airport Transfer', path: '/services/airport-transfer' },
+      { name: 'Airport Protocol', path: '/services/airport-protocol' },
+      { name: 'Tour Guide', path: '/services/tour-guide' },
+      { name: 'Cruises', path: '/services/cruises' }
+    ]
+  },
+  { 
+    name: 'Visa',
+    dropdown: [
+      { name: 'UAE Visa', path: '/visa/uae' },
+      { name: 'Global Visa', path: '/visa/global' },
+    ]
+  },
   { name: 'Contact', path: '/contact' }
 ]
 
 const handleScroll = () => {
   scrolled.value = window.scrollY > 50
+}
+
+const toggleMobileDropdown = (name: string) => {
+  mobileOpenDropdown.value = mobileOpenDropdown.value === name ? null : name
 }
 
 onMounted(() => {
@@ -117,3 +236,35 @@ onUnmounted(() => {
   }
 })
 </script>
+
+<style scoped>
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+</style>

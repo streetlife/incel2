@@ -72,12 +72,12 @@
                     AED {{ pkg.price.toLocaleString() }}
                   </div>
                 </div>
-                <Button 
+                <button 
                   size="sm" 
                   class="rounded-full flex items-center py-2 bg-white text-black hover:bg-primary hover:text-white border-0 font-semibold px-3 md:px-4 text-xs md:text-sm"
                 >
                   View Details <ArrowRight class="w-3 h-3 md:w-3.5 md:h-3.5 ml-1.5" />
-                </Button>
+                </button>
               </div>
             </div>
           </Transition>
@@ -108,14 +108,16 @@ import { ArrowLeft, ArrowRight, MapPin } from 'lucide-vue-next'
 import { navigateTo } from 'nuxt/app'
 
 interface Package {
-  id: string
+  id: number | string
   title: string
   location: string
-  duration: string
+  duration?: string
   image: string
   price: number
-  category: string
-  highlights: string[]
+  oldPrice?: number
+  discount?: number
+  category?: string
+  highlights?: string[]
 }
 
 interface Props {

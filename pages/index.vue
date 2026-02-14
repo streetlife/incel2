@@ -28,16 +28,6 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useScrollReveal } from '~/composables/useScrollReveal'
-import HeroSection from '../components/HeroSection.vue'
-import BookingSearch from '../components/BookingSearch.vue'
-import LatestPackages from '../components/LatestPackages.vue'
-import FeaturedPackages from '../components/FeaturedPackages.vue'
-import BlackFridayDeals from '../components/BlackFridayDeals.vue'
-import ServicesSection from '../components/ServicesSection.vue'
-import PopularDestinations from '../components/PopularDestinations.vue'
-import WhyChooseUs from '../components/WhyChooseUs.vue'
-import LocalTours from '../components/LocalTours.vue'
-import WhatsAppContact from '../components/WhatsAppContact.vue'
 
 const { revealElements } = useScrollReveal()
 

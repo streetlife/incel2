@@ -16,7 +16,13 @@
       type="button"
       @click="toggleDropdown"
       :disabled="disabled"
-      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-left flex items-center justify-between bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+      :class="[
+        'w-full px-4 py-3 border rounded-lg focus:border-transparent text-left flex items-center justify-between bg-white',
+        disabled && 'bg-gray-100 cursor-not-allowed',
+        hasError 
+          ? 'border-red-500 focus:ring-red-500' 
+          : 'border-gray-300 focus:ring-[#0076ad]'
+      ]"
     >
       <span class="text-gray-700">{{ displayText }}</span>
       <svg 
@@ -95,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, useAttrs } from 'vue'
 
 /* Types */
 interface Category {
@@ -248,6 +254,8 @@ const emit = defineEmits<{
   'update:modelValue': [value: Record<string, number>]
 }>()
 
+const attrs = useAttrs()
+
 /* State */
 const open = ref(false)
 const triggerRef = ref<HTMLElement>()
@@ -385,6 +393,27 @@ const decrement = (key: string): void => {
   
   emitUpdate()
 }
+
+const hasError = computed(() => {
+  const classAttr = attrs.class
+  if (!classAttr) return false
+  
+  // Check if class includes border-red-500
+  if (typeof classAttr === 'string') {
+    return classAttr.includes('border-red-500')
+  }
+  
+  if (Array.isArray(classAttr)) {
+    return classAttr.some(c => typeof c === 'string' && c.includes('border-red-500'))
+  }
+  
+  if (typeof classAttr === 'object' && classAttr !== null) {
+    return Object.hasOwn(classAttr, 'border-red-500') && 
+           (classAttr as Record<string, boolean>)['border-red-500'] === true
+  }
+  
+  return false
+})
 
 const emitUpdate = (): void => {
   emit('update:modelValue', { ...counts.value })

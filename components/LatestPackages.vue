@@ -18,6 +18,8 @@
 </template>
 
 <script setup>
+import PackagesCarousel from './PackagesCarousel.vue';
+
 const latestPackages = [
   {
     id: 1,

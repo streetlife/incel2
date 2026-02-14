@@ -191,8 +191,7 @@ const navLinks: NavLink[] = [
       { name: 'Flights', path: '/travel/flights' },
       { name: 'Hotels', path: '/travel/hotels' },
       { name: 'Tours', path: '/travel/tours' },
-      { name: 'Visas', path: '/travel/visas' },
-      { name: 'Services', path: '/travel/services' }
+      { name: 'Visas', path: '/travel/visas' }
     ]
   },
   { 

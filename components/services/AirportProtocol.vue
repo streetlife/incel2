@@ -163,7 +163,7 @@ const formatPrice = (price: number) => {
   <div>
     <!-- Hero Section -->
     <section 
-      class="relative py-24 px-6 bg-cover bg-center bg-no-repeat"
+      class="relative py-40 px-6 bg-cover bg-center bg-no-repeat"
       style="background-image: url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1600')"
     >
       <div class="absolute inset-0 bg-black/50"></div>
@@ -203,7 +203,7 @@ const formatPrice = (price: number) => {
                     value="arrival"
                     class="peer sr-only"
                   />
-                  <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-purple-600 peer-checked:bg-purple-50 hover:border-gray-300 transition-colors">
+                  <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-primary peer-checked:bg-primary/10 hover:border-gray-300 transition-colors">
                     <p class="font-bold text-gray-900">Arrival Assistance</p>
                     <p class="text-sm text-gray-600 mt-1">Help when you arrive at the airport</p>
                   </div>
@@ -215,7 +215,7 @@ const formatPrice = (price: number) => {
                     value="departure"
                     class="peer sr-only"
                   />
-                  <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-purple-600 peer-checked:bg-purple-50 hover:border-gray-300 transition-colors">
+                  <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-primary peer-checked:bg-primary/10 hover:border-gray-300 transition-colors">
                     <p class="font-bold text-gray-900">Departure Assistance</p>
                     <p class="text-sm text-gray-600 mt-1">Help when you depart from the airport</p>
                   </div>
@@ -235,7 +235,7 @@ const formatPrice = (price: number) => {
                     'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                     errors.airport 
                       ? 'border-red-500 focus:ring-red-500 border-2' 
-                      : 'border border-gray-300 focus:ring-purple-500'
+                      : 'border border-gray-300 focus:ring-primary'
                   ]"
                 >
                   <option value="">Select Airport</option>
@@ -257,7 +257,7 @@ const formatPrice = (price: number) => {
                     'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                     errors.flightNumber 
                       ? 'border-red-500 focus:ring-red-500 border-2' 
-                      : 'border border-gray-300 focus:ring-purple-500'
+                      : 'border border-gray-300 focus:ring-primary'
                   ]"
                 />
               </div>
@@ -274,7 +274,7 @@ const formatPrice = (price: number) => {
                     'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                     errors.airline 
                       ? 'border-red-500 focus:ring-red-500 border-2' 
-                      : 'border border-gray-300 focus:ring-purple-500'
+                      : 'border border-gray-300 focus:ring-primary'
                   ]"
                 />
               </div>
@@ -288,7 +288,7 @@ const formatPrice = (price: number) => {
                   type="number"
                   min="1"
                   max="20"
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
             </div>
@@ -315,7 +315,7 @@ const formatPrice = (price: number) => {
                     'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                     errors.time 
                       ? 'border-red-500 focus:ring-red-500 border-2' 
-                      : 'border border-gray-300 focus:ring-purple-500'
+                      : 'border border-gray-300 focus:ring-primary'
                   ]"
                 />
               </div>
@@ -330,13 +330,13 @@ const formatPrice = (price: number) => {
                 <label 
                   v-for="assistance in assistanceTypes" 
                   :key="assistance.value"
-                  class="flex items-start gap-3 p-4 border-2 border-gray-200 rounded-lg hover:bg-purple-50 cursor-pointer transition-colors"
+                  class="flex items-start gap-3 p-4 border-2 border-gray-200 rounded-lg hover:bg-primary/10 cursor-pointer transition-colors"
                 >
                   <input 
                     v-model="form.assistanceType"
                     type="checkbox"
                     :value="assistance.value"
-                    class="w-5 h-5 text-purple-600 mt-1"
+                    class="w-5 h-5 text-primary mt-1"
                   />
                   <div class="flex-1">
                     <div class="flex items-start justify-between">
@@ -344,7 +344,7 @@ const formatPrice = (price: number) => {
                         <p class="font-bold text-gray-900">{{ assistance.label }}</p>
                         <p class="text-xs text-gray-600 mt-1">{{ assistance.description }}</p>
                       </div>
-                      <p class="font-bold text-purple-600 ml-2">{{ formatPrice(assistance.price) }}</p>
+                      <p class="font-bold text-primary ml-2">{{ formatPrice(assistance.price) }}</p>
                     </div>
                   </div>
                 </label>
@@ -367,7 +367,7 @@ const formatPrice = (price: number) => {
                       'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                       errors.firstName 
                         ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-purple-500'
+                        : 'border border-gray-300 focus:ring-primary'
                     ]"
                   />
                 </div>
@@ -383,7 +383,7 @@ const formatPrice = (price: number) => {
                       'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                       errors.lastName 
                         ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-purple-500'
+                        : 'border border-gray-300 focus:ring-primary'
                     ]"
                   />
                 </div>
@@ -399,7 +399,7 @@ const formatPrice = (price: number) => {
                       'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                       errors.email 
                         ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-purple-500'
+                        : 'border border-gray-300 focus:ring-primary'
                     ]"
                   />
                 </div>
@@ -415,7 +415,7 @@ const formatPrice = (price: number) => {
                       'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                       errors.phone 
                         ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-purple-500'
+                        : 'border border-gray-300 focus:ring-primary'
                     ]"
                   />
                 </div>
@@ -429,7 +429,7 @@ const formatPrice = (price: number) => {
                   v-model="form.specialRequests"
                   rows="3"
                   placeholder="Any special requirements or requests..."
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 ></textarea>
               </div>
             </div>
@@ -438,14 +438,14 @@ const formatPrice = (price: number) => {
             <div class="flex items-center justify-between pt-6 border-t">
               <div>
                 <p class="text-sm text-gray-600">Total Price</p>
-                <p class="text-3xl font-bold text-purple-600">{{ formatPrice(totalPrice) }}</p>
+                <p class="text-3xl font-bold text-primary">{{ formatPrice(totalPrice) }}</p>
                 <p class="text-xs text-gray-500 mt-1">
                   {{ form.passengers }} passenger{{ form.passengers > 1 ? 's' : '' }}
                 </p>
               </div>
               <button 
                 type="submit"
-                class="px-8 py-4 bg-purple-600 text-white rounded-lg font-bold text-lg hover:bg-purple-700 transition-colors"
+                class="px-8 py-4 bg-primary text-white rounded-lg font-bold text-lg hover:bg-primary/80 transition-colors"
               >
                 Book Service
               </button>

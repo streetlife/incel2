@@ -140,7 +140,7 @@ const formatPrice = (price: number) => {
   <div>
     <!-- Hero Section -->
     <section 
-      class="relative py-24 px-6 bg-cover bg-center bg-no-repeat"
+      class="relative py-40 px-6 bg-cover bg-center bg-no-repeat"
       style="background-image: url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1600')"
     >
       <div class="absolute inset-0 bg-black/50"></div>
@@ -183,7 +183,7 @@ const formatPrice = (price: number) => {
                         'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                         errors.firstName 
                           ? 'border-red-500 focus:ring-red-500 border-2' 
-                          : 'border border-gray-300 focus:ring-blue-500'
+                          : 'border border-gray-300 focus:ring-primary'
                       ]"
                     />
                   </div>
@@ -199,7 +199,7 @@ const formatPrice = (price: number) => {
                         'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                         errors.lastName 
                           ? 'border-red-500 focus:ring-red-500 border-2' 
-                          : 'border border-gray-300 focus:ring-blue-500'
+                          : 'border border-gray-300 focus:ring-primary'
                       ]"
                     />
                   </div>
@@ -217,7 +217,7 @@ const formatPrice = (price: number) => {
                         'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                         errors.email 
                           ? 'border-red-500 focus:ring-red-500 border-2' 
-                          : 'border border-gray-300 focus:ring-blue-500'
+                          : 'border border-gray-300 focus:ring-primary'
                       ]"
                     />
                   </div>
@@ -233,7 +233,7 @@ const formatPrice = (price: number) => {
                         'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                         errors.phone 
                           ? 'border-red-500 focus:ring-red-500 border-2' 
-                          : 'border border-gray-300 focus:ring-blue-500'
+                          : 'border border-gray-300 focus:ring-primary'
                       ]"
                     />
                   </div>
@@ -251,7 +251,7 @@ const formatPrice = (price: number) => {
                         'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                         errors.dateOfBirth 
                           ? 'border-red-500 focus:ring-red-500 border-2' 
-                          : 'border border-gray-300 focus:ring-blue-500'
+                          : 'border border-gray-300 focus:ring-primary'
                       ]"
                     />
                   </div>
@@ -268,7 +268,7 @@ const formatPrice = (price: number) => {
                         'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                         errors.destination 
                           ? 'border-red-500 focus:ring-red-500 border-2' 
-                          : 'border border-gray-300 focus:ring-blue-500'
+                          : 'border border-gray-300 focus:ring-primary'
                       ]"
                     />
                   </div>
@@ -294,7 +294,7 @@ const formatPrice = (price: number) => {
                     type="number"
                     min="1"
                     max="10"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   />
                 </div>
 
@@ -315,9 +315,9 @@ const formatPrice = (price: number) => {
                         :value="option.value"
                         class="peer sr-only"
                       />
-                      <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-blue-600 peer-checked:bg-blue-50 hover:border-gray-300 transition-colors">
+                      <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-primary peer-checked:bg-primary/10 hover:border-gray-300 transition-colors">
                         <p class="font-bold text-gray-900">{{ option.label }}</p>
-                        <p class="text-lg font-bold text-blue-600 mt-1">{{ formatPrice(option.price) }}</p>
+                        <p class="text-lg font-bold text-primary mt-1">{{ formatPrice(option.price) }}</p>
                         <ul class="mt-2 space-y-1">
                           <li 
                             v-for="feature in option.features" 
@@ -348,7 +348,7 @@ const formatPrice = (price: number) => {
                         v-model="form.additionalCoverage"
                         type="checkbox"
                         :value="option.value"
-                        class="w-5 h-5 text-blue-600"
+                        class="w-5 h-5 text-primary"
                       />
                       <span class="flex-1 text-gray-700">{{ option.label }}</span>
                       <span class="font-semibold text-gray-900">{{ formatPrice(option.price) }}</span>
@@ -362,7 +362,7 @@ const formatPrice = (price: number) => {
                     <input 
                       v-model="form.medicalConditions"
                       type="checkbox"
-                      class="w-5 h-5 text-blue-600 mt-1"
+                      class="w-5 h-5 text-primary mt-1"
                     />
                     <span class="text-sm text-gray-700">
                       I have pre-existing medical conditions that need to be covered
@@ -373,7 +373,7 @@ const formatPrice = (price: number) => {
                 <!-- Submit Button -->
                 <button 
                   type="submit"
-                  class="w-full py-4 bg-blue-600 text-white rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors"
+                  class="w-full py-4 bg-primary text-white rounded-lg font-bold text-lg hover:bg-primary-dark transition-colors"
                 >
                   Get Quote
                 </button>
@@ -409,7 +409,7 @@ const formatPrice = (price: number) => {
 
               <div class="flex justify-between items-center mb-6">
                 <span class="text-lg font-bold text-gray-900">Total</span>
-                <span class="text-2xl font-bold text-blue-600">{{ formatPrice(totalPrice) }}</span>
+                <span class="text-2xl font-bold text-primary">{{ formatPrice(totalPrice) }}</span>
               </div>
 
               <div class="bg-blue-50 rounded-lg p-4 text-sm text-gray-700">

@@ -163,7 +163,7 @@ const formatPrice = (price: number) => {
   <div>
     <!-- Hero Section -->
     <section 
-      class="relative py-24 px-6 bg-cover bg-center bg-no-repeat"
+      class="relative py-40 px-6 bg-cover bg-center bg-no-repeat"
       style="background-image: url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=1600')"
     >
       <div class="absolute inset-0 bg-black/50"></div>
@@ -203,7 +203,7 @@ const formatPrice = (price: number) => {
                     value="airport-to-hotel"
                     class="peer sr-only"
                   />
-                  <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-blue-600 peer-checked:bg-blue-50 hover:border-gray-300 transition-colors text-center">
+                  <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-primary peer-checked:bg-primary/10 hover:border-gray-300 transition-colors text-center">
                     <p class="font-bold text-gray-900">Airport to Hotel</p>
                   </div>
                 </label>
@@ -214,7 +214,7 @@ const formatPrice = (price: number) => {
                     value="hotel-to-airport"
                     class="peer sr-only"
                   />
-                  <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-blue-600 peer-checked:bg-blue-50 hover:border-gray-300 transition-colors text-center">
+                  <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-primary peer-checked:bg-blue-50 hover:border-gray-300 transition-colors text-center">
                     <p class="font-bold text-gray-900">Hotel to Airport</p>
                   </div>
                 </label>
@@ -225,7 +225,7 @@ const formatPrice = (price: number) => {
                     value="city-transfer"
                     class="peer sr-only"
                   />
-                  <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-blue-600 peer-checked:bg-blue-50 hover:border-gray-300 transition-colors text-center">
+                  <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-primary peer-checked:bg-blue-50 hover:border-gray-300 transition-colors text-center">
                     <p class="font-bold text-gray-900">City Transfer</p>
                   </div>
                 </label>
@@ -246,7 +246,7 @@ const formatPrice = (price: number) => {
                     'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                     errors.pickupLocation 
                       ? 'border-red-500 focus:ring-red-500 border-2' 
-                      : 'border border-gray-300 focus:ring-blue-500'
+                      : 'border border-gray-300 focus:ring-primary'
                   ]"
                 />
               </div>
@@ -263,7 +263,7 @@ const formatPrice = (price: number) => {
                     'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                     errors.dropoffLocation 
                       ? 'border-red-500 focus:ring-red-500 border-2' 
-                      : 'border border-gray-300 focus:ring-blue-500'
+                      : 'border border-gray-300 focus:ring-primary'
                   ]"
                 />
               </div>
@@ -291,7 +291,7 @@ const formatPrice = (price: number) => {
                     'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                     errors.time 
                       ? 'border-red-500 focus:ring-red-500 border-2' 
-                      : 'border border-gray-300 focus:ring-blue-500'
+                      : 'border border-gray-300 focus:ring-primary'
                   ]"
                 />
               </div>
@@ -307,7 +307,7 @@ const formatPrice = (price: number) => {
                   v-model="form.flightNumber"
                   type="text"
                   placeholder="e.g., BA075"
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
 
@@ -320,7 +320,7 @@ const formatPrice = (price: number) => {
                   type="number"
                   min="1"
                   max="20"
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
 
@@ -333,7 +333,7 @@ const formatPrice = (price: number) => {
                   type="number"
                   min="0"
                   max="20"
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
             </div>
@@ -355,12 +355,12 @@ const formatPrice = (price: number) => {
                     :value="vehicle.value"
                     class="peer sr-only"
                   />
-                  <div class="border-2 border-gray-200 rounded-lg overflow-hidden peer-checked:border-blue-600 peer-checked:ring-2 peer-checked:ring-blue-600 hover:border-gray-300 transition-all">
+                  <div class="border-2 border-gray-200 rounded-lg overflow-hidden peer-checked:border-primary peer-checked:ring-2 peer-checked:ring-primary hover:border-gray-300 transition-all">
                     <img :src="vehicle.image" :alt="vehicle.label" class="w-full h-32 object-cover" />
                     <div class="p-3">
                       <p class="font-bold text-gray-900">{{ vehicle.label }}</p>
                       <p class="text-xs text-gray-600 mt-1">{{ vehicle.capacity }}</p>
-                      <p class="text-lg font-bold text-blue-600 mt-2">{{ formatPrice(vehicle.price) }}</p>
+                      <p class="text-lg font-bold text-primary mt-2">{{ formatPrice(vehicle.price) }}</p>
                     </div>
                   </div>
                 </label>
@@ -383,7 +383,7 @@ const formatPrice = (price: number) => {
                       'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                       errors.firstName 
                         ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-blue-500'
+                        : 'border border-gray-300 focus:ring-primary'
                     ]"
                   />
                 </div>
@@ -399,7 +399,7 @@ const formatPrice = (price: number) => {
                       'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                       errors.lastName 
                         ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-blue-500'
+                        : 'border border-gray-300 focus:ring-primary'
                     ]"
                   />
                 </div>
@@ -415,7 +415,7 @@ const formatPrice = (price: number) => {
                       'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                       errors.email 
                         ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-blue-500'
+                        : 'border border-gray-300 focus:ring-primary'
                     ]"
                   />
                 </div>
@@ -431,7 +431,7 @@ const formatPrice = (price: number) => {
                       'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                       errors.phone 
                         ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-blue-500'
+                        : 'border border-gray-300 focus:ring-primary'
                     ]"
                   />
                 </div>
@@ -445,7 +445,7 @@ const formatPrice = (price: number) => {
                   v-model="form.specialRequests"
                   rows="3"
                   placeholder="Child seat, wheelchair accessible, etc."
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 ></textarea>
               </div>
             </div>
@@ -458,7 +458,7 @@ const formatPrice = (price: number) => {
               </div>
               <button 
                 type="submit"
-                class="px-8 py-4 bg-blue-600 text-white rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors"
+                class="px-8 py-4 bg-primary text-white rounded-lg font-bold text-lg hover:bg-primary/80 transition-colors"
               >
                 Book Transfer
               </button>

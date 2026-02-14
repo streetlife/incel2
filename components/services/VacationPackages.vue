@@ -104,7 +104,7 @@ onMounted(() => {
   <div>
     <!-- Hero Section -->
     <section 
-      class="relative py-24 px-6 bg-cover bg-center bg-no-repeat"
+      class="relative py-40 px-6 bg-cover bg-center bg-no-repeat"
       style="background-image: url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1600')"
     >
       <div class="absolute inset-0 bg-black/40"></div>

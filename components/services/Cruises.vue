@@ -136,7 +136,7 @@ onMounted(() => {
   <div>
     <!-- Hero Section -->
     <section 
-      class="relative py-24 px-6 bg-cover bg-center bg-no-repeat"
+      class="relative py-40 px-6 bg-cover bg-center bg-no-repeat"
       style="background-image: url('https://images.unsplash.com/photo-1540946485063-a40da27545f8?w=1600')"
     >
       <div class="absolute inset-0 bg-black/50"></div>
@@ -173,7 +173,7 @@ onMounted(() => {
                 :alt="cruise.name"
                 class="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
               />
-              <div class="absolute top-4 left-4 bg-cyan-600 text-white px-3 py-1 rounded-full font-bold text-sm">
+              <div class="absolute top-4 left-4 bg-primary text-white px-3 py-1 rounded-full font-bold text-sm">
                 {{ cruise.duration }}
               </div>
               <div class="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-gray-900 px-3 py-1 rounded-full font-bold text-sm">
@@ -184,8 +184,8 @@ onMounted(() => {
             <!-- Cruise Info -->
             <div class="p-6">
               <div class="flex items-start gap-3 mb-3">
-                <div class="w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Anchor class="w-5 h-5 text-cyan-600" />
+                <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Anchor class="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <h3 class="text-xl font-bold text-gray-900">{{ cruise.name }}</h3>
@@ -205,7 +205,7 @@ onMounted(() => {
                   <span 
                     v-for="dest in cruise.destinations" 
                     :key="dest"
-                    class="px-2 py-1 bg-cyan-50 text-cyan-700 text-xs rounded-full"
+                    class="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
                   >
                     {{ dest }}
                   </span>
@@ -234,10 +234,10 @@ onMounted(() => {
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-sm text-gray-600">Starting from</p>
-                  <p class="text-2xl font-bold text-cyan-600">{{ formatPrice(cruise.price) }}</p>
+                  <p class="text-2xl font-bold text-primary">{{ formatPrice(cruise.price) }}</p>
                   <p class="text-xs text-gray-500">per person</p>
                 </div>
-                <button class="px-6 py-3 bg-cyan-600 text-white rounded-lg font-semibold hover:bg-cyan-700 transition-colors">
+                <button class="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/80 transition-colors">
                   Book Now
                 </button>
               </div>

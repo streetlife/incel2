@@ -220,7 +220,7 @@ onMounted(() => {
   <div>
     <!-- Hero Section -->
     <section 
-      class="relative py-24 px-6 bg-cover bg-center bg-no-repeat"
+      class="relative py-40 px-6 bg-cover bg-center bg-no-repeat"
       style="background-image: url('https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1600')"
     >
       <div class="absolute inset-0 bg-black/50"></div>
@@ -253,7 +253,7 @@ onMounted(() => {
             <img :src="guide.image" :alt="guide.name" class="w-full h-48 object-cover" />
             <div class="p-5">
               <div class="flex items-center gap-2 mb-3">
-                <Users class="w-5 h-5 text-orange-600" />
+                <Users class="w-5 h-5 text-primary" />
                 <h3 class="text-lg font-bold text-gray-900">{{ guide.name }}</h3>
               </div>
 
@@ -269,7 +269,7 @@ onMounted(() => {
                   <span 
                     v-for="lang in guide.languages" 
                     :key="lang"
-                    class="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full"
+                    class="px-2 py-1 bg-blue-50 text-primary text-xs rounded-full"
                   >
                     {{ lang }}
                   </span>
@@ -282,7 +282,7 @@ onMounted(() => {
                   <span 
                     v-for="specialty in guide.specialties" 
                     :key="specialty"
-                    class="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full"
+                    class="px-2 py-1 bg-green-50 text-primary text-xs rounded-full"
                   >
                     {{ specialty }}
                   </span>
@@ -292,9 +292,9 @@ onMounted(() => {
               <div class="flex items-center justify-between pt-3 border-t">
                 <div>
                   <p class="text-xs text-gray-600">From</p>
-                  <p class="text-lg font-bold text-orange-600">{{ formatPrice(guide.price) }}/day</p>
+                  <p class="text-lg font-bold text-primary">{{ formatPrice(guide.price) }}/day</p>
                 </div>
-                <button class="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700 transition-colors">
+                <button class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary/80 transition-colors">
                   Book
                 </button>
               </div>
@@ -330,7 +330,7 @@ onMounted(() => {
                     'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                     errors.destination 
                       ? 'border-red-500 focus:ring-red-500 border-2' 
-                      : 'border border-gray-300 focus:ring-orange-500'
+                      : 'border border-gray-300 focus:ring-primary'
                   ]"
                 />
               </div>
@@ -345,7 +345,7 @@ onMounted(() => {
                     'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                     errors.language 
                       ? 'border-red-500 focus:ring-red-500 border-2' 
-                      : 'border border-gray-300 focus:ring-orange-500'
+                      : 'border border-gray-300 focus:ring-primary'
                   ]"
                 >
                   <option value="">Select Language</option>
@@ -373,7 +373,7 @@ onMounted(() => {
                 </label>
                 <select 
                   v-model="form.duration"
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                   <option value="2">2 Hours</option>
                   <option value="4">4 Hours (Half Day)</option>
@@ -391,7 +391,7 @@ onMounted(() => {
                   type="number"
                   min="1"
                   max="30"
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
             </div>
@@ -411,7 +411,7 @@ onMounted(() => {
                     v-model="form.tourType"
                     type="checkbox"
                     :value="type.value"
-                    class="w-4 h-4 text-orange-600"
+                    class="w-4 h-4 text-primary"
                   />
                   <span class="text-2xl">{{ type.icon }}</span>
                   <span class="text-sm font-medium text-gray-700">{{ type.label }}</span>
@@ -435,7 +435,7 @@ onMounted(() => {
                       'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                       errors.firstName 
                         ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-orange-500'
+                        : 'border border-gray-300 focus:ring-primary'
                     ]"
                   />
                 </div>
@@ -451,7 +451,7 @@ onMounted(() => {
                       'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                       errors.lastName 
                         ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-orange-500'
+                        : 'border border-gray-300 focus:ring-primary'
                     ]"
                   />
                 </div>
@@ -467,7 +467,7 @@ onMounted(() => {
                       'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                       errors.email 
                         ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-orange-500'
+                        : 'border border-gray-300 focus:ring-primary'
                     ]"
                   />
                 </div>
@@ -483,7 +483,7 @@ onMounted(() => {
                       'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                       errors.phone 
                         ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-orange-500'
+                        : 'border border-gray-300 focus:ring-primary'
                     ]"
                   />
                 </div>
@@ -497,7 +497,7 @@ onMounted(() => {
                   v-model="form.specialRequests"
                   rows="3"
                   placeholder="Specific interests, accessibility needs, etc."
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 ></textarea>
               </div>
             </div>
@@ -506,14 +506,14 @@ onMounted(() => {
             <div class="flex items-center justify-between pt-6 border-t">
               <div>
                 <p class="text-sm text-gray-600">Estimated Price</p>
-                <p class="text-3xl font-bold text-orange-600">{{ formatPrice(totalPrice) }}</p>
+                <p class="text-3xl font-bold text-primary">{{ formatPrice(totalPrice) }}</p>
                 <p class="text-xs text-gray-500 mt-1">
                   {{ form.duration }} hours at {{ formatPrice(pricePerHour) }}/hour
                 </p>
               </div>
               <button 
                 type="submit"
-                class="px-8 py-4 bg-orange-600 text-white rounded-lg font-bold text-lg hover:bg-orange-700 transition-colors"
+                class="px-8 py-4 bg-primary text-white rounded-lg font-bold text-lg hover:bg-primary transition-colors"
               >
                 Request Guide
               </button>

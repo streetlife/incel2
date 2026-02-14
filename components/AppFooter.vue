@@ -12,9 +12,9 @@
             <input 
               type="email" 
               placeholder="Enter your email"
-              class="flex-1 px-6 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500"
+              class="flex-1 px-6 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-primary"
             />
-            <button class="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+            <button class="px-8 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/80 transition-colors">
               Subscribe
             </button>
           </div>
@@ -28,7 +28,7 @@
         <!-- Company Info -->
         <div>
           <div class="text-2xl font-bold text-white mb-4">
-            <span class="text-blue-400">Incel</span> Tourism
+            <span class="text-primary">Incel</span> Tourism
           </div>
           <p class="text-gray-400 text-sm mb-4">
             UAE-licensed Destination Management Company serving travelers across Sub-Saharan Africa with expert visa assistance and unforgettable experiences.
@@ -40,7 +40,7 @@
           <h4 class="text-white font-semibold mb-4">Quick Links</h4>
           <ul class="space-y-2">
             <li v-for="link in quickLinks" :key="link.name">
-              <NuxtLink :to="link.path" class="text-gray-400 hover:text-blue-400 transition-colors text-sm">
+              <NuxtLink :to="link.path" class="text-gray-400 hover:text-primary transition-colors text-sm">
                 {{ link.name }}
               </NuxtLink>
             </li>
@@ -52,23 +52,23 @@
           <h4 class="text-white font-semibold mb-4">Dubai Office</h4>
           <ul class="space-y-3 text-sm text-gray-400">
             <li class="flex items-start gap-2">
-              <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
               <span>Suite 403, Dubai National Insurance Building, Port Saeed, Dubai, UAE</span>
             </li>
             <li class="flex items-center gap-2">
-              <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
               </svg>
-              <a href="tel:+97143977242" class="hover:text-blue-400">+971 4 397 7242</a>
+              <a href="tel:+97143977242" class="hover:text-primary">+971 4 397 7242</a>
             </li>
             <li class="flex items-center gap-2">
-              <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
               </svg>
-              <a href="mailto:info@inceltourism.com" class="hover:text-blue-400">info@inceltourism.com</a>
+              <a href="mailto:info@inceltourism.com" class="hover:text-primary">info@inceltourism.com</a>
             </li>
           </ul>
         </div>
@@ -78,23 +78,23 @@
           <h4 class="text-white font-semibold mb-4">Lagos Office</h4>
           <ul class="space-y-3 text-sm text-gray-400">
             <li class="flex items-start gap-2">
-              <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
               <span>4th Floor, Right Wing, Mulliner Towers, Plot 39 Alfred Rewane Road, Ikoyi, Lagos, Nigeria</span>
             </li>
             <li class="flex items-center gap-2">
-              <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
               </svg>
-              <a href="tel:+2348180850745" class="hover:text-blue-400">+234 818 085 0745</a>
+              <a href="tel:+2348180850745" class="hover:text-primary">+234 818 085 0745</a>
             </li>
             <li class="flex items-center gap-2">
-              <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
               </svg>
-              <a href="mailto:info@inceltourism.com" class="hover:text-blue-400">info@inceltourism.com</a>
+              <a href="mailto:info@inceltourism.com" class="hover:text-primary">info@inceltourism.com</a>
             </li>
           </ul>
         </div>
@@ -109,13 +109,13 @@
             © 2026 Incel Tourism. All rights reserved.
           </p>
           <div class="flex gap-6 text-sm">
-            <NuxtLink to="/privacy-policy" class="text-gray-400 hover:text-blue-400 transition-colors">
+            <NuxtLink to="/privacy-policy" class="text-gray-400 hover:text-primary transition-colors">
               Privacy Policy
             </NuxtLink>
-            <NuxtLink to="/terms-and-conditions" class="text-gray-400 hover:text-blue-400 transition-colors">
+            <NuxtLink to="/terms" class="text-gray-400 hover:text-primary transition-colors">
               Terms & Conditions
             </NuxtLink>
-            <NuxtLink to="/faq" class="text-gray-400 hover:text-blue-400 transition-colors">
+            <NuxtLink to="/faq" class="text-gray-400 hover:text-primary transition-colors">
               FAQ
             </NuxtLink>
           </div>
@@ -138,10 +138,10 @@
 
 <script setup>
 const quickLinks = [
-  { name: 'Packages', path: '/packages' },
-  { name: 'Local Tours', path: '/local-tours' },
-  { name: 'UAE Visa', path: '/uae-visa' },
-  { name: 'Global Visa', path: '/global-visa' },
+  { name: 'Flights', path: '/travel/flights' },
+  { name: 'Hotels', path: '/travel/hotels' },
+  { name: 'Tours', path: '/travel/tours' },
+  { name: 'Visa', path: '/travel/visas' },
   { name: 'About Us', path: '/about-us' },
   { name: 'Contact', path: '/contact' }
 ]

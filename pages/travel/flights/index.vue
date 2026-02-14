@@ -1,16 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import FlightsForm from '../../../components/forms/FlightsForm.vue'
+import Pagination from '../../../components/Pagination.vue'
 import { Plane } from 'lucide-vue-next'
 
 const route = useRoute()
 
 // Search results state
-const searchResults = ref<any[]>([])
+const flightResults = ref<any[]>([])
 const isLoading = ref(false)
 const hasSearched = ref(false)
 const showSearchForm = ref(true)
+const currentPage = ref(1)
+const itemsPerPage = 10
+
+// Paginated results
+const paginatedResults = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return flightResults.value.slice(start, end)
+})
 
 // Popular destinations
 const popularDestinations = [
@@ -131,12 +141,10 @@ const searchFlights = async (params?: any) => {
     tripType: route.query.tripType || 'round-trip'
   }
 
-  console.log('Search params:', searchParams)
-
   // Simulate API call
   setTimeout(() => {
-    // Generate mock results
-    const results = Array.from({ length: 8 }, (_, i) => ({
+    // Generate mock results (50 flights for pagination demo)
+    const results = Array.from({ length: 50 }, (_, i) => ({
       id: i + 1,
       airline: airlines[Math.floor(Math.random() * airlines.length)],
       from: searchParams.from || 'Lagos',
@@ -152,11 +160,11 @@ const searchFlights = async (params?: any) => {
       availableSeats: Math.floor(Math.random() * 20) + 5
     }))
     
-    searchResults.value = results
+    flightResults.value = results
     isLoading.value = false
     
     // Scroll to results
-    if (searchResults.value.length > 0) {
+    if (flightResults.value.length > 0) {
       setTimeout(() => {
         const resultsElement = document.getElementById('search-results')
         resultsElement?.scrollIntoView({ behavior: 'smooth' })
@@ -170,12 +178,22 @@ watch(
   () => route.query,
   (newQuery) => {
     console.log('Route query changed:', newQuery)
+    
+    // Update current page from URL
+    const pageFromUrl = Number.parseInt(newQuery.page as string) || 1
+    currentPage.value = pageFromUrl
+    
     if (newQuery.from && newQuery.to) {
       searchFlights()
     }
   },
   { immediate: true }
 )
+
+// Handle page change
+const handlePageChange = (page: number) => {
+  currentPage.value = page
+}
 
 // Toggle search form
 const toggleSearchForm = () => {
@@ -185,6 +203,7 @@ const toggleSearchForm = () => {
 // Handle search from FlightsForm
 const handleFlightSearch = (searchData: any) => {
   console.log('handleFlightSearch received:', searchData)
+  currentPage.value = 1 // Reset to first page on new search
   searchFlights(searchData)
 }
 
@@ -282,10 +301,10 @@ const formatPrice = (price: number) => {
         </div>
 
         <!-- Results Header -->
-        <div v-else-if="searchResults.length > 0" class="mb-8">
+        <div v-else-if="flightResults.length > 0" class="mb-8">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
-              Available Flights ({{ searchResults.length }})
+              Available Flights ({{ flightResults.length }})
             </h2>
             <div class="flex gap-2">
               <select class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900">
@@ -297,14 +316,14 @@ const formatPrice = (price: number) => {
             </div>
           </div>
           <p class="text-gray-600">
-            Showing flights from {{ searchResults[0]?.from || 'Lagos' }} to {{ searchResults[0]?.to || 'Dubai' }}
+            Showing flights from {{ paginatedResults[0]?.from || 'Lagos' }} to {{ paginatedResults[0]?.to || 'Dubai' }}
           </p>
         </div>
 
         <!-- Results Grid -->
-        <div v-if="!isLoading && searchResults.length > 0" class="grid gap-6">
+        <div v-if="!isLoading && paginatedResults.length > 0" class="grid gap-6">
           <div 
-            v-for="(flight, index) in searchResults" 
+            v-for="(flight, index) in paginatedResults" 
             :key="flight.id"
             class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6"
             :style="{ transitionDelay: `${index * 50}ms` }"
@@ -314,7 +333,7 @@ const formatPrice = (price: number) => {
               <div class="flex-1">
                 <div class="flex items-center gap-4 mb-4">
                   <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <span class="text-2xl"><Plane /></span>
+                    <Plane class="w-6 h-6 text-gray-600" />
                   </div>
                   <div>
                     <h3 class="text-xl font-bold text-gray-900">{{ flight.airline }}</h3>
@@ -372,8 +391,17 @@ const formatPrice = (price: number) => {
           </div>
         </div>
 
+        <!-- Pagination -->
+        <Pagination
+          v-if="!isLoading && flightResults.length > 0"
+          :total-items="flightResults.length"
+          :items-per-page="itemsPerPage"
+          :current-page="currentPage"
+          @page-change="handlePageChange"
+        />
+
         <!-- No Results -->
-        <div v-if="!isLoading && searchResults.length === 0 && hasSearched" class="text-center py-20 reveal">
+        <div v-if="!isLoading && flightResults.length === 0 && hasSearched" class="text-center py-20 reveal">
           <div class="text-6xl mb-4">✈️</div>
           <h3 class="text-2xl font-bold text-gray-900 mb-2">No Flights Found</h3>
           <p class="text-gray-600 mb-6">

@@ -34,29 +34,28 @@
         v-if="isCalendarOpen"
         ref="calendarRef"
         :style="calendarStyle"
-        class="fixed z-10 bg-white rounded-lg shadow-2xl border border-gray-200 p-6"
-        style="width: 640px;"
+        :class="calendarClasses"
         @click.stop
       >
         <!-- Header with Month Navigation -->
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-3">
           <button
             type="button"
             @click="previousMonth"
-            class="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
             :disabled="!canGoPrevious"
             :class="{ 'opacity-50 cursor-not-allowed': !canGoPrevious }"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           
-          <div class="flex gap-8">
-            <span class="font-semibold text-gray-900 min-w-[120px] text-center">
+          <div class="flex gap-3 sm:gap-6 flex-1 justify-center">
+            <span class="font-semibold text-gray-900 text-sm min-w-[90px] sm:min-w-[100px] text-center">
               {{ currentMonthDisplay }}
             </span>
-            <span class="font-semibold text-gray-900 min-w-[120px] text-center">
+            <span v-if="!isMobile" class="font-semibold text-gray-900 text-sm min-w-[90px] text-center">
               {{ nextMonthDisplay }}
             </span>
           </div>
@@ -64,23 +63,23 @@
           <button
             type="button"
             @click="nextMonth"
-            class="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
           </button>
         </div>
         
-        <!-- Two Month Calendars -->
-        <div class="flex gap-6">
+        <!-- Month Calendars (1 on mobile, 2 on desktop) -->
+        <div :class="isMobile ? 'flex flex-col gap-6' : 'flex gap-4'">
           <!-- Current Month -->
           <div class="flex-1">
-            <div class="grid grid-cols-7 gap-1 mb-2">
+            <div class="grid grid-cols-7 gap-1 mb-1.5">
               <div
                 v-for="day in weekDays"
                 :key="day"
-                class="text-center text-xs font-semibold text-gray-600 py-2"
+                class="text-center text-xs font-semibold text-gray-600 py-1"
               >
                 {{ day }}
               </div>
@@ -101,13 +100,13 @@
             </div>
           </div>
           
-          <!-- Next Month -->
-          <div class="flex-1">
-            <div class="grid grid-cols-7 gap-1 mb-2">
+          <!-- Next Month (hidden on mobile) -->
+          <div v-if="!isMobile" class="flex-1">
+            <div class="grid grid-cols-7 gap-1 mb-1.5">
               <div
                 v-for="day in weekDays"
                 :key="day"
-                class="text-center text-xs font-semibold text-gray-600 py-2"
+                class="text-center text-xs font-semibold text-gray-600 py-1"
               >
                 {{ day }}
               </div>
@@ -130,15 +129,15 @@
         </div>
         
         <!-- Footer -->
-        <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
-          <div class="text-sm text-gray-600 font-medium">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mt-3 sm:mt-4 pt-3 border-t border-gray-200 gap-2 sm:gap-3">
+          <div class="text-xs text-gray-600 font-medium text-center sm:text-left">
             {{ footerDisplay }}
           </div>
           <div class="flex gap-2">
             <button
               type="button"
               @click="clearSelection"
-              class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              class="flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
             >
               Cancel
             </button>
@@ -146,7 +145,7 @@
               type="button"
               @click="applySelection"
               :disabled="!isValidSelection"
-              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition-colors"
+              class="flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition-colors touch-manipulation"
             >
               Apply
             </button>
@@ -213,6 +212,7 @@ const hoverDate = ref<string>('')
 const containerRef = ref<HTMLElement>()
 const calendarRef = ref<HTMLElement>()
 const calendarStyle = ref<Record<string, string>>({})
+const isMobile = ref(false)
 
 /* Constants */
 const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
@@ -261,8 +261,13 @@ const canGoPrevious = computed(() => {
 })
 
 const inputClasses = computed(() => [
-  'w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors cursor-pointer',
+  'w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors cursor-pointer text-sm sm:text-base',
   props.disabled && 'bg-gray-100 cursor-not-allowed opacity-60'
+])
+
+const calendarClasses = computed(() => [
+  'fixed z-50 bg-white rounded-lg shadow-2xl border border-gray-200 p-4',
+  isMobile.value ? 'w-[calc(100vw-2rem)] max-w-sm' : 'w-auto'
 ])
 
 const currentMonthDates = computed(() => generateMonthDates(currentMonth.value))
@@ -273,48 +278,75 @@ const nextMonthDates = computed(() => {
 })
 
 /* Methods */
+const checkMobile = (): void => {
+  isMobile.value = window.innerWidth < 640 // sm breakpoint
+}
+
+const calculateMobilePosition = (
+  rect: DOMRect,
+  viewportWidth: number,
+  viewportHeight: number,
+  padding: number
+): Record<string, string> => {
+  const calendarWidth = Math.min(viewportWidth - (padding * 2), 384)
+  const calendarHeight = 450
+  
+  let top = rect.bottom + padding
+  const left = (viewportWidth - calendarWidth) / 2
+  
+  // Adjust if calendar goes off bottom
+  if (top + calendarHeight > viewportHeight - padding) {
+    top = Math.max(rect.top - calendarHeight - padding, padding)
+  }
+  
+  return {
+    top: `${top}px`,
+    left: `${left}px`
+  }
+}
+
+const calculateDesktopPosition = (
+  rect: DOMRect,
+  viewportWidth: number,
+  viewportHeight: number,
+  padding: number
+): Record<string, string> => {
+  const calendarWidth = 520
+  const calendarHeight = 380
+  
+  let top = rect.bottom + padding
+  let left = rect.right - calendarWidth
+  
+  // Ensure calendar doesn't go off left edge
+  left = Math.max(left, rect.left, padding)
+  
+  // Ensure calendar doesn't go off right edge
+  if (left + calendarWidth > viewportWidth - padding) {
+    left = viewportWidth - calendarWidth - padding
+  }
+  
+  // Adjust vertical position if needed
+  if (top + calendarHeight > viewportHeight - padding) {
+    top = Math.max(rect.top - calendarHeight - padding, rect.bottom + padding)
+  }
+  
+  return {
+    top: `${top}px`,
+    left: `${left}px`
+  }
+}
+
 const updateCalendarPosition = (): void => {
   if (!containerRef.value) return
   
   const rect = containerRef.value.getBoundingClientRect()
-  const calendarWidth = 640
-  const calendarHeight = 450
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
   const padding = 8
   
-  // Position below the input
-  let top = rect.bottom + padding
-  
-  // Align calendar's right edge with input's right edge
-  let left = rect.right - calendarWidth
-  
-  // If calendar goes off left edge, align to left edge of input instead
-  if (left < padding) {
-    left = rect.left
-  }
-  
-  // If still goes off left edge, push it right
-  if (left < padding) {
-    left = padding
-  }
-  
-  // If calendar goes off right edge, adjust
-  if (left + calendarWidth > window.innerWidth - padding) {
-    left = window.innerWidth - calendarWidth - padding
-  }
-  
-  // Adjust if calendar goes off bottom edge
-  if (top + calendarHeight > window.innerHeight - padding) {
-    top = rect.top - calendarHeight - padding
-    // If it still doesn't fit above, show it below with available space
-    if (top < padding) {
-      top = rect.bottom + padding
-    }
-  }
-  
-  calendarStyle.value = {
-    top: `${top}px`,
-    left: `${left}px`
-  }
+  calendarStyle.value = isMobile.value
+    ? calculateMobilePosition(rect, viewportWidth, viewportHeight, padding)
+    : calculateDesktopPosition(rect, viewportWidth, viewportHeight, padding)
 }
 
 const formatDateDisplay = (dateString: string): string => {
@@ -406,13 +438,13 @@ const createCalendarDate = (date: Date, isCurrentMonth: boolean): CalendarDate =
 
 const getDateClasses = (date: CalendarDate): string[] => {
   return [
-    'w-10 h-10 rounded-lg text-sm font-medium transition-all',
+    'w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-xs sm:text-sm font-medium transition-all touch-manipulation',
     !date.isCurrentMonth && 'text-gray-300',
-    date.isCurrentMonth && !date.isDisabled && 'text-gray-900 hover:bg-blue-50',
+    date.isCurrentMonth && !date.isDisabled && 'text-gray-900 hover:bg-blue-50 active:bg-blue-100',
     date.isDisabled && 'text-gray-300 cursor-not-allowed',
     date.isToday && !date.isSelected && 'border-2 border-blue-500',
-    date.isRangeStart && 'bg-blue-600 text-white hover:bg-blue-700',
-    date.isRangeEnd && 'bg-blue-600 text-white hover:bg-blue-700',
+    date.isRangeStart && 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800',
+    date.isRangeEnd && 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800',
     date.isInRange && !date.isSelected && 'bg-blue-100',
   ].filter(Boolean) as string[]
 }
@@ -428,6 +460,7 @@ const toggleCalendar = async (): Promise<void> => {
       currentMonth.value = new Date(startDate.getFullYear(), startDate.getMonth(), 1)
     }
     
+    checkMobile()
     await nextTick()
     updateCalendarPosition()
   }
@@ -444,7 +477,7 @@ const selectDate = (calendarDate: CalendarDate): void => {
     return
   }
   
-  // If start exists but no end, set end (don't close calendar)
+  // If start exists but no end, set end
   if (tempSelection.value.start && !tempSelection.value.end) {
     if (dateString >= tempSelection.value.start) {
       tempSelection.value.end = dateString
@@ -452,7 +485,6 @@ const selectDate = (calendarDate: CalendarDate): void => {
       // If clicked date is before start, swap them
       tempSelection.value = { start: dateString, end: tempSelection.value.start }
     }
-    // Don't close - let user click Apply
     return
   }
   
@@ -487,7 +519,6 @@ const applySelection = (): void => {
 const handleClickOutside = (event: MouseEvent): void => {
   const target = event.target as Node
   
-  // Check if click is outside both the container and calendar
   if (
     containerRef.value && 
     !containerRef.value.contains(target) &&
@@ -504,16 +535,24 @@ const handleScroll = (): void => {
   }
 }
 
+const handleResize = (): void => {
+  checkMobile()
+  if (isCalendarOpen.value) {
+    updateCalendarPosition()
+  }
+}
+
 /* Lifecycle */
 onMounted(() => {
+  checkMobile()
   document.addEventListener('mousedown', handleClickOutside)
-  window.addEventListener('resize', updateCalendarPosition)
+  window.addEventListener('resize', handleResize)
   window.addEventListener('scroll', handleScroll, true)
 })
 
 onUnmounted(() => {
   document.removeEventListener('mousedown', handleClickOutside)
-  window.removeEventListener('resize', updateCalendarPosition)
+  window.removeEventListener('resize', handleResize)
   window.removeEventListener('scroll', handleScroll, true)
 })
 </script>

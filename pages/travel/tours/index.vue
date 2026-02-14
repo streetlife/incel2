@@ -1,16 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import ToursForm from '../../../components/forms/ToursForm.vue'
 import { MapPin } from 'lucide-vue-next'
+import Pagination from '../../../components/Pagination.vue'
 
 const route = useRoute()
 
 // Search results state
-const searchResults = ref<any[]>([])
+const tourResults = ref<any[]>([])
 const isLoading = ref(false)
 const hasSearched = ref(false)
 const showSearchForm = ref(true)
+const currentPage = ref(1)
+const itemsPerPage = 10
+
+// Paginated results
+const paginatedResults = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return tourResults.value.slice(start, end)
+})
 
 // Popular destinations
 const popularDestinations = [
@@ -82,8 +92,6 @@ const durations = ['Half Day', 'Full Day', '2 Days', '3 Days']
 
 // Function to search tours
 const searchTours = async (params?: any) => {
-  console.log('searchTours called with params:', params)
-  
   isLoading.value = true
   hasSearched.value = true
   
@@ -98,12 +106,10 @@ const searchTours = async (params?: any) => {
     }
   }
 
-  console.log('Search params:', searchParams)
-
   // Simulate API call
   setTimeout(() => {
     // Generate mock results
-    const results = Array.from({ length: 8 }, (_, i) => ({
+    const results = Array.from({ length: 50 }, (_, i) => ({
       id: i + 1,
       name: `${searchParams.city || 'Dubai'} ${tourTypes[Math.floor(Math.random() * tourTypes.length)]}`,
       city: searchParams.city || 'Dubai',
@@ -119,12 +125,11 @@ const searchTours = async (params?: any) => {
       availableSpots: Math.floor(Math.random() * 15) + 5
     }))
     
-    console.log('Generated results:', results)
-    searchResults.value = results
+    tourResults.value = results
     isLoading.value = false
     
     // Scroll to results
-    if (searchResults.value.length > 0) {
+    if (tourResults.value.length > 0) {
       setTimeout(() => {
         const resultsElement = document.getElementById('search-results')
         console.log('Scrolling to results element:', resultsElement)
@@ -153,8 +158,12 @@ const toggleSearchForm = () => {
 
 // Handle search from ToursForm
 const handleTourSearch = (searchData: any) => {
-  console.log('handleTourSearch received:', searchData)
   searchTours(searchData)
+}
+
+// Handle page change
+const handlePageChange = (page: number) => {
+  currentPage.value = page
 }
 
 // Scroll reveal animation
@@ -251,10 +260,10 @@ const formatPrice = (price: number) => {
         </div>
 
         <!-- Results Header -->
-        <div v-else-if="searchResults.length > 0" class="mb-8">
+        <div v-else-if="tourResults.length > 0" class="mb-8">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
-              Available Tours ({{ searchResults.length }})
+              Available Tours ({{ tourResults.length }})
             </h2>
             <div class="flex gap-2">
               <select class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900">
@@ -266,14 +275,14 @@ const formatPrice = (price: number) => {
             </div>
           </div>
           <p class="text-gray-600">
-            Showing tours in {{ searchResults[0]?.city || 'Dubai' }}, {{ searchResults[0]?.country || 'UAE' }}
+            Showing tours in {{ paginatedResults[0]?.city || 'Dubai' }}, {{ paginatedResults[0]?.country || 'UAE' }}
           </p>
         </div>
 
         <!-- Results Grid -->
-        <div v-if="!isLoading && searchResults.length > 0" class="grid gap-6">
+        <div v-if="!isLoading && paginatedResults.length > 0" class="grid gap-6">
           <div 
-            v-for="(tour, index) in searchResults" 
+            v-for="(tour, index) in paginatedResults" 
             :key="tour.id"
             class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden"
             :style="{ transitionDelay: `${index * 50}ms` }"
@@ -346,8 +355,17 @@ const formatPrice = (price: number) => {
           </div>
         </div>
 
+        <!-- Pagination -->
+        <Pagination
+          v-if="!isLoading && tourResults.length > 0"
+          :total-items="tourResults.length"
+          :items-per-page="itemsPerPage"
+          :current-page="currentPage"
+          @page-change="handlePageChange"
+        />
+
         <!-- No Results -->
-        <div v-if="!isLoading && searchResults.length === 0 && hasSearched" class="text-center py-20 reveal">
+        <div v-if="!isLoading && tourResults.length === 0 && hasSearched" class="text-center py-20 reveal">
           <div class="text-6xl mb-4">🗺️</div>
           <h3 class="text-2xl font-bold text-gray-900 mb-2">No Tours Found</h3>
           <p class="text-gray-600 mb-6">

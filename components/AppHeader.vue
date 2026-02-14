@@ -224,15 +224,11 @@ const toggleMobileDropdown = (name: string) => {
 }
 
 onMounted(() => {
-  if (process.client) {
-    window.addEventListener('scroll', handleScroll)
-  }
+  window.addEventListener('scroll', handleScroll)
 })
 
 onUnmounted(() => {
-  if (process.client) {
-    window.removeEventListener('scroll', handleScroll)
-  }
+  window.removeEventListener('scroll', handleScroll)
 })
 </script>
 

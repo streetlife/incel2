@@ -11,15 +11,15 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#1a73e8',
+          DEFAULT: '#0076ad',
           dark: '#0d47a1',
-          light: '#4285f4'
+          light: '#0076ad'
         },
         accent: {
           DEFAULT: '#ff6b35',
           dark: '#e85d2c',
           light: '#ff8659'
-        }
+        },
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],

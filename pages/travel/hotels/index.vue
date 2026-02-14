@@ -1,16 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import HotelsForm from '../../../components/forms/HotelsForm.vue'
 import { Building2 } from 'lucide-vue-next'
+import Pagination from '../../../components/Pagination.vue'
 
 const route = useRoute()
 
 // Search results state
-const searchResults = ref<any[]>([])
+const hotelResults = ref<any[]>([])
 const isLoading = ref(false)
 const hasSearched = ref(false)
 const showSearchForm = ref(true)
+const currentPage = ref(1)
+const itemsPerPage = 10
+
+// Paginated results
+const paginatedResults = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return hotelResults.value.slice(start, end)
+})
 
 // Popular destinations
 const popularDestinations = [
@@ -82,8 +92,6 @@ const hotelTypes = ['Hotel', 'Resort', 'Apartment', 'Villa', 'Guesthouse']
 
 // Function to search hotels
 const searchHotels = async (params?: any) => {
-  console.log('searchHotels called with params:', params)
-  
   isLoading.value = true
   hasSearched.value = true
   
@@ -99,12 +107,10 @@ const searchHotels = async (params?: any) => {
     }
   }
 
-  console.log('Search params:', searchParams)
-
   // Simulate API call
   setTimeout(() => {
     // Generate mock results
-    const results = Array.from({ length: 8 }, (_, i) => ({
+    const results = Array.from({ length: 50 }, (_, i) => ({
       id: i + 1,
       name: `${hotelNames[Math.floor(Math.random() * hotelNames.length)]} ${hotelTypes[Math.floor(Math.random() * hotelTypes.length)]}`,
       city: searchParams.city || 'Dubai',
@@ -118,12 +124,11 @@ const searchHotels = async (params?: any) => {
       checkOut: searchParams.checkInEnd
     }))
     
-    console.log('Generated results:', results)
-    searchResults.value = results
+    hotelResults.value = results
     isLoading.value = false
     
     // Scroll to results
-    if (searchResults.value.length > 0) {
+    if (hotelResults.value.length > 0) {
       setTimeout(() => {
         const resultsElement = document.getElementById('search-results')
         console.log('Scrolling to results element:', resultsElement)
@@ -131,6 +136,11 @@ const searchHotels = async (params?: any) => {
       }, 100)
     }
   }, 1500)
+}
+
+// Handle page change
+const handlePageChange = (page: number) => {
+  currentPage.value = page
 }
 
 // Watch for route query changes
@@ -259,10 +269,10 @@ const calculateNights = (checkIn: string, checkOut: string) => {
         </div>
 
         <!-- Results Header -->
-        <div v-else-if="searchResults.length > 0" class="mb-8">
+        <div v-else-if="hotelResults.length > 0" class="mb-8">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
-              Available Hotels ({{ searchResults.length }})
+              Available Hotels ({{ hotelResults.length }})
             </h2>
             <div class="flex gap-2">
               <select class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900">
@@ -274,14 +284,14 @@ const calculateNights = (checkIn: string, checkOut: string) => {
             </div>
           </div>
           <p class="text-gray-600">
-            Showing hotels in {{ searchResults[0]?.city || 'Dubai' }}, {{ searchResults[0]?.country || 'UAE' }}
+            Showing hotels in {{ paginatedResults[0]?.city || 'Dubai' }}, {{ paginatedResults[0]?.country || 'UAE' }}
           </p>
         </div>
 
         <!-- Results Grid -->
-        <div v-if="!isLoading && searchResults.length > 0" class="grid gap-6">
+        <div v-if="!isLoading && paginatedResults.length > 0" class="grid gap-6">
           <div 
-            v-for="(hotel, index) in searchResults" 
+            v-for="(hotel, index) in paginatedResults" 
             :key="hotel.id"
             class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden"
             :style="{ transitionDelay: `${index * 50}ms` }"
@@ -348,8 +358,17 @@ const calculateNights = (checkIn: string, checkOut: string) => {
           </div>
         </div>
 
+        <!-- Pagination -->
+        <Pagination
+          v-if="!isLoading && hotelResults.length > 0"
+          :total-items="hotelResults.length"
+          :items-per-page="itemsPerPage"
+          :current-page="currentPage"
+          @page-change="handlePageChange"
+        />
+
         <!-- No Results -->
-        <div v-if="!isLoading && searchResults.length === 0 && hasSearched" class="text-center py-20 reveal">
+        <div v-if="!isLoading && hotelResults.length === 0 && hasSearched" class="text-center py-20 reveal">
           <div class="text-6xl mb-4">🏨</div>
           <h3 class="text-2xl font-bold text-gray-900 mb-2">No Hotels Found</h3>
           <p class="text-gray-600 mb-6">

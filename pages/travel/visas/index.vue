@@ -1,16 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import VisaForm from '../../../components/forms/VisaForm.vue'
 import { FileText } from 'lucide-vue-next'
+import Pagination from '../../../components/Pagination.vue'
 
 const route = useRoute()
 
 // Search results state
-const searchResults = ref<any[]>([])
+const visaResults = ref<any[]>([])
 const isLoading = ref(false)
 const hasSearched = ref(false)
 const showSearchForm = ref(true)
+const currentPage = ref(1)
+const itemsPerPage = 10
+
+// Paginated results
+const paginatedResults = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return visaResults.value.slice(start, end)
+})
 
 // Popular visa destinations
 const popularDestinations = [
@@ -83,8 +93,6 @@ const entryTypes = ['Single Entry', 'Multiple Entry']
 
 // Function to search visas
 const searchVisas = async (params?: any) => {
-  console.log('searchVisas called with params:', params)
-  
   isLoading.value = true
   hasSearched.value = true
   
@@ -98,12 +106,10 @@ const searchVisas = async (params?: any) => {
     }
   }
 
-  console.log('Search params:', searchParams)
-
   // Simulate API call
   setTimeout(() => {
     // Generate mock results
-    const results = Array.from({ length: 6 }, (_, i) => ({
+    const results = Array.from({ length: 30 }, (_, i) => ({
       id: i + 1,
       country: searchParams.country || 'United Arab Emirates',
       nationality: searchParams.nationality || 'Nigeria',
@@ -116,15 +122,13 @@ const searchVisas = async (params?: any) => {
       success_rate: Math.floor(Math.random() * 20) + 80
     }))
     
-    console.log('Generated results:', results)
-    searchResults.value = results
+    visaResults.value = results
     isLoading.value = false
     
     // Scroll to results
-    if (searchResults.value.length > 0) {
+    if (visaResults.value.length > 0) {
       setTimeout(() => {
         const resultsElement = document.getElementById('search-results')
-        console.log('Scrolling to results element:', resultsElement)
         resultsElement?.scrollIntoView({ behavior: 'smooth' })
       }, 100)
     }
@@ -135,7 +139,6 @@ const searchVisas = async (params?: any) => {
 watch(
   () => route.query,
   (newQuery) => {
-    console.log('Route query changed:', newQuery)
     if (newQuery.country && newQuery.nationality) {
       searchVisas()
     }
@@ -150,8 +153,12 @@ const toggleSearchForm = () => {
 
 // Handle search from VisaForm
 const handleVisaSearch = (searchData: any) => {
-  console.log('handleVisaSearch received:', searchData)
   searchVisas(searchData)
+}
+
+// Handle page change
+const handlePageChange = (page: number) => {
+  currentPage.value = page
 }
 
 // Scroll reveal animation
@@ -248,10 +255,10 @@ const formatPrice = (price: number) => {
         </div>
 
         <!-- Results Header -->
-        <div v-else-if="searchResults.length > 0" class="mb-8">
+        <div v-else-if="visaResults.length > 0" class="mb-8">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
-              Available Visa Services ({{ searchResults.length }})
+              Available Visa Services ({{ visaResults.length }})
             </h2>
             <div class="flex gap-2">
               <select class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900">
@@ -263,14 +270,14 @@ const formatPrice = (price: number) => {
             </div>
           </div>
           <p class="text-gray-600">
-            Showing visa services for {{ searchResults[0]?.country || 'United Arab Emirates' }}
+            Showing visa services for {{ paginatedResults[0]?.country || 'United Arab Emirates' }}
           </p>
         </div>
 
         <!-- Results Grid -->
-        <div v-if="!isLoading && searchResults.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div v-if="!isLoading && paginatedResults.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div 
-            v-for="(visa, index) in searchResults" 
+            v-for="(visa, index) in paginatedResults" 
             :key="visa.id"
             class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6"
             :style="{ transitionDelay: `${index * 50}ms` }"
@@ -329,8 +336,17 @@ const formatPrice = (price: number) => {
           </div>
         </div>
 
+        <!-- Pagination -->
+        <Pagination
+          v-if="!isLoading && visaResults.length > 0"
+          :total-items="visaResults.length"
+          :items-per-page="itemsPerPage"
+          :current-page="currentPage"
+          @page-change="handlePageChange"
+        />
+
         <!-- No Results -->
-        <div v-if="!isLoading && searchResults.length === 0 && hasSearched" class="text-center py-20 reveal">
+        <div v-if="!isLoading && visaResults.length === 0 && hasSearched" class="text-center py-20 reveal">
           <div class="text-6xl mb-4">📄</div>
           <h3 class="text-2xl font-bold text-gray-900 mb-2">No Visa Services Found</h3>
           <p class="text-gray-600 mb-6">

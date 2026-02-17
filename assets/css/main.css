@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply font-sans text-gray-900 antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg;
+  }
+  
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-50 text-primary font-semibold py-3 px-8 rounded-full transition-all duration-300 border-2 border-primary;
+  }
+  
+  .btn-accent {
+    @apply bg-accent hover:bg-accent-dark text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105;
+  }
+  
+  .card {
+    @apply bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2;
+  }
+  
+  .section-title {
+    @apply text-4xl md:text-5xl font-bold text-gray-900 mb-4;
+  }
+  
+  .section-subtitle {
+    @apply text-lg md:text-xl text-gray-600 mb-12;
+  }
+  
+  .badge {
+    @apply inline-block px-4 py-1 rounded-full text-sm font-semibold;
+  }
+  
+  .badge-primary {
+    @apply badge bg-primary/10 text-primary;
+  }
+  
+  .badge-accent {
+    @apply badge bg-accent/10 text-accent;
+  }
+  
+  .badge-success {
+    @apply badge bg-green-100 text-green-700;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+  
+  .bg-gradient-primary {
+    @apply bg-gradient-to-br from-primary to-primary-dark;
+  }
+  
+  .bg-gradient-accent {
+    @apply bg-gradient-to-br from-accent to-accent-dark;
+  }
+  
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+  
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+  
+  .animation-delay-600 {
+    animation-delay: 600ms;
+  }
+}
+
+/* Swiper custom styles */
+.swiper-button-next,
+.swiper-button-prev {
+  @apply text-white bg-primary/80 hover:bg-primary w-12 h-12 rounded-full;
+}
+
+.swiper-button-next:after,
+.swiper-button-prev:after {
+  @apply text-sm font-bold;
+}
+
+.swiper-pagination-bullet {
+  @apply bg-white opacity-50;
+}
+
+.swiper-pagination-bullet-active {
+  @apply opacity-100 bg-primary;
+}
+
+/* Video overlay */
+.video-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.4),
+    rgba(0, 0, 0, 0.6)
+  );
+}
+
+/* Smooth scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s ease-out;
+}
+
+.reveal.active {
+  opacity: 1;
+  transform: translateY(0);
+}

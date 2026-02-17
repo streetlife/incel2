@@ -17,7 +17,7 @@
       @click="toggleDropdown"
       :disabled="disabled"
       :class="[
-        'w-full px-4 py-3 border rounded-lg focus:border-transparent text-left flex items-center justify-between bg-white',
+        'w-full px-4 py-3 border rounded-lg text-left flex items-center justify-between bg-white',
         disabled && 'bg-gray-100 cursor-not-allowed',
         hasError 
           ? 'border-red-500 focus:ring-red-500' 

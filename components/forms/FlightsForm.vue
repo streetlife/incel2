@@ -467,7 +467,7 @@ const submit = async () => {
       v-for="type in [
         { value: 'round-trip', label: 'Round-trip' },
         { value: 'one-way', label: 'One way' },
-        { value: 'multi-city', label: 'Multi-city' }
+        // { value: 'multi-city', label: 'Multi-city' }
       ]"
       :key="type.value"
       class="flex items-center space-x-2 cursor-pointer"

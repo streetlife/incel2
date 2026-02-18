@@ -28,7 +28,18 @@
         <!-- Company Info -->
         <div>
           <div class="text-2xl font-bold text-white mb-4">
-            <span class="text-primary">Incel</span> Tourism
+            <NuxtLink
+              to="/" 
+              class="flex items-center space-x-2 z-50 relative transition-opacity duration-300"
+            >
+              <div class="text-2xl font-bold">
+                <img 
+                    src="https://ik.imagekit.io/7ptk19utb/incel_tourism_logo_wide.png" 
+                    class="w-auto h-12 object-contain"
+                    alt="Incel Tourism Logo"
+                />
+              </div>
+            </NuxtLink>
           </div>
           <p class="text-gray-400 text-sm mb-4">
             UAE-licensed Destination Management Company serving travelers across Sub-Saharan Africa with expert visa assistance and unforgettable experiences.

@@ -1,5 +1,5 @@
 <template>
-  <section class="relative h-screen w-full overflow-hidden">
+  <section class="relative h-screen w-full overflow-hidden pb-5">
     <!-- Video Background -->
     <div class="absolute inset-0 w-full h-full">
       <video 
@@ -11,7 +11,7 @@
         aria-describedby="dubai-video-desc"
       >
         <source 
-          src="https://ik.imagekit.io/7ptk19utb/dubai.mp4" 
+          src="https://ik.imagekit.io/7ptk19utb/istockphoto-2171202163-640_adpp_is.mp4" 
           type="video/mp4"
         />
 
@@ -35,10 +35,7 @@
     
     <!-- Hero Content -->
     <div class="relative z-20 h-full flex flex-col items-center justify-center text-center px-4 max-w-7xl mx-auto">
-      <p class="px-6 py-2 mb-5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-white/90 text-sm tracking-[0.2em] uppercase font-light animate-fade-in">
-        Redefining Luxury Travel
-      </p>
-      <h1 class="text-6xl md:text-8xl lg:text-[10rem] font-bold text-white tracking-tighter leading-[0.9] mix-blend-overlay opacity-90">
+      <h1 class="text-5xl md:text-7xl lg:text-[8rem] font-bold text-white tracking-tighter leading-[0.9] mix-blend-overlay opacity-90">
         DISCOVER
         <br />
         <span class="text-transparent bg-clip-text bg-gradient-to-r from-neutral-200 to-neutral-500">THE WORLD</span>
@@ -51,13 +48,6 @@
       >
         Book Now
       </button>
-    </div>
-    
-    <!-- Scroll Indicator -->
-    <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 animate-bounce">
-      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-      </svg>
     </div>
   </section>
 </template>

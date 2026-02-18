@@ -15,11 +15,7 @@
           </button>
         </div>
       </section>
-      <BlackFridayDeals />
-      <ServicesSection />
-      <PopularDestinations />
       <WhyChooseUs />
-      <LocalTours />
       <WhatsAppContact />
     </main>
   </div>

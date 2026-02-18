@@ -144,8 +144,7 @@ onMounted(() => {
 
     <!-- ── Hero + search form ──────────────────────────────────────────────── -->
     <section
-      class="relative px-6 bg-cover bg-center bg-no-repeat transition-all duration-500"
-      :class="hasSearched ? 'py-12' : 'py-24'"
+      class="relative px-6 bg-cover bg-center bg-no-repeat transition-all duration-500 pt-36 pb-24"
       style="background-image: url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1600')"
     >
       <div class="absolute inset-0 bg-black/40"></div>

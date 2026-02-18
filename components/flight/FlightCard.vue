@@ -156,13 +156,13 @@ const cabinLabel = computed(() => fare.value.cabin.replace('_', ' ').toLowerCase
           +{{ fmtPrice(bags.amount) }} bags
         </div>
         <button
-          class="mt-1 w-full px-5 py-2.5 bg-blue-700 hover:bg-blue-800 active:scale-95 text-white text-sm font-semibold rounded-xl transition-all duration-150 cursor-pointer border-none"
+          class="mt-1 w-full px-5 py-2.5 bg-primary hover:bg-primary active:scale-95 text-white text-sm font-semibold rounded-xl transition-all duration-150 cursor-pointer border-none"
           @click.stop="emit('book', flight.id)"
         >
           Book Now
         </button>
         <button
-          class="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer bg-transparent border-none p-0 font-[inherit]"
+          class="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary transition-colors cursor-pointer bg-transparent border-none p-0 font-[inherit]"
           @click="emit('toggle')"
         >
           {{ expanded ? 'Hide details' : 'View details' }}

@@ -210,8 +210,7 @@ const calculateNights = (checkIn: string, checkOut: string) => {
   <div class="min-h-screen">
     <!-- Hero Section with Search Form -->
     <section 
-      class="relative py-24 px-6 bg-cover bg-center bg-no-repeat transition-all duration-500"
-      :class="{ 'py-12': hasSearched }"
+      class="relative pt-36 pb-24 px-6 bg-cover bg-center bg-no-repeat transition-all duration-500"
       style="background-image: url('https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600')"
     >
       <!-- Overlay -->

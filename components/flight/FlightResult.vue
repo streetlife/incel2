@@ -78,17 +78,24 @@ const sortedOthers = computed(() => [...otherFlights.value].sort((a, b) => {
 }))
 
 // ── Pagination
-const currentPage = ref(1)
 const itemsPerPage = 10
+const currentPage = ref(parseInt(route.query.page as string) || 1)
 
-// Paginated results
-const paginatedResults = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return sortedOthers.value.slice(start, end)
+// Keep currentPage in sync with URL (handles back/forward navigation too)
+watch(() => route.query.page, (page) => {
+  currentPage.value = parseInt(page as string) || 1
 })
 
-// Handle page change
+// Reset to page 1 when filters or sort change
+watch([filters, sortBy], () => {
+  currentPage.value = 1
+})
+
+const paginatedResults = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return sortedOthers.value.slice(start, start + itemsPerPage)
+})
+
 const handlePageChange = (page: number) => {
   currentPage.value = page
 }
@@ -111,7 +118,7 @@ const handlePageChange = (page: number) => {
         </span>
         <button
           v-if="hasFilters"
-          class="text-xs text-blue-600 underline font-medium bg-transparent border-none cursor-pointer p-0"
+          class="text-xs text-primary underline font-medium bg-transparent border-none cursor-pointer p-0"
           @click="clearFilters"
         >
           Clear all
@@ -127,7 +134,7 @@ const handlePageChange = (page: number) => {
         >
           <input
             type="checkbox"
-            class="w-3.5 h-3.5 accent-blue-600 cursor-pointer"
+            class="w-3.5 h-3.5 accent-primary cursor-pointer"
             :checked="filters.airlines.includes(code)"
             @change="toggleFilter(filters.airlines, code)"
           />
@@ -145,7 +152,7 @@ const handlePageChange = (page: number) => {
         >
           <input
             type="checkbox"
-            class="w-3.5 h-3.5 accent-blue-600 cursor-pointer"
+            class="w-3.5 h-3.5 accent-primary cursor-pointer"
             :checked="filters.stops.includes(s)"
             @change="toggleFilter(filters.stops, s)"
           />
@@ -162,7 +169,7 @@ const handlePageChange = (page: number) => {
         >
           <input
             type="checkbox"
-            class="w-3.5 h-3.5 accent-blue-600 cursor-pointer"
+            class="w-3.5 h-3.5 accent-primary cursor-pointer"
             :checked="filters.cabin.includes(c)"
             @change="toggleFilter(filters.cabin, c)"
           />
@@ -184,12 +191,12 @@ const handlePageChange = (page: number) => {
           <span class="text-xs text-slate-400 font-medium mr-1">Sort:</span>
           <button
             class="text-xs font-medium px-3.5 py-1.5 rounded-lg transition-all cursor-pointer border border-slate-200"
-            :class="sortBy === 'price' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 hover:border-slate-400'"
+            :class="sortBy === 'price' ? 'bg-primary text-white border-primary' : 'bg-slate-50 text-slate-500 hover:border-slate-400'"
             @click="sortBy = 'price'"
           >Cheapest</button>
           <button
             class="text-xs font-medium px-3.5 py-1.5 rounded-lg transition-all cursor-pointer border border-slate-200"
-            :class="sortBy === 'duration' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 hover:border-slate-400'"
+            :class="sortBy === 'duration' ? 'bg-primary text-white border-primary' : 'bg-slate-50 text-slate-500 hover:border-slate-400'"
             @click="sortBy = 'duration'"
           >Fastest</button>
         </div>
@@ -200,7 +207,7 @@ const handlePageChange = (page: number) => {
 
         <!-- Recommended -->
         <div v-if="recommended" class="flex flex-col min-w-0">
-          <div class="self-start flex items-center gap-1.5 text-xs font-bold bg-blue-700 text-white px-3 py-1.5 rounded-t-lg">
+          <div class="self-start flex items-center gap-1.5 text-xs font-bold bg-primary text-white px-3 py-1.5 rounded-t-lg">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
@@ -269,7 +276,7 @@ const handlePageChange = (page: number) => {
         <h3 class="text-lg font-bold text-slate-800">No flights found</h3>
         <p class="text-sm text-slate-500">Try adjusting your filters to see more options.</p>
         <button
-          class="mt-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl border-none cursor-pointer transition-colors"
+          class="mt-2 px-6 py-2.5 bg-primary hover:bg-primary text-white text-sm font-semibold rounded-xl border-none cursor-pointer transition-colors"
           @click="clearFilters"
         >
           Clear all filters

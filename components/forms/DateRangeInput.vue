@@ -145,7 +145,7 @@
               type="button"
               @click="applySelection"
               :disabled="!isValidSelection"
-              class="flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition-colors touch-manipulation"
+              class="flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm font-medium text-white bg-primary hover:bg-primary disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition-colors touch-manipulation"
             >
               Apply
             </button>
@@ -261,7 +261,7 @@ const canGoPrevious = computed(() => {
 })
 
 const inputClasses = computed(() => [
-  'w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors cursor-pointer text-sm sm:text-base',
+  'w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors cursor-pointer text-sm sm:text-base',
   props.disabled && 'bg-gray-100 cursor-not-allowed opacity-60'
 ])
 
@@ -440,12 +440,12 @@ const getDateClasses = (date: CalendarDate): string[] => {
   return [
     'w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-xs sm:text-sm font-medium transition-all touch-manipulation',
     !date.isCurrentMonth && 'text-gray-300',
-    date.isCurrentMonth && !date.isDisabled && 'text-gray-900 hover:bg-blue-50 active:bg-blue-100',
+    date.isCurrentMonth && !date.isDisabled && 'text-gray-900 hover:bg-primary active:bg-primary',
     date.isDisabled && 'text-gray-300 cursor-not-allowed',
-    date.isToday && !date.isSelected && 'border-2 border-blue-500',
-    date.isRangeStart && 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800',
-    date.isRangeEnd && 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800',
-    date.isInRange && !date.isSelected && 'bg-blue-100',
+    date.isToday && !date.isSelected && 'border-2 border-primary',
+    date.isRangeStart && 'bg-primary text-white hover:bg-primary active:bg-primary',
+    date.isRangeEnd && 'bg-primary text-white hover:bg-primary active:bg-primary',
+    date.isInRange && !date.isSelected && 'bg-primary',
   ].filter(Boolean) as string[]
 }
 

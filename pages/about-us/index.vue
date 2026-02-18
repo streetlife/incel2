@@ -62,7 +62,7 @@ onMounted(() => {
     <main>
       <!-- Hero Section -->
       <section 
-        class="relative py-32 px-6 text-center bg-cover bg-center bg-no-repeat"
+        class="relative py-44 px-6 text-center bg-cover bg-center bg-no-repeat"
         style="background-image: url('https://images.unsplash.com/photo-1643904736472-8b77e93ca3d7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxEdWJhaSUyMHNreWxpbmUlMjBCdXJqJTIwS2hhbGlmYXxlbnwxfHx8fDE3NjIyODc0OTN8MA&ixlib=rb-4.1.0&q=80&w=1080')"
       >
         <!-- Overlay -->

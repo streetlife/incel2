@@ -535,15 +535,6 @@ interface NavLink {
 const navLinks: NavLink[] = [
   { name: 'Home', path: '/' },
   { name: 'About Us', path: '/about-us' },
-  // { 
-  //   name: 'Travel',
-  //   dropdown: [
-  //     { name: 'Flights', path: '/travel/flights' },
-  //     { name: 'Hotels', path: '/travel/hotels' },
-  //     { name: 'Tours', path: '/travel/tours' },
-  //     { name: 'Visas', path: '/travel/visas' }
-  //   ]
-  // },
   { 
     name: 'Services',
     dropdown: [
@@ -552,16 +543,8 @@ const navLinks: NavLink[] = [
       { name: 'Airport Transfer', path: '/services/airport-transfer' },
       { name: 'Airport Protocol', path: '/services/airport-protocol' },
       { name: 'Tour Guide', path: '/services/tour-guide' },
-      { name: 'Cruises', path: '/services/cruises' }
     ]
   },
-  // { 
-  //   name: 'Visa',
-  //   dropdown: [
-  //     { name: 'UAE Visa', path: '/visa/uae' },
-  //     { name: 'Global Visa', path: '/visa/global' },
-  //   ]
-  // },
   { name: 'Contact', path: '/contact' }
 ]
 

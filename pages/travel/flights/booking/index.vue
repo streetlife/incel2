@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useBookingStore } from '../../../composables/useBookingStore'
-import PassengerForm from '../../../components/flight/PassengerForm.vue'
-import BookingReview from '../../../components/flight/BookingReview.vue'
-import PaymentForm from '../../../components/flight/PaymentForm.vue'
-import BookingConfirmation from '../../../components/flight/BookingConfirmation.vue'
-import BookingSummary from '../../../components/flight/BookingSummary.vue'
+import { useBookingStore } from '../../../../composables/useBookingStore'
+import PassengerForm from '../../../../components/flight/PassengerForm.vue'
+import BookingReview from '../../../../components/flight/BookingReview.vue'
+import PaymentForm from '../../../../components/flight/PaymentForm.vue'
+import BookingConfirmation from '../../../../components/flight/BookingConfirmation.vue'
+import BookingSummary from '../../../../components/flight/BookingSummary.vue'
 
 const route  = useRoute()
 const router = useRouter()

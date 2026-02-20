@@ -102,7 +102,7 @@
               :to="link.path"
               :class="[
                 'font-medium transition-colors duration-200',
-                scrolled ? 'text-primary hover:text-gray-200' : 'text-white hover:text-gray-200'
+                scrolled || !isMainPage ? 'text-primary hover:text-primary/40' : 'text-white hover:text-primary/40'
               ]"
             >
               {{ link.name }}
@@ -118,7 +118,7 @@
               <button
                 :class="[
                   'font-medium transition-colors duration-200 flex items-center gap-1',
-                  scrolled ? 'text-primary hover:text-gray-200' : 'text-white hover:text-gray-200'
+                  scrolled || !isMainPage ? 'text-primary hover:text-primary/40' : 'text-white hover:text-primary/40'
                 ]"
               >
                 {{ link.name }}
@@ -164,20 +164,23 @@
             <button
               :class="[
                 'flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors duration-200',
-                scrolled ? 'text-white hover:bg-white/10' : 'text-white hover:bg-white/10'
+                scrolled || !isMainPage ? 'text-white hover:bg-white/10' : 'text-white hover:bg-white/10'
               ]"
             >
               <img class="w-8 h-8 object-contain" :src="currencies.find(c => c.code === selectedCurrency)?.flag" alt="">
               <span 
                 :class="[
-                  scrolled ? 'text-primary hover:text-gray-200' : 'text-white hover:text-gray-200'
+                  scrolled || !isMainPage ? 'text-primary hover:text-primary/40' : 'text-white hover:text-primary/40'
                 ]"
               >
                 {{ selectedCurrency }}
               </span>
               <svg 
                 class="w-4 h-4 transition-transform duration-200"
-                :class="{ 'rotate-180': currencyDropdownOpen }"
+                :class="[ 
+                  { 'rotate-180': currencyDropdownOpen },
+                  scrolled || !isMainPage ? 'text-primary hover:text-primary/40' : 'text-white hover:text-primary/40'
+                ]"
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
@@ -224,7 +227,7 @@
           @click="mobileMenuOpen = !mobileMenuOpen"
           class="lg:hidden z-50 relative p-2 rounded-lg transition-colors duration-200"
           :class="scrolled
-            ? 'text-primary hover:text-gray-200'
+            ? 'text-primary hover:text-primary/40'
             : mobileMenuOpen
               ? 'text-gray-800 hover:bg-gray-100'
               : 'text-white hover:bg-white/10'"
@@ -244,7 +247,7 @@
         class="fixed top-0 right-0 h-full w-full sm:w-96 bg-white lg:hidden z-40 overflow-y-auto shadow-2xl"
       >
         <!-- Menu Header -->
-        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+        <div class="flex items-center justify-between p-6 border-b border-primary/hover:text-primary/40">
           <h2 class="text-2xl font-bold text-gray-900">Menu</h2>
           <button 
             @click="mobileMenuOpen = false"
@@ -330,7 +333,7 @@
           </div>
 
           <!-- Bottom Section -->
-          <div class="p-6 space-y-6 border-t border-gray-200">
+          <div class="p-6 space-y-6 border-t border-primary/hover:text-primary/40">
             <!-- Currency Selector (Mobile) -->
             <div class="bg-gray-50 rounded-xl p-4">
               <p class="text-sm font-medium text-gray-700 mb-3">Currency</p>
@@ -385,7 +388,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
 const scrolled = ref(false)
 const mobileMenuOpen = ref(false)
 const openDropdown = ref<string | null>(null)
@@ -555,6 +560,30 @@ const handleScroll = () => {
 const toggleMobileDropdown = (name: string) => {
   mobileOpenDropdown.value = mobileOpenDropdown.value === name ? null : name
 }
+
+// Add this computed property to check if current page is a main/home page
+const isMainPage = computed(() => {
+  const mainPages = [
+    '/',
+    '/about-us',
+    '/contact',
+    '/travel/flights',
+    '/travel/packages',
+    '/travel/hotels',
+    '/travel/tours',
+    '/travel/visas',
+    '/visa',
+    '/services/vacation-packages',
+    '/services/travel-insurance',
+    '/services/airport-transfer',
+    '/services/airport-protocol',
+    '/services/tour-guide',
+    '/privacy-policy',
+    '/faq',
+    '/terms',
+  ]
+  return mainPages.includes(route.path)
+})
 
 onMounted(async () => {
   window.addEventListener('scroll', handleScroll)

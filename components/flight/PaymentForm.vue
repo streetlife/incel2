@@ -3,7 +3,7 @@
 import { ref, computed } from 'vue'
 import { useBookingStore } from '../../composables/useBookingStore'
 
-const emit = defineEmits<{ (e: 'back'): void }>()
+const emit = defineEmits<(e: 'back') => void>()
 const { state, priceBreakdown, fmtNgn } = useBookingStore()
 
 const gateway  = ref<'paystack' | 'flutterwave' | null>(null)
@@ -30,23 +30,23 @@ async function handlePay() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         gateway: gateway.value,
-        amount:  priceBreakdown.value.total, // NGN, in kobo/cents multiply on backend
-        email:   state.contactEmail,
-        phone:   state.contactPhone,
+        amount: priceBreakdown.value.total, // NGN, in kobo/cents multiply on backend
+        email: state.contactEmail,
+        phone: state.contactPhone,
         metadata: {
           bookingReference: state.bookingReference || null,
-          invoiceNumber:    state.invoiceNumber,
-          discountCode:     state.discountCode || null,
-          passengerCount:   state.passengerCount,
-          flightOfferId:    state.offer?.id,
+          invoiceNumber: state.invoiceNumber,
+          discountCode: state.discountCode || null,
+          passengerCount: state.passengerCount,
+          flightOfferId: state.offer?.id,
           passengers: state.passengers.map(p => ({
             firstName: p.firstName,
-            lastName:  p.lastName,
-            passport:  p.passportNumber,
+            lastName: p.lastName,
+            passport: p.passportNumber,
           })),
         },
         // callback URL — backend sets this, but we include desired redirect
-        callbackUrl: `${window.location.origin}/travel/flights/booking/confirm`,
+        callbackUrl: `${globalThis.location.origin}/travel/flights/booking/confirm`,
       }),
     })
 
@@ -60,7 +60,7 @@ async function handlePay() {
     if (!redirectUrl) throw new Error('No payment URL returned from server.')
 
     // Redirect to hosted payment page
-    window.location.href = redirectUrl
+    globalThis.location.href = redirectUrl
 
   } catch (e: any) {
     error.value   = e.message ?? 'Could not connect to payment gateway.'
@@ -228,7 +228,7 @@ async function handlePay() {
     </div>
 
     <p class="text-center text-xs text-slate-400">
-      🔒 Payments are processed by {{ gateway === 'paystack' ? 'Paystack' : gateway === 'flutterwave' ? 'Flutterwave' : 'your chosen gateway' }} · We never store your card details
+      Payments are processed by {{ gateway === 'paystack' ? 'Paystack' : gateway === 'flutterwave' ? 'Flutterwave' : 'your chosen gateway' }} · We never store your card details
     </p>
   </div>
 </template>

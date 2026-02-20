@@ -24,11 +24,11 @@ const CARRIER_COLORS: Record<string,string> = {
   KL:'#00A1DE', AA:'#0078D2', DL:'#E51937', IB:'#C8102E', EI:'#006272',
 }
 
-const seg   = computed(() => offer.value?.itineraries[0].segments[0])
-const itin  = computed(() => offer.value?.itineraries[0])
-const code  = computed(() => seg.value?.carrierCode ?? '')
+const seg = computed(() => offer.value?.itineraries[0].segments[0])
+const itin = computed(() => offer.value?.itineraries[0])
+const code = computed(() => seg.value?.carrierCode ?? '')
 const color = computed(() => CARRIER_COLORS[code.value] ?? '#475569')
-const pb    = priceBreakdown
+const pb = priceBreakdown
 
 const cabinLabel = (c: string) => c.replace('_',' ').toLowerCase().replace(/\b\w/g, l=>l.toUpperCase())
 </script>

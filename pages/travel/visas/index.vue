@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import VisaForm from '../../../components/forms/VisaForm.vue'
 import { FileText } from 'lucide-vue-next'
 import Pagination from '../../../components/Pagination.vue'
 
+const router = useRouter()
 const route = useRoute()
 
 // Search results state
@@ -24,66 +25,20 @@ const paginatedResults = computed(() => {
 
 // Popular visa destinations
 const popularDestinations = [
-  {
-    country: 'United Arab Emirates',
-    image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800',
-    price: 'From ₦45,000',
-    processingTime: '3-5 Days'
-  },
-  {
-    country: 'United Kingdom',
-    image: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800',
-    price: 'From ₦120,000',
-    processingTime: '15-20 Days'
-  },
-  {
-    country: 'United States',
-    image: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800',
-    price: 'From ₦150,000',
-    processingTime: '30-45 Days'
-  },
-  {
-    country: 'Canada',
-    image: 'https://images.unsplash.com/photo-1503614472-8c93d56e92ce?w=800',
-    price: 'From ₦130,000',
-    processingTime: '20-30 Days'
-  },
-  {
-    country: 'Schengen',
-    image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800',
-    price: 'From ₦95,000',
-    processingTime: '10-15 Days'
-  },
-  {
-    country: 'Turkey',
-    image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800',
-    price: 'From ₦35,000',
-    processingTime: '2-3 Days'
-  }
+  { country: 'United Arab Emirates', image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800', price: 'From ₦45,000', processingTime: '3-5 Days' },
+  { country: 'United Kingdom', image: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800', price: 'From ₦120,000', processingTime: '15-20 Days' },
+  { country: 'United States', image: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800', price: 'From ₦150,000', processingTime: '30-45 Days' },
+  { country: 'Canada', image: 'https://images.unsplash.com/photo-1503614472-8c93d56e92ce?w=800', price: 'From ₦130,000', processingTime: '20-30 Days' },
+  { country: 'Schengen', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800', price: 'From ₦95,000', processingTime: '10-15 Days' },
+  { country: 'Turkey', image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800', price: 'From ₦35,000', processingTime: '2-3 Days' },
 ]
 
 // Benefits
 const benefits = [
-  {
-    icon: '✓',
-    title: 'Expert Assistance',
-    description: 'Professional guidance through the entire visa process'
-  },
-  {
-    icon: '✓',
-    title: 'Fast Processing',
-    description: 'Quick turnaround times for your visa applications'
-  },
-  {
-    icon: '✓',
-    title: 'Document Support',
-    description: 'Help with document preparation and verification'
-  },
-  {
-    icon: '✓',
-    title: 'Track Application',
-    description: 'Real-time updates on your visa application status'
-  }
+  { icon: '✓', title: 'Expert Assistance', description: 'Professional guidance through the entire visa process' },
+  { icon: '✓', title: 'Fast Processing', description: 'Quick turnaround times for your visa applications' },
+  { icon: '✓', title: 'Document Support', description: 'Help with document preparation and verification' },
+  { icon: '✓', title: 'Track Application', description: 'Real-time updates on your visa application status' },
 ]
 
 // Visa types
@@ -91,118 +46,126 @@ const visaTypes = ['Tourist Visa', 'Business Visa', 'Transit Visa', 'Student Vis
 const validityPeriods = ['30 Days', '60 Days', '90 Days', '180 Days', '1 Year']
 const entryTypes = ['Single Entry', 'Multiple Entry']
 
-// Function to search visas
+// ── CHANGE 1: Push search params to the URL on every search ──────────────────
 const searchVisas = async (params?: any) => {
   isLoading.value = true
   hasSearched.value = true
-  
-  // Get search params
+  currentPage.value = 1
+
   const searchParams = params || {
-    country: route.query.country,
-    nationality: route.query.nationality,
+    country: route.query.country as string,
+    nationality: route.query.nationality as string,
     persons: {
       adults: Number.parseInt(route.query.adults as string) || 1,
-      children: Number.parseInt(route.query.children as string) || 0
-    }
+      children: Number.parseInt(route.query.children as string) || 0,
+    },
   }
 
-  // Simulate API call
+  // Reflect every search in the URL so it is bookmarkable and shareable
+  router.replace({
+    query: {
+      country:     searchParams.country,
+      nationality: searchParams.nationality,
+      adults:      String(searchParams.persons?.adults   ?? searchParams.adults   ?? 1),
+      children:    String(searchParams.persons?.children ?? searchParams.children ?? 0),
+    },
+  })
+
+  // TODO: replace with real API → GET /api/visa/search?country=&nationality=&adults=&children=
   setTimeout(() => {
-    // Generate mock results
-    const results = Array.from({ length: 30 }, (_, i) => ({
+    visaResults.value = Array.from({ length: 30 }, (_, i) => ({
       id: i + 1,
       country: searchParams.country || 'United Arab Emirates',
-      nationality: searchParams.nationality || 'Nigeria',
-      visaType: visaTypes[Math.floor(Math.random() * visaTypes.length)],
-      validity: validityPeriods[Math.floor(Math.random() * validityPeriods.length)],
-      entryType: entryTypes[Math.floor(Math.random() * entryTypes.length)],
-      processingTime: `${Math.floor(Math.random() * 20) + 3}-${Math.floor(Math.random() * 10) + 15} Days`,
+      nationality: searchParams.nationality || 'Nigerian',
+      visaType: visaTypes[i % visaTypes.length],
+      validity: validityPeriods[i % validityPeriods.length],
+      entryType: entryTypes[i % 2],
+      processingTime: `${(i % 5) + 3}-${(i % 5) + 8} Days`,
       price: Math.floor(Math.random() * 100000) + 30000,
-      requirements: ['Valid Passport', 'Passport Photos', 'Bank Statement', 'Flight Booking'].slice(0, Math.floor(Math.random() * 2) + 2),
-      success_rate: Math.floor(Math.random() * 20) + 80
+      requirements: ['Valid Passport', 'Passport Photos', 'Bank Statement', 'Flight Booking'].slice(0, (i % 2) + 2),
+      success_rate: Math.floor(Math.random() * 20) + 80,
     }))
-    
-    visaResults.value = results
     isLoading.value = false
-    
-    // Scroll to results
+
     if (visaResults.value.length > 0) {
       setTimeout(() => {
-        const resultsElement = document.getElementById('search-results')
-        resultsElement?.scrollIntoView({ behavior: 'smooth' })
+        document.getElementById('search-results')?.scrollIntoView({ behavior: 'smooth' })
       }, 100)
     }
   }, 1500)
 }
 
-// Watch for route query changes
+// ── CHANGE 2: Pass full visa details in the URL instead of sessionStorage ─────
+// VisaBookingPage reads these query params directly — no sessionStorage needed.
+function applyNow(visa: any) {
+  router.push({
+    path: '/travel/visas/booking',
+    query: {
+      // Search context (so the booking page knows how many applicants)
+      country:        visa.country,
+      nationality:    visa.nationality,
+      adults:         route.query.adults   || '1',
+      children:       route.query.children || '0',
+      // Selected visa service details
+      visaId:         String(visa.id),
+      visaType:       visa.visaType,
+      validity:       visa.validity,
+      entryType:      visa.entryType,
+      processingTime: visa.processingTime,
+      price:          String(visa.price),
+      successRate:    String(visa.success_rate),
+      requirements:   visa.requirements.join(','),
+      step:           '1',
+    },
+  })
+}
+
+// Re-run search when URL query changes (browser back/fwd, or direct URL visit)
 watch(
   () => route.query,
   (newQuery) => {
     if (newQuery.country && newQuery.nationality) {
-      searchVisas()
+      hasSearched.value = true
+      // Only fetch if results are empty (avoids double-fetching on form submit)
+      if (visaResults.value.length === 0) {
+        searchVisas()
+      }
     }
   },
   { immediate: true }
 )
 
-// Toggle search form
-const toggleSearchForm = () => {
-  showSearchForm.value = !showSearchForm.value
-}
-
-// Handle search from VisaForm
-const handleVisaSearch = (searchData: any) => {
-  searchVisas(searchData)
-}
-
-// Handle page change
-const handlePageChange = (page: number) => {
-  currentPage.value = page
-}
+const toggleSearchForm = () => { showSearchForm.value = !showSearchForm.value }
+const handleVisaSearch = (searchData: any) => { searchVisas(searchData) }
+const handlePageChange = (page: number) => { currentPage.value = page }
 
 // Scroll reveal animation
 onMounted(() => {
-  const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
-  }
-
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
+  const observer = new IntersectionObserver(
+    (entries) => entries.forEach(entry => {
       if (entry.isIntersecting) {
         entry.target.classList.add('reveal-visible')
         observer.unobserve(entry.target)
       }
-    })
-  }, observerOptions)
-
-  document.querySelectorAll('.reveal').forEach(el => {
-    observer.observe(el)
-  })
+    }),
+    { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+  )
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el))
 })
 
-// Format currency
-const formatPrice = (price: number) => {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0
-  }).format(price)
-}
+const formatPrice = (price: number) =>
+  new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(price)
 </script>
 
 <template>
   <div class="min-h-screen">
     <!-- Hero Section with Search Form -->
-    <section 
+    <section
       class="relative pt-36 pb-24 px-6 bg-cover bg-center bg-no-repeat transition-all duration-500"
       style="background-image: url('https://images.unsplash.com/photo-1606768666853-403c90a981ad?w=1600')"
     >
-      <!-- Overlay -->
       <div class="absolute inset-0 bg-black/50"></div>
-      
-      <!-- Content -->
+
       <div class="relative z-10 max-w-7xl mx-auto">
         <div class="text-center mb-12 reveal transition-all duration-500" :class="{ 'mb-6': hasSearched }">
           <h1 class="text-4xl md:text-5xl font-bold mb-4 text-white transition-all duration-500" :class="{ 'text-3xl md:text-4xl': hasSearched }">
@@ -211,6 +174,20 @@ const formatPrice = (price: number) => {
           <p class="text-xl text-gray-100 transition-opacity duration-500" v-if="!hasSearched">
             Fast and reliable visa processing services worldwide
           </p>
+
+          <!-- Live search context pill — updates as URL updates -->
+          <div v-if="hasSearched && !isLoading"
+            class="inline-flex items-center gap-2 mt-3 bg-white/20 text-white text-sm px-4 py-2 rounded-full backdrop-blur-sm">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            {{ route.query.country }} ·
+            {{ route.query.nationality }} ·
+            {{ route.query.adults }} adult{{ Number(route.query.adults) > 1 ? 's' : '' }}
+            <template v-if="Number(route.query.children) > 0">
+              , {{ route.query.children }} child{{ Number(route.query.children) > 1 ? 'ren' : '' }}
+            </template>
+          </div>
         </div>
 
         <!-- Collapsible Search Form -->
@@ -218,26 +195,21 @@ const formatPrice = (price: number) => {
           <button
             v-if="hasSearched"
             @click="toggleSearchForm"
-            class="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex items-center justify-between"
+            class="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 transition-colors duration-300 flex items-center justify-between cursor-pointer border-none"
           >
             <span class="font-semibold text-gray-900">
               {{ showSearchForm ? 'Hide Search Form' : 'Modify Search' }}
             </span>
-            <svg 
-              class="w-5 h-5 transition-transform duration-300" 
+            <svg
+              class="w-5 h-5 transition-transform duration-300"
               :class="{ 'rotate-180': showSearchForm }"
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
             >
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-          
-          <div 
-            v-show="!hasSearched || showSearchForm"
-            class="p-6 md:p-8 transition-all duration-500"
-          >
+
+          <div v-show="!hasSearched || showSearchForm" class="p-6 md:p-8 transition-all duration-500">
             <VisaForm @search="handleVisaSearch" />
           </div>
         </div>
@@ -247,6 +219,7 @@ const formatPrice = (price: number) => {
     <!-- Search Results Section -->
     <section v-if="hasSearched" id="search-results" class="py-16 px-6 bg-gray-50">
       <div class="max-w-7xl mx-auto">
+
         <!-- Loading State -->
         <div v-if="isLoading" class="text-center py-20">
           <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-gray-900"></div>
@@ -255,12 +228,12 @@ const formatPrice = (price: number) => {
 
         <!-- Results Header -->
         <div v-else-if="visaResults.length > 0" class="mb-8">
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
             <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
               Available Visa Services ({{ visaResults.length }})
             </h2>
             <div class="flex gap-2">
-              <select class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900">
+              <select class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm bg-white">
                 <option>Sort by: Price (Low to High)</option>
                 <option>Sort by: Price (High to Low)</option>
                 <option>Sort by: Processing Time</option>
@@ -268,17 +241,24 @@ const formatPrice = (price: number) => {
               </select>
             </div>
           </div>
-          <p class="text-gray-600">
-            Showing visa services for {{ paginatedResults[0]?.country || 'United Arab Emirates' }}
+          <!-- Reflects live URL params -->
+          <p class="text-gray-600 text-sm">
+            Showing results for
+            <span class="font-semibold text-gray-800">{{ route.query.country }}</span>
+            · Nationality: <span class="font-semibold text-gray-800">{{ route.query.nationality }}</span>
+            · {{ route.query.adults }} adult{{ Number(route.query.adults) > 1 ? 's' : '' }}
+            <template v-if="Number(route.query.children) > 0">
+              , {{ route.query.children }} child{{ Number(route.query.children) > 1 ? 'ren' : '' }}
+            </template>
           </p>
         </div>
 
         <!-- Results Grid -->
         <div v-if="!isLoading && paginatedResults.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div 
-            v-for="(visa, index) in paginatedResults" 
+          <div
+            v-for="(visa, index) in paginatedResults"
             :key="visa.id"
-            class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6"
+            class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6 flex flex-col"
             :style="{ transitionDelay: `${index * 50}ms` }"
           >
             <div class="flex items-start gap-3 mb-4">
@@ -289,6 +269,10 @@ const formatPrice = (price: number) => {
                 <h3 class="text-xl font-bold text-gray-900 mb-1">{{ visa.visaType }}</h3>
                 <p class="text-sm text-gray-600">{{ visa.country }} - {{ visa.entryType }}</p>
               </div>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-full shrink-0"
+                :class="visa.success_rate >= 90 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'">
+                {{ visa.success_rate }}% success
+              </span>
             </div>
 
             <div class="grid grid-cols-2 gap-4 mb-4 pb-4 border-b">
@@ -310,26 +294,33 @@ const formatPrice = (price: number) => {
               </div>
             </div>
 
-            <div class="mb-4">
+            <div class="mb-4 flex-1">
               <p class="text-sm font-semibold text-gray-700 mb-2">Requirements:</p>
               <div class="flex flex-wrap gap-2">
-                <span 
-                  v-for="req in visa.requirements" 
+                <span
+                  v-for="req in visa.requirements"
                   :key="req"
                   class="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
-                >
-                  ✓ {{ req }}
-                </span>
+                >✓ {{ req }}</span>
               </div>
             </div>
 
-            <div class="flex items-center justify-between pt-4 border-t">
+            <div class="flex items-center justify-between pt-4 border-t mt-auto">
               <div>
-                <p class="text-sm text-gray-600">Total Cost</p>
+                <p class="text-xs text-gray-500 mb-0.5">Per person</p>
                 <p class="text-2xl font-bold text-gray-900">{{ formatPrice(visa.price) }}</p>
+                <!-- Show total cost based on URL applicant count -->
+                <p class="text-xs text-gray-400 mt-0.5">
+                  Total: {{ formatPrice(visa.price * (Number(route.query.adults || 1) + Number(route.query.children || 0))) }}
+                  for {{ Number(route.query.adults || 1) + Number(route.query.children || 0) }}
+                  person{{ (Number(route.query.adults || 1) + Number(route.query.children || 0)) > 1 ? 's' : '' }}
+                </p>
               </div>
-              <button class="px-6 py-3 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-300">
-                Apply Now
+              <button
+                class="px-6 py-3 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-300 cursor-pointer border-none"
+                @click="applyNow(visa)"
+              >
+                Apply Now →
               </button>
             </div>
           </div>
@@ -352,9 +343,9 @@ const formatPrice = (price: number) => {
             We couldn't find any visa services matching your criteria.
             Try selecting a different destination or nationality.
           </p>
-          <button 
+          <button
             @click="toggleSearchForm"
-            class="px-8 py-3 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-300"
+            class="px-8 py-3 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-300 border-none cursor-pointer"
           >
             Modify Search
           </button>
@@ -371,14 +362,14 @@ const formatPrice = (price: number) => {
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div 
-            v-for="(destination, index) in popularDestinations" 
+          <div
+            v-for="(destination, index) in popularDestinations"
             :key="destination.country"
             class="group relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer reveal"
             :style="{ transitionDelay: `${index * 100}ms` }"
           >
-            <img 
-              :src="destination.image" 
+            <img
+              :src="destination.image"
               :alt="destination.country"
               class="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
             />
@@ -407,8 +398,8 @@ const formatPrice = (price: number) => {
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div 
-            v-for="(benefit, index) in benefits" 
+          <div
+            v-for="(benefit, index) in benefits"
             :key="benefit.title"
             class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 reveal"
             :style="{ transitionDelay: `${index * 100}ms` }"
@@ -424,13 +415,11 @@ const formatPrice = (price: number) => {
 </template>
 
 <style scoped>
-/* Reveal animation styles */
 .reveal {
   opacity: 0;
   transform: translateY(30px);
   transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
-
 .reveal-visible {
   opacity: 1;
   transform: translateY(0);

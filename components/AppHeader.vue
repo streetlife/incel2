@@ -213,20 +213,33 @@
             </div>
           </div>
 
-          <button 
-            :class="[
-              'px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 shadow-lg hover:shadow-xl',
-            ]"
-          >
-            Login
-          </button>
+          <div v-if="auth.isLoggedIn">
+            <button 
+              :class="[
+                'px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 shadow-lg hover:shadow-xl',
+              ]"
+              @click="navigateTo('/dashboard')"
+            >
+              Dashboard
+            </button>
+          </div>
+          <div v-else>
+            <button 
+              :class="[
+                'px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 shadow-lg hover:shadow-xl',
+              ]"
+              @click="navigateTo('/auth/login')"
+            >
+              Login
+            </button>
+          </div>
         </div>
         
         <!-- Mobile Menu Button -->
         <button 
           @click="mobileMenuOpen = !mobileMenuOpen"
           class="lg:hidden z-50 relative p-2 rounded-lg transition-colors duration-200"
-          :class="scrolled
+          :class="scrolled || !isMainPage
             ? 'text-primary hover:text-primary/40'
             : mobileMenuOpen
               ? 'text-gray-800 hover:bg-gray-100'
@@ -356,14 +369,34 @@
             </div>
 
             <!-- Login & Sign Up Buttons -->
-            <div class="flex gap-3">
+            <div class="flex gap-3" v-if="auth.isLoggedIn">
+              <button 
+                :class="[
+                  'flex-1 px-6 py-3 rounded-full font-medium border-2 border-black text-black hover:bg-gray-50 transition-all',
+                ]"
+                @click="handleMobileNavigation('/dashboard')"
+              >
+                Dashboard
+              </button>
+
+              <button 
+                class="flex-1 px-6 py-3 rounded-full font-medium bg-black text-white hover:bg-gray-800 transition-all"
+                @click="handleLogout()"
+              >
+                Logout
+              </button>
+            </div>
+            
+            <div class="flex gap-3" v-else>
               <button 
                 class="flex-1 px-6 py-3 rounded-full font-medium border-2 border-black text-black hover:bg-gray-50 transition-all"
+                @click="handleMobileNavigation('/auth/login')"
               >
                 Login
               </button>
               <button 
                 class="flex-1 px-6 py-3 rounded-full font-medium bg-black text-white hover:bg-gray-800 transition-all"
+                @click="handleMobileNavigation('/auth/signup')"
               >
                 Sign Up
               </button>
@@ -387,8 +420,10 @@
 </template>
 
 <script setup lang="ts">
+import { navigateTo } from 'nuxt/app'
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
 const scrolled = ref(false)
@@ -397,6 +432,7 @@ const openDropdown = ref<string | null>(null)
 const mobileOpenDropdown = ref<string | null>(null)
 const selectedCurrency = ref('NGN')
 const currencyDropdownOpen = ref(false)
+const auth = useAuthStore()
 
 // Hot deals state
 const hotDeals = ref<Array<{
@@ -410,7 +446,7 @@ const hotDeals = ref<Array<{
 
 const hideDeals = ref(false)
 const dealsContainer = ref<HTMLElement | null>(null)
-const autoScrollInterval = ref<NodeJS.Timeout | null>(null)
+const autoScrollInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const isPaused = ref(false)
 
 // Replace with actual API call
@@ -584,6 +620,17 @@ const isMainPage = computed(() => {
   ]
   return mainPages.includes(route.path)
 })
+
+const handleMobileNavigation = (path: string) => {
+  mobileMenuOpen.value = false
+  navigateTo(path)
+}
+
+const handleLogout = () => {
+  mobileMenuOpen.value = false
+  auth.logout()
+  navigateTo('/')
+}
 
 onMounted(async () => {
   window.addEventListener('scroll', handleScroll)

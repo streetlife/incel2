@@ -1,8 +1,10 @@
+import { defineNuxtConfig } from 'nuxt/config'
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2024-04-03',
   devtools: { enabled: true },
-  modules: ['@nuxtjs/tailwindcss', '@vueuse/motion/nuxt', 'nuxt-lucide-icons'],
+  modules: ['@nuxtjs/tailwindcss', '@vueuse/motion/nuxt', 'nuxt-lucide-icons', '@pinia/nuxt'],
   app: {
     head: {
       title: 'Incel Tourism - Luxury Travel & Tour Packages',
@@ -19,5 +21,11 @@ export default defineNuxtConfig({
       ]
     }
   },
-  css: ['~/assets/css/main.css']
+  css: ['~/assets/css/main.css'],
+  vite: {
+    define: {
+      'process.env.DEBUG': false,
+    }
+  },
 })
+

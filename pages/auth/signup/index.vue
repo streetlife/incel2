@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useAuthService } from '../../../services/auth.service'
 import { useToast } from '../../../composables/useToast'
 import { normaliseError } from '../../../utils/api'
 import AppToast from '../../../components/toast/AppToast.vue'
@@ -15,7 +14,6 @@ definePageMeta({
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
-const authService = useAuthService()
 const toast = useToast()
 const error = ref('')
 

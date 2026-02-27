@@ -7,7 +7,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"] // optional but useful
+    "types": ["nuxt"] // optional but useful
   },
   "include": [
     "env.d.ts",

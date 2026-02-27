@@ -21,17 +21,14 @@
             : 'border-gray-300 focus:ring-[#0076ad]'
         ]"
         :placeholder="placeholder"
-        :value="modelValue"
+        :value="displayValue"
         @input="handleInput"
         @focus="handleFocus"
         @blur="handleBlur"
         autocomplete="off"
       />
       <!-- Loading spinner -->
-      <div
-        v-if="loading"
-        class="absolute right-3 top-1/2 -translate-y-1/2"
-      >
+      <div v-if="loading" class="absolute right-3 top-1/2 -translate-y-1/2">
         <svg class="animate-spin h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -41,7 +38,6 @@
 
     <!-- Teleport dropdown to body -->
     <Teleport to="body">
-      <!-- Dropdown -->
       <ul
         v-if="open && suggestions.length"
         :style="dropdownStyle"
@@ -49,15 +45,14 @@
       >
         <li
           v-for="option in suggestions"
-          :key="option"
+          :key="option.value"
           @mousedown.prevent="select(option)"
           class="px-4 py-2 cursor-pointer hover:bg-gray-100 text-sm"
         >
-          {{ option }}
+          {{ option.label }}
         </li>
       </ul>
       
-      <!-- No results message -->
       <div
         v-if="open && !loading && !suggestions.length && modelValue"
         :style="dropdownStyle"
@@ -70,134 +65,79 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, onMounted, computed, useAttrs } from "vue"
+import { ref, onUnmounted, onMounted, computed, useAttrs, watch } from "vue"
+import { useFlightService } from "../services/flight.service";
+import { normaliseError } from "../utils/api";
+import { Airport } from "../types/flight";
 
-/* Props */
 const props = defineProps({
-  modelValue: {
-    type: String,
-    default: ""
-  },
-  label: {
-    type: String,
-    default: ""
-  },
-  placeholder: {
-    type: String,
-    default: "City or airport"
-  },
-  options: {
-    type: Array as () => string[],
-    required: true
-  },
-  id: {
-    type: String,
-    default: () => `airport-${Math.random().toString(36).slice(2)}`
-  },
-  debounceMs: {
-    type: Number,
-    default: 300
-  }
+  modelValue: { type: String, default: "" },
+  label: { type: String, default: "" },
+  placeholder:{ type: String, default: "City or airport" },
+  id: { type: String, default: () => `airport-${Math.random().toString(36).slice(2)}` },
+  debounceMs: { type: Number, default: 300 },
 })
 
-/* Emits */
 const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
-/* Attrs */
 const attrs = useAttrs()
 
-/* Computed - Check if component has error styling */
 const hasError = computed(() => {
   const classAttr = attrs.class
   if (!classAttr) return false
-  
-  // Check if class includes border-red-500
-  if (typeof classAttr === 'string') {
-    return classAttr.includes('border-red-500')
-  }
-  
-  if (Array.isArray(classAttr)) {
-    return classAttr.some(c => typeof c === 'string' && c.includes('border-red-500'))
-  }
-  
+  if (typeof classAttr === 'string')  return classAttr.includes('border-red-500')
+  if (Array.isArray(classAttr))       return classAttr.some(c => typeof c === 'string' && c.includes('border-red-500'))
   if (typeof classAttr === 'object' && classAttr !== null) {
-    return Object.hasOwn(classAttr, 'border-red-500') && 
+    return Object.hasOwn(classAttr, 'border-red-500') &&
            (classAttr as Record<string, boolean>)['border-red-500'] === true
   }
-  
   return false
 })
 
-/* State */
 const open = ref(false)
 const loading = ref(false)
-const suggestions = ref<string[]>([])
+const suggestions = ref<Airport[]>([])
 const inputRef = ref<HTMLInputElement | null>(null)
 const dropdownStyle = ref<Record<string, string>>({})
+const service = useFlightService()
+const error = ref("")
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
+const displayValue = ref(props.modelValue)
 
-/* Mock API function - Replace this with your actual API call */
-const fetchSuggestions = async (query: string): Promise<string[]> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500))
-  
-  // Mock data - filter from props.options
-  if (!query) return props.options
-  
-  return props.options.filter(option =>
-    option.toLowerCase().includes(query.toLowerCase())
-  )
-}
-
-/* Calculate dropdown position */
 const calculateDropdownPosition = () => {
   if (!inputRef.value) return
-
   const rect = inputRef.value.getBoundingClientRect()
-  const dropdownMaxHeight = 240 // max-h-60 = 240px
-  const spaceBelow = window.innerHeight - rect.bottom
-  const spaceAbove = rect.top
-
-  // Determine if dropdown should open above or below
-  const openAbove = spaceBelow < dropdownMaxHeight && spaceAbove > spaceBelow
-
+  const dropdownMaxHeight = 240
+  const openAbove = window.innerHeight - rect.bottom < dropdownMaxHeight && rect.top > window.innerHeight - rect.bottom
   dropdownStyle.value = {
     width: `${rect.width}px`,
     left: `${rect.left}px`,
     top: openAbove ? `${rect.top - dropdownMaxHeight - 8}px` : `${rect.bottom + 4}px`,
   }
 }
+const updatePosition = () => { if (open.value) calculateDropdownPosition() }
 
-/* Update position on scroll/resize */
-const updatePosition = () => {
-  if (open.value) {
-    calculateDropdownPosition()
+const fetchSuggestions = async (query: string): Promise<Airport[]> => {
+  if (!query) return []
+  try {
+    return await service.searchAirpots({ q: query })
+  } catch (err) {
+    error.value = normaliseError(err)
+    return []
   }
 }
 
-/* Debounced API call */
 const debouncedFetch = (query: string) => {
-  // Clear existing timer
-  if (debounceTimer) {
-    clearTimeout(debounceTimer)
-  }
-  
-  // Set loading state
+  if (debounceTimer) clearTimeout(debounceTimer)
   loading.value = true
-  
-  // Set new timer
   debounceTimer = setTimeout(async () => {
     try {
       const results = await fetchSuggestions(query)
       suggestions.value = results
-      // Recalculate position after results load
-      if (results.length > 0) {
-        calculateDropdownPosition()
-      }
-    } catch (error) {
-      console.error('Error fetching suggestions:', error)
+      if (results.length) calculateDropdownPosition()
+    } catch {
       suggestions.value = []
     } finally {
       loading.value = false
@@ -206,10 +146,12 @@ const debouncedFetch = (query: string) => {
 }
 
 const handleInput = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  const value = target.value
-  emit("update:modelValue", value)
-  
+  const value = (e.target as HTMLInputElement).value
+
+  displayValue.value = value
+
+  emit('update:modelValue', '')
+
   if (value.trim()) {
     debouncedFetch(value)
     open.value = true
@@ -223,15 +165,13 @@ const handleInput = (e: Event) => {
 const handleFocus = () => {
   open.value = true
   calculateDropdownPosition()
-  
-  // Show initial suggestions on focus if input has value
-  if (props.modelValue.trim()) {
-    debouncedFetch(props.modelValue)
-  }
+  if (props.modelValue.trim()) debouncedFetch(props.modelValue)
 }
 
-const select = (option: string) => {
-  emit("update:modelValue", option)
+const select = (option: Airport) => {
+  displayValue.value = option.label
+  emit('update:modelValue', option.value)
+
   suggestions.value = []
   open.value = false
 }
@@ -242,17 +182,39 @@ const handleBlur = () => {
   }, 150)
 }
 
-/* Lifecycle */
+const resolveLabel = async (code: string) => {
+  if (!code || code.length !== 3) return
+  try {
+    const results = await service.searchAirpots({ q: code })
+    const match = results.find(
+      (a) => a.value.toUpperCase() === code.toUpperCase()
+    ) ?? results[0]
+    if (match) displayValue.value = match.label
+  } catch {
+    // If lookup fails, fall back to showing the raw code — not a blocker
+  }
+}
+
+watch(
+  () => props.modelValue,
+  (val, oldVal) => {
+    if (!val) {
+      displayValue.value = ''
+      return
+    }
+    if (val !== oldVal && val.length === 3 && displayValue.value !== val) {
+      resolveLabel(val)
+    }
+  }
+)
 onMounted(() => {
   window.addEventListener('scroll', updatePosition, true)
   window.addEventListener('resize', updatePosition)
+  if (props.modelValue) resolveLabel(props.modelValue)
 })
 
-/* Cleanup on unmount */
 onUnmounted(() => {
-  if (debounceTimer) {
-    clearTimeout(debounceTimer)
-  }
+  if (debounceTimer) clearTimeout(debounceTimer)
   window.removeEventListener('scroll', updatePosition, true)
   window.removeEventListener('resize', updatePosition)
 })

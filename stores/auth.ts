@@ -1,112 +1,95 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useAuthService } from '../services/auth.service'
+import { LoginResponse, SignUpResponse, VerifyEmailResponse } from '../types/auth'
 
-// ── Types
 export interface AuthUser {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  avatar: string
-  role: 'user' | 'agent' | 'admin'
-  agencyName?: string
-  createdAt: string
+  id?: string
+  full_names: string
+  email_address: string
+  mobile_number?: string
+  usercode?: string
+  role?: 'CUSTOMER' | 'agent' | 'admin'
+  createdAt?: string
 }
 
-// ── Store
 export const useAuthStore = defineStore(
   'auth',
   () => {
-    // ── State (refs)
     const user = ref<AuthUser | null>(null)
     const token = ref<string>('')
     const loading = ref<boolean>(false)
     const error = ref<string>('')
+    const authService = useAuthService()
 
-    // ── Getters (computed)
     const isLoggedIn = computed((): boolean => !!token.value && !!user.value)
     const isAgent = computed((): boolean => user.value?.role === 'agent')
     const isAdmin = computed((): boolean => user.value?.role === 'admin')
-    const displayName = computed((): string => 
-      user.value ? `${user.value.firstName} ${user.value.lastName}` : ''
+    const displayName = computed((): string =>
+      user.value ? `${user.value.full_names}` : ''
     )
-    const initials = computed((): string => 
-      user.value ? `${user.value.firstName[0]}${user.value.lastName[0]}`.toUpperCase() : ''
+    const initials = computed((): string =>
+      user.value ? `${user.value.full_names[0]}`.toUpperCase() : ''
     )
 
-    // ── Actions
-    async function login(email: string, password: string): Promise<boolean> {
-      loading.value = true
-      error.value = ''
-      
+    async function login(email: string, password: string): Promise<LoginResponse> {
       try {
-        await new Promise(r => setTimeout(r, 900))
+        const response = await authService.login({
+          email_address: email,
+          password: password,
+        })
 
-        if (email && password.length >= 6) {
+        if (response) {
           user.value = {
-            id: 'USR-001',
-            firstName: 'Adaeze',
-            lastName: 'Okafor',
-            email,
-            phone: '+234 802 000 0001',
-            avatar: '',
-            role: 'user',
-            createdAt: '2024-01-15',
+            full_names: response.full_names,
+            email_address: response.email,
+            usercode: response.usercode
           }
-          token.value = 'mock-jwt-' + Date.now()
-          return true
+          token.value = response.token
         }
 
-        error.value = 'Invalid email or password.'
-        return false
-      } finally {
-        loading.value = false
+        return response
+      } catch (err: any) {
+        throw new Error(err)
       }
     }
 
     async function register(data: {
-      firstName: string
-      lastName: string
-      email: string
-      phone: string
+      full_names: string
+      email_address: string
+      mobile_number: string
       password: string
-      role?: string
-      agencyName?: string
-    }): Promise<boolean> {
-      loading.value = true
-      error.value = ''
-      
+      password_confirmation: string
+    }): Promise<SignUpResponse> {
+
       try {
-        await new Promise(r => setTimeout(r, 1000))
+        return await authService.signUp({
+          full_names: data.full_names,
+          email_address: data.email_address,
+          mobile_number: data.mobile_number,
+          password: data.password,
+          password_confirmation: data.password_confirmation
+        })
+      } catch (err: any) {
+        throw new Error(err)
+      }
+    }
 
-        if (data.email && data.password.length >= 6) {
-          user.value = {
-            id: 'USR-' + Date.now().toString(36).toUpperCase(),
-            firstName: data.firstName,
-            lastName: data.lastName,
-            email: data.email,
-            phone: data.phone,
-            avatar: '',
-            role: (data.role as AuthUser['role']) || 'user',
-            agencyName: data.agencyName,
-            createdAt: new Date().toISOString(),
-          }
-          token.value = 'mock-jwt-' + Date.now()
-          return true
-        }
-
-        error.value = 'Registration failed. Please try again.'
-        return false
-      } finally {
-        loading.value = false
+    async function verifyEmail(email: string, code: string): Promise<VerifyEmailResponse> {
+      try {
+        return await authService.verifyEmail({
+          email_address: email,
+          code: code,
+        })
+      } catch (err: any) {
+        throw new Error(err)
       }
     }
 
     async function forgotPassword(email: string): Promise<boolean> {
       loading.value = true
       error.value = ''
-      
+
       try {
         await new Promise(r => setTimeout(r, 800))
         return !!email
@@ -118,7 +101,7 @@ export const useAuthStore = defineStore(
     async function updateProfile(data: Partial<AuthUser>): Promise<boolean> {
       loading.value = true
       error.value = ''
-      
+
       try {
         await new Promise(r => setTimeout(r, 700))
         if (user.value) Object.assign(user.value, data)
@@ -131,7 +114,7 @@ export const useAuthStore = defineStore(
     async function changePassword(_old: string, _new: string): Promise<boolean> {
       loading.value = true
       error.value = ''
-      
+
       try {
         await new Promise(r => setTimeout(r, 700))
         return true
@@ -145,22 +128,19 @@ export const useAuthStore = defineStore(
       token.value = ''
     }
 
-    // ── Return everything the store exposes
     return {
-      // State
       user,
       token,
       loading,
       error,
-      // Getters
       isLoggedIn,
       isAgent,
       isAdmin,
       displayName,
       initials,
-      // Actions
       login,
       register,
+      verifyEmail,
       forgotPassword,
       updateProfile,
       changePassword,
@@ -168,7 +148,6 @@ export const useAuthStore = defineStore(
     }
   },
   {
-    // ── Unstorage Persistence
     unstorage: {
       pick: ['user', 'token'],
     },

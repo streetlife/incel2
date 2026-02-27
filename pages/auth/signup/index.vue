@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useAuthService } from '../../../services/auth.service'
+import { useToast } from '../../../composables/useToast'
+import { normaliseError } from '../../../utils/api'
+import AppToast from '../../../components/toast/AppToast.vue'
 import { useAuthStore } from '../../../stores/auth'
 
 definePageMeta({
@@ -10,15 +14,22 @@ definePageMeta({
 
 const router = useRouter()
 const route = useRoute()
-const auth = useAuthStore()
+const authStore = useAuthStore()
+const authService = useAuthService()
+const toast = useToast()
+const error = ref('')
 
 const step = ref(1)
 const showPass = ref(false)
 const role = ref((route.query.role as string) || 'user')
+const loading = ref(false)
 
 const form = ref({
-  firstName: '', lastName: '', email: '',
-  phone: '', agencyName: '', password: '', confirmPassword: '',
+  full_name: '',
+  email: '',
+  phone: '',
+  password: '',
+  confirmPassword: '',
 })
 const errors = ref<Record<string, string>>({})
 
@@ -30,11 +41,9 @@ const fieldClass = (k: string) =>
 
 function validateStep1() {
   errors.value = {}
-  if (!form.value.firstName.trim()) errors.value.firstName = 'Required'
-  if (!form.value.lastName.trim())  errors.value.lastName  = 'Required'
+  if (!form.value.full_name.trim()) errors.value.full_name = 'Required'
   if (!form.value.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) errors.value.email = 'Valid email required'
   if (!form.value.phone.match(/^\+?[\d\s\-()]{8,}$/)) errors.value.phone = 'Valid phone required'
-  if (isAgent.value && !form.value.agencyName.trim()) errors.value.agencyName = 'Required'
   return Object.keys(errors.value).length === 0
 }
 
@@ -51,12 +60,26 @@ function nextStep() { if (validateStep1()) step.value = 2 }
 
 async function submit() {
   if (!validateStep2()) return
-  const ok = await auth.register({
-    ...form.value,
-    role:       role.value,
-    agencyName: isAgent.value ? form.value.agencyName : undefined,
-  })
-  if (ok) router.push('/dashboard')
+
+  loading.value = true
+  try {
+    const response = await authStore.register({
+      full_names: form.value.full_name,
+      email_address: form.value.email,
+      mobile_number: form.value.phone,
+      password: form.value.password,
+      password_confirmation: form.value.confirmPassword
+    })
+
+    if (response) {
+      toast.success("Account created successfully!")
+      router.push({ path: '/auth/verify-email', query: { email: form.value.email } })
+    }
+  } catch (err) {
+    loading.value = false
+    error.value = normaliseError(err)
+    toast.error(error.value)
+  }
 }
 
 const pwStrength = computed(() => {
@@ -74,27 +97,15 @@ const pwColor = computed(() => ['', 'bg-red-400', 'bg-amber-400', 'bg-blue-500',
 </script>
 
 <template>
+  <AppToast />
   <div class="min-h-screen to-slate-900 flex items-center justify-center px-4 pt-36 pb-12">
     <div class="absolute inset-0 bg-white opacity-5 pointer-events-none"></div>
     <div class="relative w-full max-w-md">
-
-      <!-- Brand -->
       <div class="text-center mb-8">
         <h1 class="text-2xl font-bold text-gray-500">{{ isAgent ? 'Register your agency' : 'Create your account' }}</h1>
         <p class="text-gray-500 text-sm mt-1">{{ isAgent ? 'Access B2B rates and agent tools' : 'Book flights, hotels, tours and more' }}</p>
       </div>
 
-      <!-- Role toggle -->
-      <div class="flex bg-white/10 rounded-xl p-1 mb-4">
-        <button v-for="r in [{ key:'user', label:'Individual' }, { key:'agent', label:'Travel Agent' }]" :key="r.key"
-          class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer border-none"
-          :class="role === r.key ? 'bg-white text-gray-500 shadow' : 'text-gray-500 hover:text-gray-500 bg-transparent'"
-          @click="role = r.key">
-          {{ r.label }}
-        </button>
-      </div>
-
-      <!-- Step indicator -->
       <div class="flex items-center gap-2 mb-5">
         <div v-for="s in [1, 2]" :key="s" class="flex items-center gap-2" :class="s < 2 ? 'flex-1' : ''">
           <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all shrink-0"
@@ -107,35 +118,17 @@ const pwColor = computed(() => ['', 'bg-red-400', 'bg-amber-400', 'bg-blue-500',
         <span class="text-xs text-slate-400 shrink-0 ml-2">{{ step === 1 ? 'Your Details' : 'Set Password' }}</span>
       </div>
 
-      <!-- Card -->
       <div class="bg-white rounded-2xl shadow-2xl p-8">
-
-        <div v-if="auth.error" class="mb-5 flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-          <svg class="shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <p class="text-sm text-red-700">{{ auth.error }}</p>
-        </div>
-
         <Transition name="slide" mode="out-in">
 
           <!-- Step 1 -->
           <div v-if="step === 1" class="space-y-4">
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols gap-3">
               <div>
-                <label for="firstName" class="text-xs font-semibold text-slate-600 mb-1.5 block">First Name <span class="text-red-400">*</span></label>
-                <input v-model="form.firstName" type="text" placeholder="Adaeze" :class="fieldClass('firstName')" />
-                <p v-if="errors.firstName" class="text-xs text-red-500 mt-1">{{ errors.firstName }}</p>
+                <label for="full_name" class="text-xs font-semibold text-slate-600 mb-1.5 block">Full Name <span class="text-red-400">*</span></label>
+                <input v-model="form.full_name" type="text" placeholder="Adaeze" :class="fieldClass('full_name')" />
+                <p v-if="errors.full_name" class="text-xs text-red-500 mt-1">{{ errors.full_name }}</p>
               </div>
-              <div>
-                <label for="lastName" class="text-xs font-semibold text-slate-600 mb-1.5 block">Last Name <span class="text-red-400">*</span></label>
-                <input v-model="form.lastName" type="text" placeholder="Okafor" :class="fieldClass('lastName')" />
-                <p v-if="errors.lastName" class="text-xs text-red-500 mt-1">{{ errors.lastName }}</p>
-              </div>
-            </div>
-
-            <div v-if="isAgent">
-              <label for="agencyName" class="text-xs font-semibold text-slate-600 mb-1.5 block">Agency Name <span class="text-red-400">*</span></label>
-              <input v-model="form.agencyName" type="text" placeholder="Acme Travel Agency" :class="fieldClass('agencyName')" />
-              <p v-if="errors.agencyName" class="text-xs text-red-500 mt-1">{{ errors.agencyName }}</p>
             </div>
 
             <div>
@@ -196,9 +189,9 @@ const pwColor = computed(() => ['', 'bg-red-400', 'bg-amber-400', 'bg-blue-500',
               <button class="flex-1 h-12 border-2 border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 cursor-pointer bg-white" @click="step = 1">← Back</button>
               <button
                 class="flex-[2] h-12 bg-primary hover:opacity-90 active:scale-95 text-slate-900 font-bold rounded-xl transition-all border-none cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
-                :disabled="auth.loading" @click="submit">
-                <svg v-if="auth.loading" class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                {{ auth.loading ? 'Creating account…' : 'Create Account' }}
+                :disabled="loading" @click="submit">
+                <svg v-if="loading" class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                {{ loading ? 'Creating account…' : 'Create Account' }}
               </button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import SearchTabs from './SearchTabs.vue'
+import SearchTabs from './SearchTabs.vue';
 import FlightsForm from './forms/FlightsForm.vue';
 import HotelsForm from './forms/HotelsForm.vue';
 import ToursForm from './forms/ToursForm.vue';

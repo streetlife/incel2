@@ -30,21 +30,22 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  tabs: {
-    type: Array,
-    required: true
-  },
-  modelValue: {
-    type: String,
-    required: true
-  }
-})
+<script setup lang="ts">
+
+interface Tab {
+  id: string
+  label: string
+  icon: string
+}
+
+const props = defineProps<{
+  tabs: Tab[]
+  modelValue: string
+}>()
 
 const emit = defineEmits(['update:modelValue'])
 
-const setActive = (id) => {
+const setActive = (id: string) => {
   emit('update:modelValue', id)
 }
 </script>

@@ -8,12 +8,12 @@ import Pagination from '../../../components/Pagination.vue'
 const route  = useRoute()
 const router = useRouter()
 
-const hotelResults   = ref<any[]>([])
-const isLoading      = ref(false)
-const hasSearched    = ref(false)
+const hotelResults = ref<any[]>([])
+const isLoading = ref(false)
+const hasSearched = ref(false)
 const showSearchForm = ref(true)
-const currentPage    = ref(1)
-const itemsPerPage   = 10
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 const paginatedResults = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
@@ -46,20 +46,20 @@ const searchHotels = async (params?: any) => {
   const buildRoomsFromQuery = () => {
     const roomCount = Number.parseInt(route.query.rooms as string) || 1
     return Array.from({ length: roomCount }, (_, i) => ({
-      adults:   Number.parseInt(route.query[`r${i}_adults`]   as string) || 1,
+      adults: Number.parseInt(route.query[`r${i}_adults`]   as string) || 1,
       children: Number.parseInt(route.query[`r${i}_children`] as string) || 0,
-      infants:  Number.parseInt(route.query[`r${i}_infants`]  as string) || 0,
+      infants: Number.parseInt(route.query[`r${i}_infants`]  as string) || 0,
     }))
   }
 
   const sp = params || {
-    city:         route.query.city,
-    nationality:  route.query.nationality,
+    city: route.query.city,
+    nationality: route.query.nationality,
     checkInStart: route.query.checkInStart,
-    checkInEnd:   route.query.checkInEnd,
-    rooms:        buildRoomsFromQuery(),
-    totalGuests:  Number.parseInt(route.query.totalGuests as string) || 1,
-    totalRooms:   Number.parseInt(route.query.rooms as string) || 1,
+    checkInEnd: route.query.checkInEnd,
+    rooms: buildRoomsFromQuery(),
+    totalGuests: Number.parseInt(route.query.totalGuests as string) || 1,
+    totalRooms: Number.parseInt(route.query.rooms as string) || 1,
   }
 
   // Replace setTimeout with real Rezlive availability call:
@@ -69,21 +69,21 @@ const searchHotels = async (params?: any) => {
   // The room combinations are shown in Step 1 of the booking flow (HotelRoomSelect).
   setTimeout(() => {
     hotelResults.value = Array.from({ length: 50 }, (_, i) => ({
-      id:          i + 1,
-      name:        `${hotelNames[i % hotelNames.length]} ${hotelTypes[i % hotelTypes.length]}`,
-      city:        sp.city || 'Dubai',
-      rating:      (Math.random() * 2 + 3).toFixed(1),
-      reviews:     Math.floor(Math.random() * 1000) + 100,
-      price:       Math.floor(Math.random() * 50000) + 20000,
-      image:       'https://www.orchidhotel.com/static/website/img/hotels/panchgani/homepage_slider/homepage_slider.webp',
-      amenities:   ['Free WiFi', 'Pool', 'Gym', 'Breakfast'].slice(0, Math.floor(Math.random() * 3) + 2),
-      checkIn:     sp.checkInStart,
-      checkOut:    sp.checkInEnd,
-      rooms:       sp.rooms,
+      id: i + 1,
+      name: `${hotelNames[i % hotelNames.length]} ${hotelTypes[i % hotelTypes.length]}`,
+      city: sp.city || 'Dubai',
+      rating: (Math.random() * 2 + 3).toFixed(1),
+      reviews: Math.floor(Math.random() * 1000) + 100,
+      price: Math.floor(Math.random() * 50000) + 20000,
+      image: 'https://www.orchidhotel.com/static/website/img/hotels/panchgani/homepage_slider/homepage_slider.webp',
+      amenities: ['Free WiFi', 'Pool', 'Gym', 'Breakfast'].slice(0, Math.floor(Math.random() * 3) + 2),
+      checkIn: sp.checkInStart,
+      checkOut: sp.checkInEnd,
+      rooms: sp.rooms,
       totalGuests: sp.totalGuests,
-      totalRooms:  sp.totalRooms,
+      totalRooms: sp.totalRooms,
     }))
-    isLoading.value   = false
+    isLoading.value = false
     currentPage.value = 1
     setTimeout(() => document.getElementById('search-results')?.scrollIntoView({ behavior: 'smooth' }), 100)
   }, 1500)
@@ -102,11 +102,11 @@ function viewHotelDetails(hotel: any) {
       checkInEnd: (route.query.checkInEnd as string) || hotel.checkOut,
       rooms: hotel.rooms || [{ adults: 1, children: 0, infants: 0 }],
       totalGuests: hotel.totalGuests || 1,
-      totalRooms:   hotel.totalRooms  || 1,
+      totalRooms: hotel.totalRooms || 1,
     },
   }))
   router.push({
-    path:  '/travel/hotels/booking',
+    path: '/travel/hotels/booking',
     query: { hotelId: String(hotel.id), step: '1' },
   })
 }

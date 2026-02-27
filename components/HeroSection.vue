@@ -39,11 +39,6 @@
       <p class="text-base sm:text-lg md:text-xl text-white/70 max-w-xs sm:max-w-xl mx-auto font-light leading-relaxed mt-6 mb-10 animate-slide-up animation-delay-400">
         Visas, tours & curated packages at the best value
       </p>
-      <button 
-        class="h-12 sm:h-16 px-7 sm:px-10 rounded-full bg-white text-black hover:bg-neutral-200 font-bold text-base sm:text-lg tracking-wide transition-all shadow-xl hover:scale-105 animate-scale-in animation-delay-600"
-      >
-        Book Now
-      </button>
     </div>
   </section>
 </template>

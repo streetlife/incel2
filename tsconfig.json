@@ -9,4 +9,9 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node"] // optional but useful
   },
+  "include": [
+    "env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.vue"
+  ]
 }

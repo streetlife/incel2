@@ -12,14 +12,15 @@ const emit = defineEmits<{
   search: [searchData: any]
 }>()
 
-const tripType = ref('round-trip')
+const tripType = ref('roundtrip')
 
 const form = ref({
+  supplier: 'amadeus',
   from: '',
   to: '',
-  departing: '',
-  returning: '',
-  passengers: { adults: 1, children: 0, infants: 0 },
+  dateFrom: '',
+  dateTo: '',
+  passengers: { adult_number: 1, child_number: 0, infants_number: 0 },
   travelClass: 'economy',
   direct: false,
   flexibleDates: false,
@@ -30,44 +31,34 @@ const form = ref({
 const errors = ref({
   from: '',
   to: '',
-  departing: '',
-  returning: '',
+  dateFrom: '',
+  dateTo: '',
   general: ''
 })
 
 // Multi-city flights array
 const multiCityFlights = ref([
-  { from: '', to: '', departing: '' },
-  { from: '', to: '', departing: '' },
-  { from: '', to: '', departing: '' },
-  { from: '', to: '', departing: '' },
-  { from: '', to: '', departing: '' },
-  { from: '', to: '', departing: '' }
+  { from: '', to: '', dateFrom: '' },
+  { from: '', to: '', dateFrom: '' },
+  { from: '', to: '', dateFrom: '' },
+  { from: '', to: '', dateFrom: '' },
+  { from: '', to: '', dateFrom: '' },
+  { from: '', to: '', dateFrom: '' }
 ])
 
 // Multi-city errors
-const multiCityErrors = ref<Array<{ from: string; to: string; departing: string }>>([
-  { from: '', to: '', departing: '' },
-  { from: '', to: '', departing: '' },
-  { from: '', to: '', departing: '' },
-  { from: '', to: '', departing: '' },
-  { from: '', to: '', departing: '' },
-  { from: '', to: '', departing: '' }
+const multiCityErrors = ref<Array<{ from: string; to: string; dateFrom: string }>>([
+  { from: '', to: '', dateFrom: '' },
+  { from: '', to: '', dateFrom: '' },
+  { from: '', to: '', dateFrom: '' },
+  { from: '', to: '', dateFrom: '' },
+  { from: '', to: '', dateFrom: '' },
+  { from: '', to: '', dateFrom: '' }
 ])
-
-const airports = [
-  "Lagos (LOS)",
-  "Abuja (ABV)",
-  "Port Harcourt (PHC)",
-  "London Heathrow (LHR)",
-  "New York (JFK)",
-  "Dubai (DXB)",
-  "Paris (CDG)"
-]
 
 // Total passengers validation
 const totalPassengers = computed(() => {
-  return form.value.passengers.adults + form.value.passengers.children + form.value.passengers.infants
+  return form.value.passengers.adult_number + form.value.passengers.child_number + form.value.passengers.infants_number
 })
 
 // Watch form fields and clear errors on change
@@ -79,12 +70,12 @@ watch(() => form.value.to, () => {
   if (errors.value.to) errors.value.to = ''
 })
 
-watch(() => form.value.departing, () => {
-  if (errors.value.departing) errors.value.departing = ''
+watch(() => form.value.dateFrom, () => {
+  if (errors.value.dateFrom) errors.value.dateFrom = ''
 })
 
-watch(() => form.value.returning, () => {
-  if (errors.value.returning) errors.value.returning = ''
+watch(() => form.value.dateTo, () => {
+  if (errors.value.dateTo) errors.value.dateTo = ''
 })
 
 watch(() => form.value.passengers, () => {
@@ -100,8 +91,8 @@ watch(() => multiCityFlights.value, (newFlights) => {
     if (flight.to && multiCityErrors.value[index].to) {
       multiCityErrors.value[index].to = ''
     }
-    if (flight.departing && multiCityErrors.value[index].departing) {
-      multiCityErrors.value[index].departing = ''
+    if (flight.dateFrom && multiCityErrors.value[index].dateFrom) {
+      multiCityErrors.value[index].dateFrom = ''
     }
   })
 }, { deep: true })
@@ -111,14 +102,14 @@ const clearErrors = () => {
   errors.value = {
     from: '',
     to: '',
-    departing: '',
-    returning: '',
+    dateFrom: '',
+    dateTo: '',
     general: ''
   }
   multiCityErrors.value = multiCityErrors.value.map(() => ({
     from: '',
     to: '',
-    departing: ''
+    dateFrom: ''
   }))
 }
 
@@ -155,11 +146,11 @@ const validateMultiCityFlight = (flight: any, index: number): boolean => {
     isValid = false
   }
 
-  if (!flight.departing) {
-    multiCityErrors.value[index].departing = 'Departure date is required'
+  if (!flight.dateFrom) {
+    multiCityErrors.value[index].dateFrom = 'Departure date is required'
     isValid = false
-  } else if (!isValidFutureDate(flight.departing)) {
-    multiCityErrors.value[index].departing = 'Date must be today or in the future'
+  } else if (!isValidFutureDate(flight.dateFrom)) {
+    multiCityErrors.value[index].dateFrom = 'Date must be today or in the future'
     isValid = false
   }
 
@@ -168,7 +159,7 @@ const validateMultiCityFlight = (flight: any, index: number): boolean => {
 
 // Validate all multi-city flights
 const validateMultiCityFlights = (): boolean => {
-  const filledFlights = multiCityFlights.value.filter(f => f.from || f.to || f.departing)
+  const filledFlights = multiCityFlights.value.filter(f => f.from || f.to || f.dateFrom)
   
   if (filledFlights.length < 2) {
     errors.value.general = 'Please fill in at least 2 flights for multi-city booking'
@@ -209,39 +200,39 @@ const validateCities = (): boolean => {
 
 // Validate departure date
 const validateDepartureDate = (): boolean => {
-  if (!form.value.departing) {
-    errors.value.departing = 'Departure date is required'
+  if (!form.value.dateFrom) {
+    errors.value.dateFrom = 'Departure date is required'
     return false
   }
 
-  if (!isValidFutureDate(form.value.departing)) {
-    errors.value.departing = 'Departure date must be today or in the future'
+  if (!isValidFutureDate(form.value.dateFrom)) {
+    errors.value.dateFrom = 'Departure date must be today or in the future'
     return false
   }
 
   return true
 }
 
-// Validate return date for round-trip
+// Validate return date for roundtrip
 const validateReturnDate = (): boolean => {
-  if (tripType.value !== 'round-trip') {
+  if (tripType.value !== 'roundtrip') {
     return true
   }
 
-  if (!form.value.returning) {
-    errors.value.returning = 'Return date is required for round-trip'
+  if (!form.value.dateTo) {
+    errors.value.dateTo = 'Return date is required for roundtrip'
     return false
   }
 
-  if (form.value.departing && !isReturnDateValid(form.value.departing, form.value.returning)) {
-    errors.value.returning = 'Return date must be after departure date'
+  if (form.value.dateFrom && !isReturnDateValid(form.value.dateFrom, form.value.dateTo)) {
+    errors.value.dateTo = 'Return date must be after departure date'
     return false
   }
 
   return true
 }
 
-// Validate single trip (round-trip or one-way)
+// Validate single trip (roundtrip or one-way)
 const validateSingleTrip = (): boolean => {
   const citiesValid = validateCities()
   const departureValid = validateDepartureDate()
@@ -296,7 +287,7 @@ const prefillFromQuery = () => {
       multiCityFlights.value = flights.map((f: any) => ({
         from: f.from || '',
         to: f.to || '',
-        departing: f.departing || ''
+        dateFrom: f.dateFrom || ''
       }))
     } catch (e) {
       console.error('Error parsing multi-city flights:', e)
@@ -304,27 +295,27 @@ const prefillFromQuery = () => {
 
     // Set passengers for multi-city
     form.value.passengers = {
-      adults: Number.parseInt(query.adults as string) || 1,
-      children: Number.parseInt(query.children as string) || 0,
-      infants: Number.parseInt(query.infants as string) || 0
+      adult_number: Number.parseInt(query.adult_number as string) || 1,
+      child_number: Number.parseInt(query.child_number as string) || 0,
+      infants_number: Number.parseInt(query.infants_number as string) || 0
     }
     form.value.travelClass = (query.travelClass as string) || 'economy'
     form.value.stops = (query.stops as string) || 'any'
   } else {
-    // Handle round-trip and one-way
+    // Handle roundtrip and one-way
     form.value.from = (query.from as string) || ''
     form.value.to = (query.to as string) || ''
-    form.value.departing = (query.departing as string) || ''
-    form.value.returning = (query.returning as string) || ''
+    form.value.dateFrom = (query.dateFrom as string) || ''
+    form.value.dateTo = (query.dateTo as string) || ''
     form.value.travelClass = (query.travelClass as string) || 'economy'
     form.value.direct = query.direct === 'true'
     form.value.flexibleDates = query.flexibleDates === 'true'
 
     // Set passengers
     form.value.passengers = {
-      adults: Number.parseInt(query.adults as string) || 1,
-      children: Number.parseInt(query.children as string) || 0,
-      infants: Number.parseInt(query.infants as string) || 0
+      adult_number: Number.parseInt(query.adult_number as string) || 1,
+      child_number: Number.parseInt(query.child_number as string) || 0,
+      infants_number: Number.parseInt(query.infants_number as string) || 0
     }
   }
 }
@@ -352,7 +343,7 @@ watch(tripType, (newType) => {
       multiCityFlights.value = multiCityFlights.value.map(() => ({
         from: '',
         to: '',
-        departing: ''
+        dateFrom: ''
       }))
     }
   }
@@ -363,7 +354,7 @@ const buildSearchData = () => {
   if (tripType.value === 'multi-city') {
     return {
       tripType: tripType.value,
-      flights: multiCityFlights.value.filter(f => f.from || f.to || f.departing),
+      flights: multiCityFlights.value.filter(f => f.from || f.to || f.dateFrom),
       passengers: form.value.passengers,
       travelClass: form.value.travelClass,
       stops: form.value.stops
@@ -381,31 +372,31 @@ const buildMultiCityQueryParams = (searchData: any) => {
   return {
     tripType: searchData.tripType,
     flights: JSON.stringify(searchData.flights),
-    adults: searchData.passengers.adults,
-    children: searchData.passengers.children,
-    infants: searchData.passengers.infants,
+    adult_number: searchData.passengers.adult_number,
+    child_number: searchData.passengers.child_number,
+    infants_number: searchData.passengers.infants_number,
     travelClass: searchData.travelClass,
     stops: searchData.stops
   }
 }
 
-// Build query params for round-trip/one-way
+// Build query params for roundtrip/one-way
 const buildSingleTripQueryParams = () => {
   const queryParams: any = {
     tripType: tripType.value,
     from: form.value.from,
     to: form.value.to,
-    departing: form.value.departing,
+    dateFrom: form.value.dateFrom,
     travelClass: form.value.travelClass,
     direct: form.value.direct ? 'true' : 'false',
     flexibleDates: form.value.flexibleDates ? 'true' : 'false',
-    adults: form.value.passengers.adults,
-    children: form.value.passengers.children,
-    infants: form.value.passengers.infants
+    adult_number: form.value.passengers.adult_number,
+    child_number: form.value.passengers.child_number,
+    infants_number: form.value.passengers.infants_number
   }
 
-  if (tripType.value === 'round-trip' && form.value.returning) {
-    queryParams.returning = form.value.returning
+  if (tripType.value === 'roundtrip' && form.value.dateTo) {
+    queryParams.dateTo = form.value.dateTo
   }
 
   return queryParams
@@ -465,8 +456,8 @@ const submit = async () => {
   <div class="flex flex-wrap gap-6 mb-6">
     <label
       v-for="type in [
-        { value: 'round-trip', label: 'Round-trip' },
-        { value: 'one-way', label: 'One way' },
+        { value: 'roundtrip', label: 'Round-trip' },
+        { value: 'oneway', label: 'One way' },
         // { value: 'multi-city', label: 'Multi-city' }
       ]"
       :key="type.value"
@@ -498,7 +489,6 @@ const submit = async () => {
               v-model="flight.from"
               :label="index === 0 ? 'Flying from' : ''"
               placeholder="City or airport"
-              :options="airports"
               :class="{ 'border-red-500 focus:ring-red-500': multiCityErrors[index].from }"
             />
           </div>
@@ -509,7 +499,6 @@ const submit = async () => {
               v-model="flight.to"
               :label="index === 0 ? 'Flying to' : ''"
               placeholder="City or airport"
-              :options="airports"
               :class="{ 'border-red-500 focus:ring-red-500': multiCityErrors[index].to }"
             />
           </div>
@@ -517,10 +506,10 @@ const submit = async () => {
           <!-- Departing -->
           <div>
             <DateInput
-              v-model="flight.departing"
+              v-model="flight.dateFrom"
               :label="index === 0 ? 'Departing' : ''"
-              :id="`multi-departing-${index}`"
-              :class="{ 'border-red-500 focus:ring-red-500': multiCityErrors[index].departing }"
+              :id="`multi-dateFrom-${index}`"
+              :class="{ 'border-red-500 focus:ring-red-500': multiCityErrors[index].dateFrom }"
             />
           </div>
         </div>
@@ -583,13 +572,15 @@ const submit = async () => {
   <!-- Round-trip / One-way Layout -->
   <template v-else>
     <!-- Search Inputs -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+    <div :class="{ 
+      'grid grid-cols-1 lg:grid-cols-12 gap-4': tripType === 'roundtrip', 
+      'grid grid-cols-1 lg:grid-cols-10 gap-4': tripType === 'oneway' 
+    }">
       <!-- Flying From -->
       <div class="lg:col-span-2">
         <AirportSelect
           v-model="form.from"
           label="Flying from"
-          :options="airports"
           :class="{ 'border-red-500 focus:ring-red-500': errors.from }"
         />
       </div>
@@ -599,7 +590,6 @@ const submit = async () => {
         <AirportSelect
           v-model="form.to"
           label="Flying to"
-          :options="airports"
           :class="{ 'border-red-500 focus:ring-red-500': errors.to }"
         />
       </div>
@@ -607,21 +597,20 @@ const submit = async () => {
       <!-- Departing -->
       <div class="lg:col-span-2">
         <DateInput
-          v-model="form.departing"
+          v-model="form.dateFrom"
           label="Departing"
-          id="departing-date"
-          :class="{ 'border-red-500 focus:ring-red-500': errors.departing }"
+          id="dateFrom-date"
+          :class="{ 'border-red-500 focus:ring-red-500': errors.dateFrom }"
         />
       </div>
 
       <!-- Returning -->
-      <div class="lg:col-span-2">
+      <div class="lg:col-span-2" v-if="tripType === 'roundtrip'">
         <DateInput
-          v-model="form.returning"
+          v-model="form.dateTo"
           label="Returning"
-          id="flight-returning"
-          :disabled="tripType !== 'round-trip'"
-          :class="{ 'border-red-500 focus:ring-red-500': errors.returning }"
+          id="flight-dateTo"
+          :class="{ 'border-red-500 focus:ring-red-500': errors.dateTo }"
         />
       </div>
 

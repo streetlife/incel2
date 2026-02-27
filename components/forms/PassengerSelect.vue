@@ -137,7 +137,7 @@ const MODES: Record<string, CounterMode> = {
   flight: {
     categories: [
       { 
-        key: 'adults', 
+        key: 'adult_number', 
         label: 'Adults', 
         description: '12 years+',
         min: 1,
@@ -145,7 +145,7 @@ const MODES: Record<string, CounterMode> = {
         plural: 'Adults'
       },
       { 
-        key: 'children', 
+        key: 'child_number', 
         label: 'Children', 
         description: '2 to 12 years',
         min: 0,
@@ -153,7 +153,7 @@ const MODES: Record<string, CounterMode> = {
         plural: 'Children'
       },
       { 
-        key: 'infants', 
+        key: 'infants_number', 
         label: 'Infants', 
         description: '0 to 2 years',
         min: 0,

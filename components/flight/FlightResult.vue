@@ -3,66 +3,101 @@ import { ref, computed, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import FlightCard from './FlightCard.vue'
 import Pagination from '../Pagination.vue'
+import type { FlightOffer, AirlineInfo, FlightMeta } from '../../types/flight'
 
 const props = withDefaults(defineProps<{
-  flights?: any[]
+  flights?: FlightOffer[]
+  meta?: FlightMeta
   origin?: string
   destination?: string
 }>(), {
   flights: () => [],
-  origin: 'London Heathrow (LHR)',
-  destination: 'New York JFK (JFK)',
+  meta: () => ({ count: 0, airlines: {}, recommended: null, fastest: null }),
+  origin: '',
+  destination: '',
 })
+
 defineEmits<{ (e: 'book', id: string): void }>()
 
-const route  = useRoute()
+const route = useRoute()
 const router = useRouter()
 
-const CARRIERS: Record<string, string> = {
-  BA:'British Airways', VS:'Virgin Atlantic', LH:'Lufthansa', TP:'TAP Portugal',
-  KL:'KLM', AA:'American Airlines', DL:'Delta', IB:'Iberia',
-  LO:'LOT Polish', AV:'Avianca', WS:'WestJet', EI:'Aer Lingus',
-}
-const CARRIER_COLORS: Record<string, string> = {
+const FALLBACK_COLORS: Record<string, string> = {
   BA:'#075AAA', VS:'#E31837', LH:'#05164D', TP:'#00843D',
   KL:'#00A1DE', AA:'#0078D2', DL:'#E51937', IB:'#C8102E',
   LO:'#003087', AV:'#E2001A', WS:'#00447C', EI:'#006272',
+  EK:'#C8102E', KQ:'#006747', QR:'#5C0632', TK:'#E8000D',
+  ET:'#009A44', MS:'#BD0029', SA:'#003087', WB:'#00923F',
+  KP:'#003087',
 }
+const GENERATED_COLORS = ['#0F4C75','#1B6CA8','#16213E','#0D3B66','#1A535C','#4ECDC4']
+function airlineColor(code: string): string {
+  return FALLBACK_COLORS[code] ?? GENERATED_COLORS[code.charCodeAt(0) % GENERATED_COLORS.length]
+}
+function airlineName(code: string): string {
+  return props.meta?.airlines?.[code]?.name ?? code
+}
+function airlineLogo(code: string): string | null {
+  const logo = props.meta?.airlines?.[code]?.logo
+  if (!logo) return null
+  const lastHttp = logo.lastIndexOf('http', logo.length - 5)
+  return lastHttp > 0 ? logo.slice(lastHttp) : logo
+}
+
+const carrierOf = (f: FlightOffer) => f.itineraries[0].segments[0].carrierCode
+
+const allCarriers = computed(() => [...new Set(props.flights.map(carrierOf))])
+const allCabins = computed(() => [
+  ...new Set(props.flights.flatMap(f =>
+    f.travelerPricings[0].fareDetailsBySegment.map(s => s.cabin)
+  )),
+])
+const cabinLabel = (c: string) => c.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+
+const filters = reactive({ airlines: [] as string[], stops: [] as number[], cabin: [] as string[] })
+const toggleFilter = <T>(arr: T[], v: T) => { const i = arr.indexOf(v); i >= 0 ? arr.splice(i, 1) : arr.push(v) }
+const clearFilters = () => { filters.airlines = []; filters.stops = []; filters.cabin = [] }
+const hasFilters = computed(() => filters.airlines.length || filters.stops.length || filters.cabin.length)
+const activeFilterCount = computed(() => filters.airlines.length + filters.stops.length + filters.cabin.length)
+const showMobileFilters = ref(false)
+
+const filteredFlights = computed(() => props.flights.filter(f => {
+  const code = carrierOf(f)
+  const stops = f.itineraries[0].segments.length - 1
+  const cabin = f.travelerPricings[0].fareDetailsBySegment[0].cabin
+  if (filters.airlines.length && !filters.airlines.includes(code)) return false
+  if (filters.stops.length && !filters.stops.includes(stops)) return false
+  if (filters.cabin.length && !filters.cabin.includes(cabin)) return false
+  return true
+}))
 
 const parseDuration = (iso: string) => {
   const h = parseInt(iso.match(/(\d+)H/)?.[1] ?? '0')
   const m = parseInt(iso.match(/(\d+)M/)?.[1] ?? '0')
   return h * 60 + m
 }
-const carrierOf   = (f: any) => f.itineraries[0].segments[0].carrierCode
-const allCarriers = computed(() => [...new Set(props.flights.map(carrierOf))])
-const allCabins   = computed(() => [...new Set(props.flights.flatMap((f: any) => f.travelerPricings[0].fareDetailsBySegment.map((s: any) => s.cabin)))])
-const cabinLabel  = (c: string) => c.replace('_', ' ').toLowerCase().replace(/\b\w/g, (l: string) => l.toUpperCase())
 
-const filters      = reactive({ airlines: [] as string[], stops: [] as number[], cabin: [] as string[] })
-const toggleFilter = <T>(arr: T[], v: T) => { const i = arr.indexOf(v); i >= 0 ? arr.splice(i, 1) : arr.push(v) }
-const clearFilters = () => { filters.airlines = []; filters.stops = []; filters.cabin = [] }
-const hasFilters   = computed(() => filters.airlines.length || filters.stops.length || filters.cabin.length)
+const recommended = computed<FlightOffer | null>(() => {
+  const apiRec = props.meta?.recommended
+  if (apiRec && filteredFlights.value.some(f => f.id === apiRec.id)) return apiRec
 
-const showMobileFilters = ref(false)
+  return filteredFlights.value.reduce<FlightOffer | null>(
+    (best, f) => !best || parseFloat(f.price.total) < parseFloat(best.price.total) ? f : best,
+    null,
+  )
+})
 
-const filteredFlights = computed(() => props.flights.filter(f => {
-  const code  = carrierOf(f)
-  const stops = f.itineraries[0].segments.length - 1
-  const cabin = f.travelerPricings[0].fareDetailsBySegment[0].cabin
-  if (filters.airlines.length && !filters.airlines.includes(code))  return false
-  if (filters.stops.length   && !filters.stops.includes(stops))     return false
-  if (filters.cabin.length   && !filters.cabin.includes(cabin))     return false
-  return true
-}))
+const timeSaver = computed<FlightOffer | null>(() => {
+  const apiFastest = props.meta?.fastest
+  if (apiFastest && filteredFlights.value.some(f => f.id === apiFastest.id)) return apiFastest
+  return filteredFlights.value.reduce<FlightOffer | null>(
+    (best, f) => !best || parseDuration(f.itineraries[0].duration) < parseDuration(best.itineraries[0].duration) ? f : best,
+    null,
+  )
+})
 
-const recommended  = computed(() => [...filteredFlights.value].sort((a, b) => parseFloat(a.price.total) - parseFloat(b.price.total))[0])
-const timeSaver    = computed(() => [...filteredFlights.value].sort((a, b) => parseDuration(a.itineraries[0].duration) - parseDuration(b.itineraries[0].duration))[0])
-const specials     = computed(() => new Set([recommended.value?.id, timeSaver.value?.id].filter(Boolean)))
+const specials = computed(() => new Set([recommended.value?.id, timeSaver.value?.id].filter(Boolean)))
 const otherFlights = computed(() => filteredFlights.value.filter(f => !specials.value.has(f.id)))
-
-const expanded     = reactive<Record<string, boolean>>({})
-const toggleExpand = (id: string) => { expanded[id] = !expanded[id] }
 
 const sortBy = ref<'price' | 'duration'>('price')
 const sortedOthers = computed(() => [...otherFlights.value].sort((a, b) => {
@@ -72,12 +107,9 @@ const sortedOthers = computed(() => [...otherFlights.value].sort((a, b) => {
 }))
 
 const itemsPerPage = 10
-const currentPage  = ref(parseInt(route.query.page as string) || 1)
+const currentPage = ref(parseInt(route.query.page as string) || 1)
 
-watch(() => route.query.page, (p) => {
-  currentPage.value = parseInt(p as string) || 1
-})
-
+watch(() => route.query.page, p => { currentPage.value = parseInt(p as string) || 1 })
 watch([filters, sortBy], () => {
   currentPage.value = 1
   router.replace({ query: { ...route.query, page: undefined } })
@@ -94,43 +126,37 @@ const handlePageChange = (page: number) => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-const activeFilterCount = computed(() => filters.airlines.length + filters.stops.length + filters.cabin.length)
+const expanded = reactive<Record<string, boolean>>({})
+const toggleExpand = (id: string) => { expanded[id] = !expanded[id] }
 </script>
 
 <template>
   <div class="font-sans text-slate-800">
-    <div class="md:hidden flex items-center justify-between mb-3 gap-2">
 
-      <!-- Flight count + route -->
+    <!-- ── Mobile top bar ──────────────────────────────────────────────────── -->
+    <div class="md:hidden flex items-center justify-between mb-3 gap-2">
       <div class="min-w-0">
         <span class="text-sm font-bold text-slate-900">{{ filteredFlights.length }} flights</span>
-        <span class="text-xs text-slate-400 ml-1.5 truncate hidden sm:inline">{{ origin }} → {{ destination }}</span>
+        <span v-if="origin && destination" class="text-xs text-slate-400 ml-1.5 truncate hidden sm:inline">
+          {{ origin }} → {{ destination }}
+        </span>
       </div>
-
       <div class="flex items-center gap-2 shrink-0">
-        <!-- Sort buttons -->
-        <button
-          class="text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer"
+        <button class="text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer"
           :class="sortBy === 'price' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-500 border-slate-200'"
-          @click="sortBy = 'price'"
-        >Cheapest</button>
-        <button
-          class="text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer"
+          @click="sortBy = 'price'">Cheapest</button>
+        <button class="text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer"
           :class="sortBy === 'duration' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-500 border-slate-200'"
-          @click="sortBy = 'duration'"
-        >Fastest</button>
-
-        <!-- Filter toggle button -->
-        <button
-          class="relative flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 bg-white cursor-pointer transition-all"
+          @click="sortBy = 'duration'">Fastest</button>
+        <button class="relative flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 bg-white cursor-pointer transition-all"
           :class="showMobileFilters ? 'border-primary text-primary' : 'text-slate-600'"
-          @click="showMobileFilters = !showMobileFilters"
-        >
+          @click="showMobileFilters = !showMobileFilters">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
           </svg>
           Filters
-          <span v-if="activeFilterCount > 0" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold">
+          <span v-if="activeFilterCount > 0"
+            class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold">
             {{ activeFilterCount }}
           </span>
         </button>
@@ -153,21 +179,20 @@ const activeFilterCount = computed(() => filters.airlines.length + filters.stops
             <button class="text-xs text-slate-400 bg-transparent border-none cursor-pointer p-0" @click="showMobileFilters = false">✕ Close</button>
           </div>
         </div>
-
         <!-- Airlines -->
         <div class="mb-4">
           <h4 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Airlines</h4>
           <div class="grid grid-cols-2 gap-x-4 gap-y-1">
             <label v-for="code in allCarriers" :key="code" class="flex items-center gap-2 py-0.5 text-sm text-slate-600 cursor-pointer">
               <input type="checkbox" class="w-3.5 h-3.5 accent-primary cursor-pointer" :checked="filters.airlines.includes(code)" @change="toggleFilter(filters.airlines, code)" />
-              <span class="w-2 h-2 rounded-full shrink-0" :style="{ background: CARRIER_COLORS[code] ?? '#64748b' }"></span>
-              <span class="truncate">{{ CARRIERS[code] ?? code }}</span>
+              <!-- Logo or colour dot -->
+              <img v-if="airlineLogo(code)" :src="airlineLogo(code)!" :alt="code" class="w-4 h-4 object-contain rounded-sm shrink-0" @error="($event.target as HTMLImageElement).style.display='none'" />
+              <span v-else class="w-2 h-2 rounded-full shrink-0" :style="{ background: airlineColor(code) }"></span>
+              <span class="truncate">{{ airlineName(code) }}</span>
             </label>
           </div>
         </div>
-
         <div class="grid grid-cols-2 gap-4">
-          <!-- Stops -->
           <div>
             <h4 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Stops</h4>
             <label v-for="s in [0, 1, 2]" :key="s" class="flex items-center gap-2 py-0.5 text-sm text-slate-600 cursor-pointer">
@@ -175,7 +200,6 @@ const activeFilterCount = computed(() => filters.airlines.length + filters.stops
               <span>{{ ['Non-stop', '1 Stop', '2+ Stops'][s] }}</span>
             </label>
           </div>
-          <!-- Cabin -->
           <div>
             <h4 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Cabin</h4>
             <label v-for="c in allCabins" :key="c" class="flex items-center gap-2 py-0.5 text-sm text-slate-600 cursor-pointer">
@@ -188,10 +212,7 @@ const activeFilterCount = computed(() => filters.airlines.length + filters.stops
     </Transition>
 
     <div class="flex gap-5">
-
-      <!-- Sidebar (desktop only) -->
       <aside class="hidden md:flex w-[220px] shrink-0 bg-white rounded-2xl p-4 h-fit sticky top-6 shadow-sm border border-slate-200 flex-col">
-
         <div class="flex items-center justify-between mb-4 pb-3.5 border-b border-slate-100">
           <span class="flex items-center gap-1.5 text-sm font-bold text-slate-900">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -205,10 +226,14 @@ const activeFilterCount = computed(() => filters.airlines.length + filters.stops
         <!-- Airlines -->
         <div class="py-3.5 border-b border-slate-100">
           <h4 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2.5">Airlines</h4>
-          <label v-for="code in allCarriers" :key="code" class="flex items-center gap-2 py-1 text-sm text-slate-600 cursor-pointer hover:text-slate-900 transition-colors">
+          <label v-for="code in allCarriers" :key="code"
+            class="flex items-center gap-2 py-1 text-sm text-slate-600 cursor-pointer hover:text-slate-900 transition-colors">
             <input type="checkbox" class="w-3.5 h-3.5 accent-primary cursor-pointer" :checked="filters.airlines.includes(code)" @change="toggleFilter(filters.airlines, code)" />
-            <span class="w-2 h-2 rounded-full shrink-0" :style="{ background: CARRIER_COLORS[code] ?? '#64748b' }"></span>
-            <span>{{ CARRIERS[code] ?? code }}</span>
+            <img v-if="airlineLogo(code)" :src="airlineLogo(code)!" :alt="code"
+              class="w-4 h-4 object-contain rounded-sm shrink-0"
+              @error="($event.target as HTMLImageElement).style.display='none'" />
+            <span v-else class="w-2 h-2 rounded-full shrink-0" :style="{ background: airlineColor(code) }"></span>
+            <span class="truncate">{{ airlineName(code) }}</span>
           </label>
         </div>
 
@@ -231,47 +256,62 @@ const activeFilterCount = computed(() => filters.airlines.length + filters.stops
         </div>
       </aside>
 
-      <!-- ── Results column -->
       <div class="flex-1 min-w-0 flex flex-col gap-3 md:gap-4">
 
-        <!-- Meta bar (desktop only — mobile has the top bar above) -->
         <div class="hidden md:flex items-center justify-between bg-white rounded-xl px-5 py-3 border border-slate-200 shadow-sm">
           <div class="flex items-center gap-3">
             <span class="text-[15px] font-bold text-slate-900">{{ filteredFlights.length }} flights</span>
-            <span class="text-sm text-slate-500">{{ origin }} → {{ destination }}</span>
+            <span v-if="origin && destination" class="text-sm text-slate-500">{{ origin }} → {{ destination }}</span>
           </div>
           <div class="flex items-center gap-1.5">
             <span class="text-xs text-slate-400 font-medium mr-1">Sort:</span>
-            <button class="text-xs font-medium px-3.5 py-1.5 rounded-lg transition-all cursor-pointer border border-slate-200" :class="sortBy === 'price' ? 'bg-primary text-white border-primary' : 'bg-slate-50 text-slate-500 hover:border-slate-400'" @click="sortBy = 'price'">Cheapest</button>
-            <button class="text-xs font-medium px-3.5 py-1.5 rounded-lg transition-all cursor-pointer border border-slate-200" :class="sortBy === 'duration' ? 'bg-primary text-white border-primary' : 'bg-slate-50 text-slate-500 hover:border-slate-400'" @click="sortBy = 'duration'">Fastest</button>
+            <button class="text-xs font-medium px-3.5 py-1.5 rounded-lg transition-all cursor-pointer border border-slate-200"
+              :class="sortBy === 'price' ? 'bg-primary text-white border-primary' : 'bg-slate-50 text-slate-500 hover:border-slate-400'"
+              @click="sortBy = 'price'">Cheapest</button>
+            <button class="text-xs font-medium px-3.5 py-1.5 rounded-lg transition-all cursor-pointer border border-slate-200"
+              :class="sortBy === 'duration' ? 'bg-primary text-white border-primary' : 'bg-slate-50 text-slate-500 hover:border-slate-400'"
+              @click="sortBy = 'duration'">Fastest</button>
           </div>
         </div>
 
-        <!-- ── Highlighted flights -->
         <div v-if="filteredFlights.length" class="flex flex-col gap-3 md:gap-3.5">
 
-          <!-- Recommended -->
           <div v-if="recommended" class="flex flex-col min-w-0">
             <div class="self-start flex items-center gap-1.5 text-xs font-bold bg-primary text-white px-3 py-1.5 rounded-t-lg">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
               Recommended · Best Value
             </div>
-            <FlightCard :flight="recommended" :expanded="!!expanded[recommended.id]" highlight="recommended" @toggle="toggleExpand(recommended.id)" @book="(id) => $emit('book', id)" />
+            <FlightCard
+              :flight="recommended"
+              :expanded="!!expanded[recommended.id]"
+              :airlines="meta?.airlines ?? {}"
+              highlight="recommended"
+              @toggle="toggleExpand(recommended.id)"
+              @book="(id) => $emit('book', id)"
+            />
           </div>
 
-          <!-- Time Saver -->
           <div v-if="timeSaver && timeSaver.id !== recommended?.id" class="flex flex-col min-w-0">
             <div class="self-start flex items-center gap-1.5 text-xs font-bold bg-sky-700 text-white px-3 py-1.5 rounded-t-lg">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+              </svg>
               Time Saver · Fastest Flight
             </div>
-            <FlightCard :flight="timeSaver" :expanded="!!expanded[timeSaver.id]" highlight="timesaver" @toggle="toggleExpand(timeSaver.id)" @book="(id) => $emit('book', id)" />
+            <FlightCard
+              :flight="timeSaver"
+              :expanded="!!expanded[timeSaver.id]"
+              :airlines="meta?.airlines ?? {}"
+              highlight="timesaver"
+              @toggle="toggleExpand(timeSaver.id)"
+              @book="(id) => $emit('book', id)"
+            />
           </div>
         </div>
 
-        <!-- ── All other flights -->
         <template v-if="sortedOthers.length">
-
           <div class="flex items-center gap-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">
             <div class="flex-1 h-px bg-slate-200"></div>
             <span>All Available Flights</span>
@@ -284,6 +324,7 @@ const activeFilterCount = computed(() => filters.airlines.length + filters.stops
               :key="flight.id"
               :flight="flight"
               :expanded="!!expanded[flight.id]"
+              :airlines="meta?.airlines ?? {}"
               @toggle="toggleExpand(flight.id)"
               @book="(id) => $emit('book', id)"
             />
@@ -298,7 +339,6 @@ const activeFilterCount = computed(() => filters.airlines.length + filters.stops
           />
         </template>
 
-        <!-- Empty state -->
         <div v-if="filteredFlights.length === 0" class="flex flex-col items-center gap-3 py-16 md:py-20 text-center">
           <span class="text-5xl">✈️</span>
           <h3 class="text-lg font-bold text-slate-800">No flights found</h3>

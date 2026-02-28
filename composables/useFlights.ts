@@ -4,7 +4,7 @@ import { normaliseError } from '../utils/api'
 import { useRoute, useRouter } from 'vue-router'
 import { Ref, ref, computed, watch } from 'vue'
 import { useToast } from './useToast'
-import { useFlightStore } from '../stores/flight'
+import { buildSearchKey, useFlightStore } from '../stores/flight'
 
 export function useFlights() {
     const route = useRoute()
@@ -26,6 +26,17 @@ export function useFlights() {
     const error: Ref<string> = ref('')
     const hasSearched: Ref<boolean> = ref(false)
 
+    function rehydrateFromStore(key: string): boolean {
+        if (flightStore.hasCachedResults(key)) {
+            results.value = flightStore.cachedResults
+            meta.value = flightStore.cachedMeta
+            hasSearched.value = true
+            showSearchForm.value = false
+            return true
+        }
+        return false
+    }
+
     const paramsFromUrl = computed<Partial<FlightSearchParams>>(() => ({
         from: route.query.from as string | undefined,
         to: route.query.to as string | undefined,
@@ -37,6 +48,10 @@ export function useFlights() {
     }))
 
     async function search(params: FlightSearchParams) {
+        const key = buildSearchKey(params)
+
+        if (rehydrateFromStore(key)) return
+
         loading.value = true
         error.value = ''
         hasSearched.value = true
@@ -66,13 +81,15 @@ export function useFlights() {
                 recommended: res.recommended?.cheapest ?? null,
                 fastest: res.recommended?.fastest ?? null,
             }
+
+            flightStore.setCachedResults(key, results.value, meta.value)
+
             showSearchForm.value = false
         } catch (err) {
             error.value = normaliseError(err)
             results.value = []
             meta.value = { count: 0, airlines: {}, recommended: null, fastest: null }
             showSearchForm.value = true
-
             toast.error(error.value)
         } finally {
             loading.value = false
@@ -82,20 +99,28 @@ export function useFlights() {
     watch(
         () => route.query,
         async (q) => {
-            if (q.from && q.to && results.value.length === 0 && !loading.value) {
+            if (!q.from || !q.to) return
+
+            const params = {
+                supplier: q.supplier as FlightSearchParams['supplier'] ?? 'amadeus',
+                from: q.from as string,
+                to: q.to as string,
+                dateFrom: q.dateFrom as string,
+                dateTo: q.dateTo as string | undefined,
+                search_type: (q.tripType as FlightSearchParams['search_type']) ?? 'round-trip',
+                flight_class: (q.travelClass as FlightSearchParams['flight_class']) ?? 'economy',
+                adult_number: Number(q.adult_number) || 1,
+                child_number: Number(q.child_number) || 0,
+                infants_number: Number(q.infants_number) || 0,
+            }
+
+            const key = buildSearchKey(params)
+
+            if (rehydrateFromStore(key)) return
+
+            if (results.value.length === 0 && !loading.value) {
                 hasSearched.value = true
-                await search({
-                    supplier: q.supplier as FlightSearchParams['supplier'] ?? 'amadeus',
-                    from: q.from as string,
-                    to: q.to as string,
-                    dateFrom: q.dateFrom as string,
-                    dateTo: q.dateTo as string | undefined,
-                    search_type: (q.tripType as FlightSearchParams['search_type']) ?? 'round-trip',
-                    flight_class: (q.travelClass as FlightSearchParams['flight_class']) ?? 'economy',
-                    adult_number: Number(q.adult_number) || 1,
-                    child_number: Number(q.child_number) || 0,
-                    infants_number: Number(q.infants_number) || 0,
-                })
+                await search(params)
             }
         },
         { immediate: true }

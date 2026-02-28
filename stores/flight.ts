@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { FlightMeta } from '../types/flight'
 
 export interface Passenger {
     type: 'ADULT' | 'CHILD' | 'INFANT'
@@ -25,6 +26,30 @@ export interface FlightSearchParams {
     adult_number: number
     child_number: number
     infants_number: number
+}
+
+export function buildSearchKey(params: {
+    from: string;
+    to: string;
+    dateFrom?: string;
+    dateTo?: string
+    search_type?: string;
+    flight_class?: string
+    adult_number?: number;
+    child_number?: number;
+    infants_number?: number
+}) {
+    return [
+        params.from,
+        params.to,
+        params.dateFrom ?? '',
+        params.dateTo ?? '',
+        params.search_type ?? '',
+        params.flight_class ?? '',
+        params.adult_number ?? 1,
+        params.child_number ?? 0,
+        params.infants_number ?? 0,
+    ].join('|')
 }
 
 export const useFlightStore = defineStore(
@@ -82,6 +107,12 @@ export const useFlightStore = defineStore(
                 searchParams.value.child_number +
                 searchParams.value.infants_number,
         )
+
+        const cachedResults = ref<any[]>([])
+        const cachedMeta = ref<FlightMeta>({
+            count: 0, airlines: {}, recommended: null, fastest: null,
+        })
+        const lastSearchKey = ref('')
 
         function _recalcPricing() {
             taxAmount.value = priceBreakdown.value.tax
@@ -162,6 +193,16 @@ export const useFlightStore = defineStore(
             return true
         }
 
+        function hasCachedResults(key: string): boolean {
+            return lastSearchKey.value === key && cachedResults.value.length > 0
+        }
+
+        function setCachedResults(key: string, flights: any[], metaData: typeof cachedMeta.value) {
+            lastSearchKey.value = key
+            cachedResults.value = flights
+            cachedMeta.value = metaData
+        }
+
         function resetBooking() {
             offer.value = null
             passengerCount.value = 1
@@ -185,6 +226,7 @@ export const useFlightStore = defineStore(
 
         function resetAll() {
             resetBooking()
+            clearCache()
             searchParams.value = {
                 from: '', to: '', dateFrom: '', dateTo: '',
                 tripType: '', travelClass: '',
@@ -194,6 +236,12 @@ export const useFlightStore = defineStore(
             name.value = ''
             email.value = ''
             isLoggedIn.value = false
+        }
+
+        function clearCache() {
+            cachedResults.value = []
+            cachedMeta.value = { count: 0, airlines: {}, recommended: null, fastest: null }
+            lastSearchKey.value = ''
         }
 
         return {
@@ -207,7 +255,8 @@ export const useFlightStore = defineStore(
             setFlight, setSessionCode, setNameEmail,
             selectOffer, applyB2BDiscount, clearDiscount,
             generateInvoice, confirmBooking,
-            resetBooking, resetAll,
+            resetBooking, resetAll, cachedResults, cachedMeta, lastSearchKey,
+            buildSearchKey, hasCachedResults, setCachedResults, clearCache,
         }
     },
     {
@@ -219,7 +268,7 @@ export const useFlightStore = defineStore(
                 'isLoggedIn', 'isB2B', 'discountRate', 'discountCode',
                 'basePrice', 'taxAmount', 'discountAmount', 'totalPrice', 'currency',
                 'invoiceNumber', 'invoiceDate', 'priceBreakdown', 'totalPassengers',
-                'bookingReference', 'ticketNumbers',
+                'bookingReference', 'ticketNumbers', 'cachedResults', 'cachedMeta', 'lastSearchKey',
             ],
         },
     },

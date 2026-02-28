@@ -11,56 +11,31 @@ const router = useRouter()
 const route = useRoute()
 const store = useVisaStore()
 
-// Step is always kept in sync with the URL
 const step = computed({
   get: () => Number(route.query.step) || 1,
   set: (n: number) => router.replace({ query: { ...route.query, step: String(n) } }),
 })
 
-// Build the visa object and search params from URL query params
 function hydrateStoreFromUrl() {
   const q = route.query
 
-  if (!q.visaId || !q.country) {
-    // URL is missing required params — send back to search
+  if (!q.country || !q.nationality || !q.persons) {
     router.replace('/travel/visas')
     return
-  }
-
-  const visa = {
-    id: Number(q.visaId),
-    country: q.country as string,
-    nationality: q.nationality as string,
-    visaType: q.visaType as string,
-    validity: q.validity as string,
-    entryType: q.entryType as string,
-    processingTime: q.processingTime as string,
-    price: Number(q.price),
-    success_rate: Number(q.successRate),
-    requirements: q.requirements
-      ? (q.requirements as string).split(',').filter(Boolean)
-      : [],
   }
 
   const searchParams = {
     country: q.country as string,
     nationality: q.nationality as string,
-    adults: Number(q.adults) || 1,
-    children: Number(q.children) || 0,
+    persons: Number(q.persons) || 1,
   }
 
-  // Only reset form data if a different visa was selected
-  // (prevents losing typed form data on tab switch or minor URL change)
-  if (!store.selectedVisa || store.selectedVisa.id !== visa.id) {
-    store.setVisa(visa, searchParams)
-  }
+  store.setVisa(searchParams)
 }
 
-// Run on mount — handles page load, refresh, and direct URL visits
 onMounted(hydrateStoreFromUrl)
 
-// Re-hydrate if the user selects a different visa (visaId changes in URL)
-watch(() => route.query.visaId, hydrateStoreFromUrl)
+watch(() => route.query.country, hydrateStoreFromUrl)
 
 const steps = [
   { n: 1, label: 'Application' },
@@ -70,15 +45,8 @@ const steps = [
 
 function goBack() {
   if (step.value === 1) {
-    // Return to search results, preserving the original search context
     router.push({
       path: '/travel/visas',
-      query: {
-        country: route.query.country,
-        nationality: route.query.nationality,
-        adults: route.query.adults,
-        children: route.query.children,
-      },
     })
   } else {
     step.value = step.value - 1
@@ -89,7 +57,6 @@ function goBack() {
 <template>
   <div class="min-h-screen bg-slate-100 pt-44 pb-16 sm:px-24 px-4">
 
-    <!-- Top bar -->
     <div class="bg-white border-b border-slate-200 sticky top-0 z-10">
       <div class="mx-auto px-4 md:px-6 py-4 flex items-center gap-4">
 
@@ -140,7 +107,6 @@ function goBack() {
       </div>
     </div>
 
-    <!-- Main content -->
     <div class="mx-auto py-6">
       <div class="flex flex-col lg:flex-row gap-6 items-start">
 
@@ -152,7 +118,6 @@ function goBack() {
           </Transition>
         </div>
 
-        <!-- Sidebar is fed from store which is fed from URL -->
         <VisaBookingSummary />
       </div>
     </div>

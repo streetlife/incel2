@@ -16,7 +16,6 @@ const form = ref({
   persons: { persons: 0 }
 })
 
-// Validation errors
 const errors = ref({
   country: '',
   nationality: '',
@@ -59,7 +58,6 @@ const countries = [
   'South Africa'
 ]
 
-// Watch form fields and clear errors on change
 watch(() => form.value.country, () => {
   if (errors.value.country) errors.value.country = ''
 })
@@ -72,12 +70,10 @@ watch(() => form.value.persons, () => {
   if (errors.value.general) errors.value.general = ''
 }, { deep: true })
 
-// Total persons validation
 const totalPersons = computed(() => {
   return form.value.persons.persons
 })
 
-// Clear errors
 const clearErrors = () => {
   errors.value = {
     country: '',
@@ -154,7 +150,6 @@ watch(
   { deep: true }
 )
 
-// Build query params
 const buildQueryParams = () => {
   return {
     country: form.value.country,
@@ -163,7 +158,6 @@ const buildQueryParams = () => {
   }
 }
 
-// Scroll to first error
 const scrollToFirstError = () => {
   const firstErrorField = document.querySelector('.border-red-500')
   if (firstErrorField) {
@@ -171,13 +165,13 @@ const scrollToFirstError = () => {
   }
 }
 
-// Navigate to visa page
 const navigateToVisaPage = async () => {
   if (route.path === '/travel/visas') {
     return
   }
 
   const queryParams = buildQueryParams()
+  
   await navigateTo({
     path: '/travel/visas',
     query: queryParams
@@ -199,7 +193,6 @@ const submit = async () => {
 </script>
 
 <template>
-  <!-- General Error -->
   <div v-if="errors.general" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
     <p class="text-red-600 text-sm font-medium">{{ errors.general }}</p>
   </div>
@@ -213,7 +206,7 @@ const submit = async () => {
         id="destination"
         v-model="form.country" 
         :class="[
-          'w-full px-4 py-3 rounded-lg focus:border-transparent',
+          'w-full px-4 py-3 rounded-lg focus:border-gray-300',
           errors.country 
             ? 'border-red-500 focus:ring-red-500 border-2' 
             : 'border border-gray-300'
@@ -232,7 +225,7 @@ const submit = async () => {
         id="nationality"
         v-model="form.nationality" 
         :class="[
-          'w-full px-4 py-3 rounded-lg focus:border-transparent',
+          'w-full px-4 py-3 rounded-lg focus:border-gray-300',
           errors.nationality 
             ? 'border-red-500 focus:ring-red-500 border-2' 
             : 'border border-gray-300'

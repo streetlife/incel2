@@ -58,29 +58,23 @@ export interface UploadedDoc {
 }
 
 interface VisaState {
-  // Selected visa service (from search results)
   selectedVisa: VisaService | null
-  searchParams: { country: string; nationality: string; adults: number; children: number }
+  searchParams: { country: string; nationality: string; persons: number; }
 
-  // Step 1 — form
   applicant: ApplicantForm
   additionalApplicants: number // extra people (children etc.) — adults count from search
   documents: UploadedDoc[]
 
-  // Step 2/3
   invoiceNumber: string
   invoiceDate: string
 
-  // After payment confirmed
   applicationRef: string
   status: 'idle' | 'submitted' | 'processing' | 'approved' | 'rejected'
   adminNote: string
 
-  // Payment
   contactEmail: string
   contactPhone: string
 
-  // UI
   loading: boolean
   error: string
 }
@@ -110,7 +104,7 @@ const defaultDocuments = (): UploadedDoc[] => [
 export const useVisaStore = defineStore('visa', {
   state: (): VisaState => ({
     selectedVisa: null,
-    searchParams: { country: '', nationality: '', adults: 1, children: 0 },
+    searchParams: { country: '', nationality: '', persons: 1 },
     applicant: defaultApplicant(),
     additionalApplicants: 0,
     documents: defaultDocuments(),
@@ -126,13 +120,12 @@ export const useVisaStore = defineStore('visa', {
   }),
 
   getters: {
-    totalApplicants: (s) => s.searchParams.adults + s.searchParams.children,
+    totalApplicants: (s) => s.searchParams.persons,
 
-    // Price per person × total applicants
     pricing: (s) => {
       if (!s.selectedVisa) return null
       const perPerson = s.selectedVisa.price
-      const applicants = s.searchParams.adults + s.searchParams.children
+      const applicants = s.searchParams.persons
       const subtotal = perPerson * applicants
       const serviceFee = Math.round(subtotal * 0.05) // 5% service fee
       const tax = Math.round(subtotal * 0.075) // 7.5% VAT
@@ -148,8 +141,7 @@ export const useVisaStore = defineStore('visa', {
   },
 
   actions: {
-    setVisa(visa: VisaService, params: VisaState['searchParams']) {
-      this.selectedVisa = visa
+    setVisa(params: VisaState['searchParams']) {
       this.searchParams = params
       this.applicant = defaultApplicant()
       this.documents = defaultDocuments()
@@ -180,12 +172,6 @@ export const useVisaStore = defineStore('visa', {
       this.contactPhone = this.applicant.phone
     },
 
-    // Called after payment is verified on the confirm page
-    // TODO: POST /api/payments/verify handles this — it:
-    //   1. Verifies payment with Paystack / Flutterwave
-    //   2. Creates a VisaApplication record in DB (status: submitted)
-    //   3. Triggers admin notification email
-    //   4. Returns { applicationRef, invoiceNumber, invoiceDate }
     confirmApplication(applicationRef: string) {
       this.applicationRef = applicationRef
       this.status = 'submitted'

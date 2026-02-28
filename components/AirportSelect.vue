@@ -66,16 +66,17 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted, onMounted, computed, useAttrs, watch } from "vue"
-import { useFlightService } from "../services/flight.service";
-import { normaliseError } from "../utils/api";
-import { Airport } from "../types/flight";
+import { debounce } from "lodash"
+import { useFlightService } from "../services/flight.service"
+import { normaliseError } from "../utils/api"
+import { Airport } from "../types/flight"
 
 const props = defineProps({
   modelValue: { type: String, default: "" },
   label: { type: String, default: "" },
-  placeholder:{ type: String, default: "City or airport" },
+  placeholder: { type: String, default: "City or airport" },
   id: { type: String, default: () => `airport-${Math.random().toString(36).slice(2)}` },
-  debounceMs: { type: Number, default: 300 },
+  debounceMs: { type: Number, default: 500 },
 })
 
 const emit = defineEmits<{
@@ -103,7 +104,6 @@ const inputRef = ref<HTMLInputElement | null>(null)
 const dropdownStyle = ref<Record<string, string>>({})
 const service = useFlightService()
 const error = ref("")
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
 const displayValue = ref(props.modelValue)
 
 const calculateDropdownPosition = () => {
@@ -117,6 +117,7 @@ const calculateDropdownPosition = () => {
     top: openAbove ? `${rect.top - dropdownMaxHeight - 8}px` : `${rect.bottom + 4}px`,
   }
 }
+
 const updatePosition = () => { if (open.value) calculateDropdownPosition() }
 
 const fetchSuggestions = async (query: string): Promise<Airport[]> => {
@@ -129,30 +130,25 @@ const fetchSuggestions = async (query: string): Promise<Airport[]> => {
   }
 }
 
-const debouncedFetch = (query: string) => {
-  if (debounceTimer) clearTimeout(debounceTimer)
-  loading.value = true
-  debounceTimer = setTimeout(async () => {
-    try {
-      const results = await fetchSuggestions(query)
-      suggestions.value = results
-      if (results.length) calculateDropdownPosition()
-    } catch {
-      suggestions.value = []
-    } finally {
-      loading.value = false
-    }
-  }, props.debounceMs)
-}
+const debouncedFetch = debounce(async (query: string) => {
+  try {
+    const results = await fetchSuggestions(query)
+    suggestions.value = results
+    if (results.length) calculateDropdownPosition()
+  } catch {
+    suggestions.value = []
+  } finally {
+    loading.value = false
+  }
+}, props.debounceMs)
 
 const handleInput = (e: Event) => {
   const value = (e.target as HTMLInputElement).value
-
   displayValue.value = value
-
   emit('update:modelValue', '')
 
   if (value.trim()) {
+    loading.value = true
     debouncedFetch(value)
     open.value = true
   } else {
@@ -171,7 +167,6 @@ const handleFocus = () => {
 const select = (option: Airport) => {
   displayValue.value = option.label
   emit('update:modelValue', option.value)
-
   suggestions.value = []
   open.value = false
 }
@@ -207,6 +202,7 @@ watch(
     }
   }
 )
+
 onMounted(() => {
   window.addEventListener('scroll', updatePosition, true)
   window.addEventListener('resize', updatePosition)
@@ -214,7 +210,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (debounceTimer) clearTimeout(debounceTimer)
+  debouncedFetch.cancel()
   window.removeEventListener('scroll', updatePosition, true)
   window.removeEventListener('resize', updatePosition)
 })

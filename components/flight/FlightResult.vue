@@ -46,12 +46,18 @@ function airlineLogo(code: string): string | null {
 
 const carrierOf = (f: FlightOffer) => f.itineraries[0].segments[0].carrierCode
 
-const allCarriers = computed(() => [...new Set(props.flights.map(carrierOf))])
+const allCarriers = computed(() =>
+  [...new Set(props.flights.map(carrierOf))].sort((a, b) =>
+    airlineName(a).localeCompare(airlineName(b))
+  )
+)
+
 const allCabins = computed(() => [
   ...new Set(props.flights.flatMap(f =>
     f.travelerPricings[0].fareDetailsBySegment.map(s => s.cabin)
   )),
 ])
+
 const cabinLabel = (c: string) => c.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
 
 const filters = reactive({ airlines: [] as string[], stops: [] as number[], cabin: [] as string[] })

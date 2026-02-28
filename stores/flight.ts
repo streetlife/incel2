@@ -26,6 +26,7 @@ export interface FlightSearchParams {
     adult_number: number
     child_number: number
     infants_number: number
+    session_code: string
 }
 
 export function buildSearchKey(params: {
@@ -38,6 +39,7 @@ export function buildSearchKey(params: {
     adult_number?: number;
     child_number?: number;
     infants_number?: number
+    session_code?: string
 }) {
     return [
         params.from,
@@ -49,6 +51,7 @@ export function buildSearchKey(params: {
         params.adult_number ?? 1,
         params.child_number ?? 0,
         params.infants_number ?? 0,
+        params.session_code ?? ''
     ].join('|')
 }
 
@@ -65,6 +68,7 @@ export const useFlightStore = defineStore(
             adult_number: 1,
             child_number: 0,
             infants_number: 0,
+            session_code: '',
         })
         const session_code = ref('')
         const name = ref('')
@@ -194,13 +198,14 @@ export const useFlightStore = defineStore(
         }
 
         function hasCachedResults(key: string): boolean {
-            return lastSearchKey.value === key && cachedResults.value.length > 0
+            return lastSearchKey.value === key && cachedResults.value.length > 0 && session_code.value !== undefined
         }
 
-        function setCachedResults(key: string, flights: any[], metaData: typeof cachedMeta.value) {
+        function setCachedResults(key: string, flights: any[], metaData: typeof cachedMeta.value, sessionCode: string) {
             lastSearchKey.value = key
             cachedResults.value = flights
             cachedMeta.value = metaData
+            session_code.value = sessionCode
         }
 
         function resetBooking() {
@@ -228,9 +233,16 @@ export const useFlightStore = defineStore(
             resetBooking()
             clearCache()
             searchParams.value = {
-                from: '', to: '', dateFrom: '', dateTo: '',
-                tripType: '', travelClass: '',
-                adult_number: 1, child_number: 0, infants_number: 0,
+                from: '',
+                to: '',
+                dateFrom: '',
+                dateTo: '',
+                tripType: '',
+                travelClass: '',
+                adult_number: 1,
+                child_number: 0,
+                infants_number: 0,
+                session_code: '',
             }
             session_code.value = ''
             name.value = ''

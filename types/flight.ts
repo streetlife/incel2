@@ -136,6 +136,7 @@ export interface FlightSearchParams {
     adult_number: number
     child_number: number
     infants_number: number
+    session_code?: string
 }
 
 export interface FlightBookingData {

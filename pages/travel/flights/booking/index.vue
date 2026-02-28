@@ -46,6 +46,7 @@ function goBack() {
         adult_number: flightStore.searchParams.adult_number,
         child_number: flightStore.searchParams.child_number,
         infants_number: flightStore.searchParams.infants_number,
+        session_code: flightStore.searchParams.session_code,
       },
     })
   } else {

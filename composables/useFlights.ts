@@ -26,12 +26,20 @@ export function useFlights() {
     const error: Ref<string> = ref('')
     const hasSearched: Ref<boolean> = ref(false)
 
-    function rehydrateFromStore(key: string): boolean {
+    function rehydrateFromStore(key: string, params: any): boolean {
         if (flightStore.hasCachedResults(key)) {
             results.value = flightStore.cachedResults
             meta.value = flightStore.cachedMeta
             hasSearched.value = true
             showSearchForm.value = false
+
+            router.replace({
+                query: {
+                    ...params,
+                    session_code: flightStore.session_code
+                },
+            })
+
             return true
         }
         return false
@@ -50,7 +58,7 @@ export function useFlights() {
     async function search(params: FlightSearchParams) {
         const key = buildSearchKey(params)
 
-        if (rehydrateFromStore(key)) return
+        if (rehydrateFromStore(key, params)) return
 
         loading.value = true
         error.value = ''
@@ -67,6 +75,7 @@ export function useFlights() {
                 adult_number: params.adult_number,
                 child_number: params.child_number,
                 infants_number: params.infants_number,
+                session_code: flightStore.session_code
             },
         })
 
@@ -82,7 +91,14 @@ export function useFlights() {
                 fastest: res.recommended?.fastest ?? null,
             }
 
-            flightStore.setCachedResults(key, results.value, meta.value)
+            flightStore.setCachedResults(key, results.value, meta.value, res.session_code)
+
+            await router.replace({
+                query: {
+                    ...route.query,
+                    session_code: res.session_code ?? undefined,
+                },
+            })
 
             showSearchForm.value = false
         } catch (err) {
@@ -101,6 +117,30 @@ export function useFlights() {
         async (q) => {
             if (!q.from || !q.to) return
 
+            if (q.session_code) {
+                hasSearched.value = true
+                showSearchForm.value = false
+
+                if (flightStore.cachedResults.length > 0) {
+                    results.value = flightStore.cachedResults
+                    meta.value = flightStore.cachedMeta
+                    return
+                }
+
+                const unwatch = watch(
+                    () => flightStore.cachedResults,
+                    (val) => {
+                        if (val.length > 0) {
+                            results.value = val
+                            meta.value = flightStore.cachedMeta
+                            unwatch()
+                        }
+                    },
+                    { immediate: true }
+                )
+                return
+            }
+
             const params = {
                 supplier: q.supplier as FlightSearchParams['supplier'] ?? 'amadeus',
                 from: q.from as string,
@@ -116,7 +156,7 @@ export function useFlights() {
 
             const key = buildSearchKey(params)
 
-            if (rehydrateFromStore(key)) return
+            if (rehydrateFromStore(key, params)) return
 
             if (results.value.length === 0 && !loading.value) {
                 hasSearched.value = true
@@ -144,6 +184,7 @@ export function useFlights() {
             adult_number: Number(q.adult_number) || 1,
             child_number: Number(q.child_number) || 0,
             infants_number: Number(q.infants_number) || 0,
+            session_code: q.session_code as string
         }
 
         flightStore.setFlight(searchParams)
@@ -177,6 +218,7 @@ export function useFlights() {
                 adult_number: route.query.adult_number,
                 child_number: route.query.child_number,
                 infants_number: route.query.infants_number,
+                session_code: route.query.session_code ?? undefined,
                 step: '1',
             },
         })

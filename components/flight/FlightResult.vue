@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import FlightCard from './FlightCard.vue'
 import Pagination from '../Pagination.vue'
 import type { FlightOffer, AirlineInfo, FlightMeta } from '../../types/flight'
+import { Plane } from 'lucide-vue-next'
 
 const props = withDefaults(defineProps<{
   flights?: FlightOffer[]
@@ -185,13 +186,11 @@ const toggleExpand = (id: string) => { expanded[id] = !expanded[id] }
             <button class="text-xs text-slate-400 bg-transparent border-none cursor-pointer p-0" @click="showMobileFilters = false">✕ Close</button>
           </div>
         </div>
-        <!-- Airlines -->
         <div class="mb-4">
           <h4 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Airlines</h4>
           <div class="grid grid-cols-2 gap-x-4 gap-y-1">
             <label v-for="code in allCarriers" :key="code" class="flex items-center gap-2 py-0.5 text-sm text-slate-600 cursor-pointer">
               <input type="checkbox" class="w-3.5 h-3.5 accent-primary cursor-pointer" :checked="filters.airlines.includes(code)" @change="toggleFilter(filters.airlines, code)" />
-              <!-- Logo or colour dot -->
               <img v-if="airlineLogo(code)" :src="airlineLogo(code)!" :alt="code" class="w-4 h-4 object-contain rounded-sm shrink-0" @error="($event.target as HTMLImageElement).style.display='none'" />
               <span v-else class="w-2 h-2 rounded-full shrink-0" :style="{ background: airlineColor(code) }"></span>
               <span class="truncate">{{ airlineName(code) }}</span>
@@ -229,7 +228,6 @@ const toggleExpand = (id: string) => { expanded[id] = !expanded[id] }
           <button v-if="hasFilters" class="text-xs text-primary underline font-medium bg-transparent border-none cursor-pointer p-0" @click="clearFilters">Clear all</button>
         </div>
 
-        <!-- Airlines -->
         <div class="py-3.5 border-b border-slate-100">
           <h4 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2.5">Airlines</h4>
           <label v-for="code in allCarriers" :key="code"
@@ -243,7 +241,6 @@ const toggleExpand = (id: string) => { expanded[id] = !expanded[id] }
           </label>
         </div>
 
-        <!-- Stops -->
         <div class="py-3.5 border-b border-slate-100">
           <h4 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2.5">Stops</h4>
           <label v-for="s in [0, 1, 2]" :key="s" class="flex items-center gap-2 py-1 text-sm text-slate-600 cursor-pointer hover:text-slate-900 transition-colors">
@@ -252,7 +249,6 @@ const toggleExpand = (id: string) => { expanded[id] = !expanded[id] }
           </label>
         </div>
 
-        <!-- Cabin -->
         <div class="py-3.5">
           <h4 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2.5">Cabin Class</h4>
           <label v-for="c in allCabins" :key="c" class="flex items-center gap-2 py-1 text-sm text-slate-600 cursor-pointer hover:text-slate-900 transition-colors">
@@ -346,14 +342,13 @@ const toggleExpand = (id: string) => { expanded[id] = !expanded[id] }
         </template>
 
         <div v-if="filteredFlights.length === 0" class="flex flex-col items-center gap-3 py-16 md:py-20 text-center">
-          <span class="text-5xl">✈️</span>
+          <span class="text-5xl"><Plane /></span>
           <h3 class="text-lg font-bold text-slate-800">No flights found</h3>
           <p class="text-sm text-slate-500">Try adjusting your filters to see more options.</p>
           <button class="mt-2 px-6 py-2.5 bg-primary hover:opacity-90 text-white text-sm font-semibold rounded-xl border-none cursor-pointer transition-colors" @click="clearFilters">
             Clear all filters
           </button>
         </div>
-
       </div>
     </div>
   </div>

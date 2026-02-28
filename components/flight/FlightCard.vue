@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { FlightOffer, AirlineInfo } from '../../types/flight'
 import { useCurrency } from '../../composables/useCurrency';
+import { useAirportResolver } from '../../composables/useAirportResolver';
 
 const props = defineProps<{
   flight: FlightOffer
@@ -12,6 +13,7 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: 'toggle'): void; (e: 'book', id: string): void }>()
 
 const { format } = useCurrency()
+const { resolveAirports } = useAirportResolver()
 
 const FALLBACK_COLORS: Record<string, string> = {
   BA:'#075AAA', VS:'#E31837', LH:'#05164D', TP:'#00843D',
@@ -37,16 +39,7 @@ function resolveLogo(code: string): string | null {
 }
 const logoErrors = ref<Record<string, boolean>>({})
 function onLogoError(code: string) { logoErrors.value[code] = true }
-
-const AIRPORTS: Record<string, string> = {
-  LHR:'London Heathrow', JFK:'New York JFK', FRA:'Frankfurt', AMS:'Amsterdam',
-  MUC:'Munich', MAD:'Madrid', LIS:'Lisbon', BOS:'Boston', ATL:'Atlanta',
-  MIA:'Miami', DFW:'Dallas', ORD:"Chicago O'Hare", IAD:'Washington Dulles',
-  DUB:'Dublin', BOG:'Bogotá', WAW:'Warsaw', BCN:'Barcelona', YYC:'Calgary',
-  MAN:'Manchester', NBO:'Nairobi', DXB:'Dubai', LOS:'Lagos', ADD:'Addis Ababa',
-  IST:'Istanbul', DOH:'Doha', CAI:'Cairo', JNB:'Johannesburg', KGL:'Kigali',
-  CPT:'Cape Town', DUR:'Durban', LFW:'Lomé', ABJ:'Abidjan', ACC:'Accra',
-}
+const airportNames = ref<Record<string, string>>({})
 
 const parseDuration = (iso: string) => {
   const h = Number.parseInt(iso.match(/(\d+)H/)?.[1] ?? '0')
@@ -76,6 +69,12 @@ const via = computed(() => segs.value.slice(0, -1).map(s => s.arrival.iataCode).
 const stopVal = stops.value > 1 ? 's' : ''
 const stopLabel = computed(() => stops.value === 0 ? 'Non-stop' : `${stops.value} stop${stopVal} via ${via.value}`)
 const cabinLabel = computed(() => fare.value.cabin.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()))
+
+watch(segs, async (segments) => {
+  const codes = segments.flatMap(s => [s.departure.iataCode, s.arrival.iataCode])
+  const names = await resolveAirports(codes)
+  airportNames.value = { ...airportNames.value, ...names }
+}, { immediate: true })
 </script>
 
 <template>
@@ -108,7 +107,6 @@ const cabinLabel = computed(() => fare.value.cabin.replace('_', ' ').toLowerCase
         </div>
       </div>
 
-      <!-- Route timeline -->
       <div class="flex items-center gap-2">
         <div class="flex flex-col items-start min-w-[52px]">
           <div class="text-xl font-bold text-slate-900 leading-none font-mono">{{ fmtTime(first.departure.at) }}</div>
@@ -135,7 +133,6 @@ const cabinLabel = computed(() => fare.value.cabin.replace('_', ' ').toLowerCase
         </div>
       </div>
 
-      <!-- Chips -->
       <div class="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
         <span class="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md whitespace-nowrap">
           {{ fare.includedCabinBags.quantity ?? fare.includedCabinBags.weight + 'kg' }} cabin bag
@@ -149,7 +146,6 @@ const cabinLabel = computed(() => fare.value.cabin.replace('_', ' ').toLowerCase
         </span>
       </div>
 
-      <!-- Actions -->
       <div class="flex items-center gap-2 pt-1">
         <button class="flex-1 py-2.5 bg-primary hover:opacity-90 active:scale-95 text-white text-sm font-semibold rounded-xl transition-all cursor-pointer border-none"
           @click.stop="emit('book', flight.id)">Book Now</button>
@@ -178,7 +174,6 @@ const cabinLabel = computed(() => fare.value.cabin.replace('_', ' ').toLowerCase
         <span class="text-xs text-slate-600 font-semibold leading-tight">{{ carrierName }}</span>
       </div>
 
-      <!-- Route timeline -->
       <div class="grid items-center gap-4" style="grid-template-columns: auto 1fr auto;">
         <div class="flex flex-col items-start">
           <div class="text-2xl font-bold text-slate-900 leading-none font-mono">{{ fmtTime(first.departure.at) }}</div>
@@ -205,7 +200,6 @@ const cabinLabel = computed(() => fare.value.cabin.replace('_', ' ').toLowerCase
         </div>
       </div>
 
-      <!-- Chips -->
       <div class="flex flex-col gap-1.5 items-start">
         <span class="inline-flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md whitespace-nowrap">{{ cabinLabel }}</span>
         <span class="inline-flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md whitespace-nowrap">
@@ -222,7 +216,6 @@ const cabinLabel = computed(() => fare.value.cabin.replace('_', ' ').toLowerCase
         </span>
       </div>
 
-      <!-- Price + CTA -->
       <div class="flex flex-col items-end gap-1 min-w-[148px]">
         <div class="text-xl font-bold text-slate-900 leading-tight">{{ format(Number(flight.price.total)) }}</div>
         <div class="text-xs text-slate-400">per person</div>
@@ -251,7 +244,6 @@ const cabinLabel = computed(() => fare.value.cabin.replace('_', ' ').toLowerCase
         <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-4">Flight Itinerary</p>
 
         <div v-for="(seg, idx) in segs" :key="idx" class="mb-4 last:mb-0">
-          <!-- Segment carrier row -->
           <div class="flex items-center gap-2 mb-2.5">
             <div class="w-5 h-5 rounded overflow-hidden shrink-0 flex items-center justify-center"
               :style="(resolveLogo(seg.carrierCode) && !logoErrors[seg.carrierCode]) ? { border: '1px solid #e2e8f0' } : { background: resolveColor(seg.carrierCode) }">
@@ -268,13 +260,16 @@ const cabinLabel = computed(() => fare.value.cabin.replace('_', ' ').toLowerCase
             </span>
           </div>
 
-          <!-- Segment route card -->
           <div class="grid items-center gap-3 bg-white border border-slate-200 rounded-xl px-3 py-3 md:px-4 md:py-3.5"
             style="grid-template-columns: 1fr auto 1fr;">
             <div class="flex flex-col gap-0.5">
               <div class="text-lg md:text-xl font-bold text-slate-900 font-mono leading-none">{{ fmtTime(seg.departure.at) }}</div>
-              <div class="text-sm font-semibold text-slate-700 mt-1">{{ seg.departure.iataCode }}</div>
-              <div class="text-xs text-slate-500 hidden sm:block">{{ AIRPORTS[seg.departure.iataCode] ?? seg.departure.iataCode }}</div>
+              <div class="flex items-center gap-1 mt-1">
+                <div class="text-sm font-semibold text-slate-700">{{ seg.departure.iataCode }}</div>
+                  <div class="text-xs text-slate-500 hidden sm:block">
+                    ({{ airportNames[seg.departure.iataCode] }})
+                  </div>
+                </div>
               <div v-if="seg.departure.terminal" class="text-xs text-slate-400">T{{ seg.departure.terminal }}</div>
             </div>
             <div class="flex flex-col items-center gap-1.5 px-2">
@@ -284,23 +279,25 @@ const cabinLabel = computed(() => fare.value.cabin.replace('_', ' ').toLowerCase
             </div>
             <div class="flex flex-col gap-0.5 items-end text-right">
               <div class="text-lg md:text-xl font-bold text-slate-900 font-mono leading-none">{{ fmtTime(seg.arrival.at) }}</div>
-              <div class="text-sm font-semibold text-slate-700 mt-1">{{ seg.arrival.iataCode }}</div>
-              <div class="text-xs text-slate-500 hidden sm:block">{{ AIRPORTS[seg.arrival.iataCode] ?? seg.arrival.iataCode }}</div>
+              <div class="flex items-center gap-1 mt-1">
+                <div class="text-xs text-slate-500 hidden sm:block">
+                    ({{ airportNames[seg.arrival.iataCode] }})
+                  </div>
+                <div class="text-sm font-semibold text-slate-700">{{ seg.arrival.iataCode }}</div>
+                </div>
               <div v-if="seg.arrival.terminal" class="text-xs text-slate-400">T{{ seg.arrival.terminal }}</div>
             </div>
           </div>
 
-          <!-- Layover pill -->
           <div v-if="Number(idx) < segs.length - 1"
             class="flex items-center gap-2 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
               <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
             </svg>
-            Layover in {{ AIRPORTS[seg.arrival.iataCode] ?? seg.arrival.iataCode }} ({{ seg.arrival.iataCode }})
+            Layover in {{ seg.arrival.iataCode }} ({{ airportNames[seg.arrival.iataCode] }})
           </div>
         </div>
 
-        <!-- Fare rules summary -->
         <div class="flex flex-wrap gap-3 mt-4 pt-4 border-t border-dashed border-slate-200">
           <div class="flex items-center gap-1.5 text-xs text-slate-600">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>

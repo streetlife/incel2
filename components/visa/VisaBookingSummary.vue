@@ -1,15 +1,37 @@
 <script setup lang="ts">
-import { useVisaStore } from '../../stores/visa';
-
+import { computed } from 'vue'
+import { useVisaStore } from '../../stores/visa'
+import { useCurrency } from '../../composables/useCurrency'
 
 const store = useVisaStore()
+
+const BASE_PRICE_PER_PERSON = 45000
+
+const pricing = computed(() => {
+  const count = store.personCount
+  const subtotal = BASE_PRICE_PER_PERSON * count
+  const serviceFee = Math.round(subtotal * 0.05)
+  const tax = Math.round(subtotal * 0.075)
+  const total = subtotal + serviceFee + tax
+  return { count, subtotal, serviceFee, tax, total }
+})
+
+const { format } = useCurrency()
+
+const requiredDocs = computed(() => store.getDocuments(0).filter(d => d.required))
+
+function uploadedCount(key: string): number {
+  return Array.from({ length: store.personCount }, (_, i) =>
+    store.getDocuments(i).find(d => d.key === key)?.uploaded ?? false
+  ).filter(Boolean).length
+}
+
+const leadEmail = computed(() => store.applicants[0]?.email || '')
 </script>
 
 <template>
   <aside class="w-full lg:w-80 shrink-0">
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden sticky top-6">
-
-      <!-- Visa header -->
       <div class="bg-slate-900 px-5 py-4">
         <div class="flex items-center gap-2 mb-1">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2">
@@ -17,76 +39,116 @@ const store = useVisaStore()
           </svg>
           <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Visa Application</span>
         </div>
-        <p class="text-white font-bold text-lg leading-tight">{{ store.selectedVisa?.country }}</p>
-        <p class="text-slate-400 text-sm">{{ store.selectedVisa?.visaType }} · {{ store.selectedVisa?.entryType }}</p>
       </div>
 
       <div class="px-5 py-4 space-y-4">
+        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nationality</p>
+            <p class="text-sm font-semibold text-slate-800 mt-0.5">{{ store.selectedVisa?.nationality || '—' }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Applicants</p>
+            <p class="text-sm font-semibold text-slate-800 mt-0.5">
+              {{ store.personCount }} person{{ store.personCount > 1 ? 's' : '' }}
+            </p>
+          </div>
+          <div v-if="store.applicants[0]?.departureDate">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Departure</p>
+            <p class="text-sm font-semibold text-slate-800 mt-0.5">
+              {{ new Date(store.applicants[0].departureDate).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) }}
+            </p>
+          </div>
+          <div v-if="store.applicants[0]?.returnDate">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Return</p>
+            <p class="text-sm font-semibold text-slate-800 mt-0.5">
+              {{ new Date(store.applicants[0].returnDate).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) }}
+            </p>
+          </div>
+        </div>
 
-        <!-- Visa details -->
-        <div class="grid grid-cols-2 gap-3">
-          <div v-for="row in [
-            { label: 'Validity', value: store.selectedVisa?.validity },
-            { label: 'Processing', value: store.selectedVisa?.processingTime },
-            { label: 'Nationality', value: store.searchParams.nationality },
-            { label: 'Applicants', value: store.totalApplicants + ' person' + (store.totalApplicants > 1 ? 's' : '') },
-          ]" :key="row.label">
-            <div>
-              <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">{{ row.label }}</p>
-              <p class="text-sm font-semibold text-slate-800 mt-0.5">{{ row.value || '—' }}</p>
+        <div class="border-t border-slate-100 pt-4" v-if="store.personCount > 0">
+          <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Travellers</p>
+          <div class="space-y-1.5">
+            <div v-for="(ap, i) in store.applicants" :key="i"
+              class="flex items-center gap-2.5 py-1.5 px-3 rounded-lg bg-slate-50 border border-slate-100">
+              <div class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
+                <span class="text-[10px] font-bold text-slate-600">{{ i + 1 }}</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-slate-800 truncate">
+                  {{ ap.firstName ? `${ap.firstName} ${ap.lastName}`.trim() : `Person ${i + 1}` }}
+                </p>
+                <p v-if="ap.passportNumber" class="text-[10px] text-slate-400 truncate uppercase">
+                  {{ ap.passportNumber }}
+                </p>
+              </div>
+              <div class="w-2 h-2 rounded-full shrink-0"
+                :class="store.requiredDocsUploaded(i) && ap.firstName && ap.passportNumber
+                  ? 'bg-green-400'
+                  : 'bg-amber-300'">
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="border-t border-slate-100 pt-4" v-if="store.pricing">
+        <div class="border-t border-slate-100 pt-4">
           <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Price Breakdown</p>
-
           <div class="space-y-2">
             <div class="flex justify-between text-sm">
               <span class="text-slate-600">
-                {{ store.fmtNgn(store.pricing.perPerson) }} × {{ store.pricing.applicants }} applicant{{ store.pricing.applicants > 1 ? 's' : '' }}
+                {{ format(BASE_PRICE_PER_PERSON) }} × {{ pricing.count }} applicant{{ pricing.count > 1 ? 's' : '' }}
               </span>
-              <span class="font-semibold text-slate-800">{{ store.fmtNgn(store.pricing.subtotal) }}</span>
+              <span class="font-semibold text-slate-800">{{ format(pricing.subtotal) }}</span>
             </div>
             <div class="flex justify-between text-sm">
               <span class="text-slate-600">Service fee (5%)</span>
-              <span class="font-semibold text-slate-800">{{ store.fmtNgn(store.pricing.serviceFee) }}</span>
+              <span class="font-semibold text-slate-800">{{ format(pricing.serviceFee) }}</span>
             </div>
             <div class="flex justify-between text-sm">
               <span class="text-slate-600">VAT (7.5%)</span>
-              <span class="font-semibold text-slate-800">{{ store.fmtNgn(store.pricing.tax) }}</span>
+              <span class="font-semibold text-slate-800">{{ format(pricing.tax) }}</span>
             </div>
             <div class="flex justify-between pt-2 border-t border-slate-100">
               <span class="font-bold text-slate-900">Total</span>
-              <span class="font-bold text-slate-900 text-lg">{{ store.fmtNgn(store.pricing.total) }}</span>
+              <span class="font-bold text-slate-900 text-lg">{{ format(pricing.total) }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Required docs checklist -->
         <div class="border-t border-slate-100 pt-4">
           <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Required Documents</p>
           <div class="space-y-1.5">
-            <div v-for="doc in store.documents.filter(d => d.required)" :key="doc.key"
-              class="flex items-center gap-2 text-xs">
+            <div v-for="doc in requiredDocs" :key="doc.key" class="flex items-center gap-2 text-xs">
               <div class="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                :class="doc.uploaded ? 'bg-green-100' : 'bg-slate-100'">
-                <svg v-if="doc.uploaded" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg>
+                :class="uploadedCount(doc.key) === store.personCount ? 'bg-green-100' : 'bg-slate-100'">
+                <svg v-if="uploadedCount(doc.key) === store.personCount"
+                  width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3">
+                  <polyline points="20,6 9,17 4,12"/>
+                </svg>
                 <div v-else class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
               </div>
-              <span :class="doc.uploaded ? 'text-green-700 font-medium' : 'text-slate-500'">{{ doc.label }}</span>
+              <span class="flex-1"
+                :class="uploadedCount(doc.key) === store.personCount ? 'text-green-700 font-medium' : 'text-slate-500'">
+                {{ doc.label }}
+              </span>
+              <span v-if="store.personCount > 1"
+                class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                :class="uploadedCount(doc.key) === store.personCount
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-slate-100 text-slate-400'">
+                {{ uploadedCount(doc.key) }}/{{ store.personCount }}
+              </span>
             </div>
           </div>
         </div>
 
-        <!-- Email notice -->
         <div class="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
           <p class="text-xs text-primary leading-relaxed">
             <span class="font-semibold">Visa delivery:</span> Once approved, your visa will be emailed to
-            <span class="font-semibold">{{ store.applicant.email || 'your email' }}</span>.
+            <span class="font-semibold">{{ leadEmail || 'your email address' }}</span>.
           </p>
         </div>
-
       </div>
     </div>
   </aside>

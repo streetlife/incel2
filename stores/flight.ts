@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { FlightMeta } from '../types/flight'
+import { useFlightService } from '../services/flight.service'
 
 export interface Passenger {
     type: 'ADULT' | 'CHILD' | 'INFANT'
@@ -83,19 +84,19 @@ export const useFlightStore = defineStore(
         const isB2B = ref(false)
         const discountRate = ref(0)
         const discountCode = ref('')
-
         const basePrice = ref(0)
         const taxAmount = ref(0)
         const discountAmount = ref(0)
         const totalPrice = ref(0)
         const currency = ref('USD')
-
         const invoiceNumber = ref('')
         const invoiceDate = ref('')
         const bookingReference = ref('')
         const ticketNumbers = ref<string[]>([])
         const status = ref<'idle' | 'loading' | 'confirmed' | 'error'>('idle')
         const errorMessage = ref('')
+        const bookCode = ref('')
+        const flightService = useFlightService()
 
         const priceBreakdown = computed(() => {
             const base = basePrice.value * passengerCount.value
@@ -208,6 +209,17 @@ export const useFlightStore = defineStore(
             session_code.value = sessionCode
         }
 
+        async function generateBookingCode(): Promise<string> {
+            try {
+                const res = await flightService.generateBookingCode()
+                bookCode.value = res.bookCode
+
+                return bookCode.value
+            } catch (err: any) {
+                throw new Error(err)
+            }
+        }
+
         function resetBooking() {
             offer.value = null
             passengerCount.value = 1
@@ -257,30 +269,84 @@ export const useFlightStore = defineStore(
         }
 
         return {
-            searchParams, session_code, name, email,
-            offer, passengerCount, cabinClass, passengers, contactEmail, contactPhone,
-            isLoggedIn, isB2B, discountRate, discountCode,
-            basePrice, taxAmount, discountAmount, totalPrice, currency,
-            invoiceNumber, invoiceDate,
-            bookingReference, ticketNumbers, status, errorMessage,
-            priceBreakdown, totalPassengers,
-            setFlight, setSessionCode, setNameEmail,
-            selectOffer, applyB2BDiscount, clearDiscount,
-            generateInvoice, confirmBooking,
-            resetBooking, resetAll, cachedResults, cachedMeta, lastSearchKey,
-            buildSearchKey, hasCachedResults, setCachedResults, clearCache,
+            searchParams,
+            session_code,
+            name,
+            email,
+            offer,
+            passengerCount,
+            cabinClass,
+            passengers,
+            contactEmail,
+            contactPhone,
+            isLoggedIn,
+            isB2B,
+            discountRate,
+            discountCode,
+            basePrice,
+            taxAmount,
+            discountAmount,
+            totalPrice,
+            currency,
+            invoiceNumber,
+            invoiceDate,
+            bookingReference,
+            ticketNumbers,
+            status,
+            errorMessage,
+            priceBreakdown,
+            totalPassengers,
+            cachedResults,
+            cachedMeta,
+            lastSearchKey,
+            setFlight,
+            setSessionCode,
+            setNameEmail,
+            selectOffer,
+            applyB2BDiscount,
+            clearDiscount,
+            generateInvoice,
+            confirmBooking,
+            resetBooking,
+            resetAll,
+            buildSearchKey,
+            hasCachedResults,
+            setCachedResults,
+            clearCache,
+            generateBookingCode,
         }
     },
     {
         unstorage: {
             pick: [
-                'searchParams', 'session_code', 'name', 'email',
-                'offer', 'passengerCount', 'cabinClass', 'passengers',
-                'contactEmail', 'contactPhone',
-                'isLoggedIn', 'isB2B', 'discountRate', 'discountCode',
-                'basePrice', 'taxAmount', 'discountAmount', 'totalPrice', 'currency',
-                'invoiceNumber', 'invoiceDate', 'priceBreakdown', 'totalPassengers',
-                'bookingReference', 'ticketNumbers', 'cachedResults', 'cachedMeta', 'lastSearchKey',
+                'searchParams',
+                'session_code',
+                'name',
+                'email',
+                'offer',
+                'passengerCount',
+                'cabinClass',
+                'passengers',
+                'contactEmail',
+                'contactPhone',
+                'isLoggedIn',
+                'isB2B',
+                'discountRate',
+                'discountCode',
+                'basePrice',
+                'taxAmount',
+                'discountAmount',
+                'totalPrice',
+                'currency',
+                'invoiceNumber',
+                'invoiceDate',
+                'priceBreakdown',
+                'totalPassengers',
+                'bookingReference',
+                'ticketNumbers',
+                'cachedResults',
+                'cachedMeta',
+                'lastSearchKey',
             ],
         },
     },

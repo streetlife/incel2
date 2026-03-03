@@ -15,6 +15,8 @@ export function useFlights() {
     const flightStore = useFlightStore()
 
     const showSearchForm = ref(true)
+    const bookingLoading = ref(false)
+
     const results: Ref<FlightOffer[]> = ref([])
     const meta = ref<FlightMeta>({
         count: 0,
@@ -190,7 +192,9 @@ export function useFlights() {
         flightStore.setFlight(searchParams)
     }
 
-    function navigateToBooking(offerId: string) {
+    async function navigateToBooking(offerId: string) {
+        let bookingCode: string | undefined
+
         const offer = results.value.find(f => f.id === offerId)
         if (!offer) return
 
@@ -211,6 +215,16 @@ export function useFlights() {
 
         selectOffer(offer, passengerTypes)
 
+        try {
+            bookingLoading.value = true
+            bookingCode = await flightStore.generateBookingCode()
+        } catch (e) {
+            error.value = normaliseError(e)
+            toast.error(error.value)
+            bookingLoading.value = false
+            return
+        }
+
         router.push({
             path: '/travel/flights/booking',
             query: {
@@ -219,6 +233,7 @@ export function useFlights() {
                 child_number: route.query.child_number,
                 infants_number: route.query.infants_number,
                 session_code: route.query.session_code ?? undefined,
+                booking_code: bookingCode,
                 step: '1',
             },
         })
@@ -232,6 +247,7 @@ export function useFlights() {
         hasSearched,
         paramsFromUrl,
         showSearchForm,
+        bookingLoading,
         search,
         navigateToBooking,
     }

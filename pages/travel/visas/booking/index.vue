@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch, onMounted } from 'vue'
+import { computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useVisaStore } from '../../../../stores/visa'
 import VisaApplicationForm from '../../../../components/visa/VisaApplicationForm.vue'
@@ -13,29 +13,28 @@ const store = useVisaStore()
 
 const step = computed({
   get: () => Number(route.query.step) || 1,
-  set: (n: number) => router.replace({ query: { ...route.query, step: String(n) } }),
+  set: (n: number) =>
+    router.replace({
+      query: {
+        country: String(route.query.country ?? ''),
+        nationality: String(route.query.nationality ?? ''),
+        persons: String(route.query.persons ?? 1),
+        step: String(n),
+      },
+    }),
 })
 
 function hydrateStoreFromUrl() {
-  const q = route.query
+  const { country, nationality, persons } = route.query
 
-  if (!q.country || !q.nationality || !q.persons) {
-    router.replace('/travel/visas')
-    return
-  }
+   store.resetAll()
 
-  const searchParams = {
-    country: q.country as string,
-    nationality: q.nationality as string,
-    persons: Number(q.persons) || 1,
-  }
-
-  store.setVisa(searchParams)
+  store.setVisa({
+    country: country ? String(country) : '',
+    nationality: nationality ? String(nationality) : '',
+    persons: persons ? Number(persons) : 1,
+  })
 }
-
-onMounted(hydrateStoreFromUrl)
-
-watch(() => route.query.country, hydrateStoreFromUrl)
 
 const steps = [
   { n: 1, label: 'Application' },
@@ -52,6 +51,21 @@ function goBack() {
     step.value = step.value - 1
   }
 }
+
+watch(
+  () => ({
+    country: route.query.country,
+    nationality: route.query.nationality,
+    persons: route.query.persons,
+  }),
+  (newQuery, oldQuery) => {
+    if (JSON.stringify(newQuery) === JSON.stringify(oldQuery)) return
+
+    store.resetAll()
+    hydrateStoreFromUrl()
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -69,7 +83,6 @@ function goBack() {
           Back
         </button>
 
-        <!-- Step progress -->
         <div class="flex items-center gap-2 flex-1 justify-center">
           <template v-for="(s, i) in steps" :key="s.n">
             <div class="flex items-center gap-2">
@@ -95,22 +108,13 @@ function goBack() {
               :class="step > s.n ? 'bg-green-400' : 'bg-slate-200'"></div>
           </template>
         </div>
-
-        <!-- Visa context pill — populated directly from URL params -->
-        <div v-if="store.selectedVisa"
-          class="shrink-0 hidden sm:flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg max-w-xs truncate">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-          </svg>
-          <span class="truncate">{{ store.selectedVisa.visaType }} · {{ store.selectedVisa.country }}</span>
-        </div>
       </div>
     </div>
 
     <div class="mx-auto py-6">
       <div class="flex flex-col lg:flex-row gap-6 items-start">
 
-        <div class="flex-1 min-w-0">
+        <div class="flex-1 sm:min-w-0 w-full">
           <Transition name="slide" mode="out-in">
             <VisaApplicationForm v-if="step === 1" key="1" @next="step = 2" />
             <VisaBookingReview v-else-if="step === 2" key="2" @next="step = 3" @back="step = 1" />

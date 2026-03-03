@@ -5,7 +5,6 @@ import PassengerSelect from './PassengerSelect.vue'
 
 const route = useRoute()
 
-// Define emit
 const emit = defineEmits<{
   search: [searchData: any]
 }>()
@@ -13,7 +12,7 @@ const emit = defineEmits<{
 const form = ref({
   country: '',
   nationality: '',
-  persons: { persons: 0 }
+  persons: 0
 })
 
 const errors = ref({
@@ -71,7 +70,7 @@ watch(() => form.value.persons, () => {
 }, { deep: true })
 
 const totalPersons = computed(() => {
-  return form.value.persons.persons
+  return form.value.persons
 })
 
 const clearErrors = () => {
@@ -83,7 +82,6 @@ const clearErrors = () => {
   }
 }
 
-// Validation functions
 const validateCountry = (): boolean => {
   if (!form.value.country) {
     errors.value.country = 'Destination country is required'
@@ -124,18 +122,13 @@ const validateForm = (): boolean => {
   return countryValid && nationalityValid && personsValid
 }
 
-// Prefill from query params
 const prefillFromQuery = () => {
   const query = route.query
-
   if (!query || Object.keys(query).length === 0) return
 
-  form.value.country = (query.country as string) || ''
-  form.value.nationality = (query.nationality as string) || ''
-
-  form.value.persons = {
-    persons: Number.parseInt(query.persons as string) || 1,
-  }
+  form.value.country = String(query.country ?? '')
+  form.value.nationality = String(query.nationality ?? '')
+  form.value.persons = Number(query.persons) || 1
 }
 
 onMounted(() => {
@@ -150,13 +143,11 @@ watch(
   { deep: true }
 )
 
-const buildQueryParams = () => {
-  return {
-    country: form.value.country,
-    nationality: form.value.nationality,
-    persons: form.value.persons.persons,
-  }
-}
+const buildQueryParams = () => ({
+  country: String(form.value.country),
+  nationality: String(form.value.nationality),
+  persons: String(form.value.persons),
+})
 
 const scrollToFirstError = () => {
   const firstErrorField = document.querySelector('.border-red-500')

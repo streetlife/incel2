@@ -8,6 +8,7 @@ import type {
   Airport,
   FlightBookingData,
   FlightBookingResponse,
+  BookingCodeResponse,
 } from '../types/flight'
 import { useApi } from '../utils/api'
 
@@ -42,7 +43,9 @@ export function useFlightService() {
      * Re-fetch a single offer to confirm price hasn't changed before payment.
      */
     async getOffer(offerId: string): Promise<FlightOffer> {
-      const res = await $api<ApiResponse<FlightOffer>>(`/flights/offers/${offerId}`)
+      const res = await $api<ApiResponse<FlightOffer>>(`/flights/offers/${offerId}`, {
+        method: 'GET'
+      })
       return res.data
     },
 
@@ -72,7 +75,8 @@ export function useFlightService() {
         customer_email: payload.customer_email,
         callback_url: payload.callback_url,
         invoice_code: payload.invoice_code,
-        customer_name: payload.customer_name
+        customer_name: payload.customer_name,
+        currency: 'NGN'
       }
 
       const res = await $api<ApiResponse<{ payment_link: string; reference: string }>>(
@@ -108,7 +112,8 @@ export function useFlightService() {
         customer_email: payload.customer_email,
         callback_url: payload.callback_url,
         invoice_code: payload.invoice_code,
-        customer_name: payload.customer_name
+        customer_name: payload.customer_name,
+        currency: 'USD'
       }
 
       const res = await $api<{ payment_link: string; reference: string }>(
@@ -116,6 +121,17 @@ export function useFlightService() {
         { method: 'POST', body }
       )
       return res
+    },
+
+    /**
+     * Generate booking code.
+     */
+    async generateBookingCode(): Promise<BookingCodeResponse> {
+      const res = await $api<ApiResponse<BookingCodeResponse>>('/bookings/generate-booking-code', {
+        method: 'POST',
+        body: [],
+      })
+      return res.data
     },
   }
 }

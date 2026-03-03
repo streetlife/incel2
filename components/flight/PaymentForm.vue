@@ -34,7 +34,7 @@ async function handlePay() {
     const response = await initPayment(gateway.value)
     
     if (!response) {
-      throw new Error('Something went wrong - try again later')
+      throw new Error('An error occured - try again later')
     }
 
     globalThis.location.href = response

@@ -36,23 +36,19 @@
       </svg>
     </button>
 
-    <!-- Teleport dropdown to body -->
     <Teleport to="body">
-      <!-- Click outside backdrop -->
       <div
         v-if="open"
         @click="open = false"
         class="fixed inset-0 z-40"
       ></div>
 
-      <!-- Dropdown Panel -->
       <div
         v-if="open"
         ref="dropdownRef"
         :style="dropdownStyle"
         class="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 space-y-4"
       >
-        <!-- Dynamic Categories -->
         <div
           v-for="category in activeCategories"
           :key="category.key"
@@ -103,7 +99,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, useAttrs } from 'vue'
 
-/* Types */
 interface Category {
   key: string
   label: string
@@ -123,7 +118,7 @@ interface CounterMode {
 }
 
 interface Props {
-  modelValue: Record<string, number>
+  modelValue: Record<string, number> | number
   label?: string
   id?: string
   disabled?: boolean
@@ -132,7 +127,6 @@ interface Props {
   maxTotal?: number
 }
 
-/* Predefined Modes */
 const MODES: Record<string, CounterMode> = {
   flight: {
     categories: [
@@ -239,7 +233,6 @@ const MODES: Record<string, CounterMode> = {
   }
 }
 
-/* Props */
 const props = withDefaults(defineProps<Props>(), {
   label: '',
   id: () => `counter-${Math.random().toString(36).slice(2)}`,
@@ -249,21 +242,18 @@ const props = withDefaults(defineProps<Props>(), {
   maxTotal: undefined
 })
 
-/* Emits */
 const emit = defineEmits<{
-  'update:modelValue': [value: Record<string, number>]
+  'update:modelValue': [value: number | Record<string, number>]
 }>()
 
 const attrs = useAttrs()
 
-/* State */
 const open = ref(false)
 const triggerRef = ref<HTMLElement>()
 const dropdownRef = ref<HTMLElement>()
 const dropdownStyle = ref<Record<string, string>>({})
-const counts = ref<Record<string, number>>({ ...props.modelValue })
+const counts = ref<Record<string, number>>({})
 
-/* Computed */
 const activeMode = computed<CounterMode>(() => {
   if (props.mode === 'custom' && props.customCategories) {
     return {
@@ -300,7 +290,6 @@ const displayText = computed(() => {
   return parts.length > 0 ? parts.join(', ') : 'Select'
 })
 
-/* Methods */
 const calculateDropdownPosition = (): void => {
   if (!triggerRef.value) return
 
@@ -318,6 +307,20 @@ const calculateDropdownPosition = (): void => {
     top: openAbove 
       ? `${rect.top - dropdownHeight - padding}px` 
       : `${rect.bottom + padding}px`,
+  }
+}
+
+const normalizeFromModelValue = () => {
+  if (props.mode === 'visa') {
+    counts.value = {
+      persons: typeof props.modelValue === 'number'
+        ? props.modelValue
+        : props.modelValue?.persons ?? 1
+    }
+  } else {
+    counts.value = typeof props.modelValue === 'object'
+      ? { ...props.modelValue }
+      : {}
   }
 }
 
@@ -340,17 +343,14 @@ const canIncrement = (key: string): boolean => {
   const category = activeCategories.value.find(c => c.key === key)
   const currentCount = counts.value[key] || 0
   
-  // Check category max
   if (category?.max && currentCount >= category.max) {
     return false
   }
   
-  // Check total max
   if (totalCount.value >= maxTotalAllowed.value) {
     return false
   }
   
-  // Check custom rules
   if (activeMode.value.rules?.[key]) {
     const testCounts = { ...counts.value, [key]: currentCount + 1 }
     return activeMode.value.rules[key](testCounts)
@@ -379,11 +379,9 @@ const decrement = (key: string): void => {
   
   counts.value[key] = (counts.value[key] || 0) - 1
   
-  // Apply dependent rules (e.g., if adults decrease, adjust infants)
   if (activeMode.value.rules) {
     Object.entries(activeMode.value.rules).forEach(([ruleKey, ruleFn]) => {
       if (!ruleFn(counts.value)) {
-        // Adjust the dependent value
         if (ruleKey === 'infants' && key === 'adults') {
           counts.value.infants = Math.min(counts.value.infants, counts.value.adults)
         }
@@ -398,7 +396,6 @@ const hasError = computed(() => {
   const classAttr = attrs.class
   if (!classAttr) return false
   
-  // Check if class includes border-red-500
   if (typeof classAttr === 'string') {
     return classAttr.includes('border-red-500')
   }
@@ -416,30 +413,30 @@ const hasError = computed(() => {
 })
 
 const emitUpdate = (): void => {
-  emit('update:modelValue', { ...counts.value })
+  if (props.mode === 'visa') {
+    emit('update:modelValue', counts.value.persons ?? 1)
+  } else {
+    emit('update:modelValue', { ...counts.value })
+  }
 }
 
-/* Watchers */
-watch(() => props.modelValue, (newValue) => {
-  counts.value = { ...newValue }
-}, { deep: true })
+watch(
+  () => props.modelValue,
+  () => {
+    normalizeFromModelValue()
+  },
+  { immediate: true, deep: true }
+)
 
 watch(() => props.mode, () => {
-  // Initialize counts based on new mode
-  const newCounts: Record<string, number> = {}
-  activeCategories.value.forEach(category => {
-    newCounts[category.key] = category.min ?? 0
-  })
-  counts.value = newCounts
+  normalizeFromModelValue()
   emitUpdate()
 })
 
-/* Lifecycle */
 onMounted(() => {
   window.addEventListener('scroll', updatePosition, true)
   window.addEventListener('resize', updatePosition)
   
-  // Initialize counts if empty
   if (Object.keys(counts.value).length === 0) {
     const initialCounts: Record<string, number> = {}
     activeCategories.value.forEach(category => {

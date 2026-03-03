@@ -1,24 +1,11 @@
 import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { useVisaService } from '../services/visa.service'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-export interface VisaService {
-  id: number
-  country: string
-  nationality: string
-  visaType: string // Tourist | Business | Transit | Student | Work
-  validity: string // 30 Days | 90 Days | 1 Year …
-  entryType: string // Single | Multiple
-  processingTime: string
-  price: number
-  requirements: string[]
-  success_rate: number
-}
-
-export interface ApplicantForm {
-  // Personal
-  title: string
+export interface ApplicantData {
   firstName: string
   lastName: string
+  otherNames: string
   dateOfBirth: string
   gender: string
   maritalStatus: string
@@ -28,14 +15,12 @@ export interface ApplicantForm {
   address: string
   city: string
   state: string
-
   // Passport
   passportNumber: string
   passportIssueDate: string
   passportExpiry: string
   issuingCountry: string
   issuingAuthority: string
-
   // Travel
   purposeOfVisit: string
   departureDate: string
@@ -48,137 +33,158 @@ export interface ApplicantForm {
   refusalDetails: string
 }
 
-export interface UploadedDoc {
-  key: string // e.g. 'passportCopy'
+export interface DocumentItem {
+  key: string
   label: string
-  fileName: string
-  size: string
   required: boolean
   uploaded: boolean
+  fileName: string
+  size: string
 }
 
-interface VisaState {
-  selectedVisa: VisaService | null
-  searchParams: { country: string; nationality: string; persons: number; }
-
-  applicant: ApplicantForm
-  additionalApplicants: number // extra people (children etc.) — adults count from search
-  documents: UploadedDoc[]
-
-  invoiceNumber: string
-  invoiceDate: string
-
-  applicationRef: string
-  status: 'idle' | 'submitted' | 'processing' | 'approved' | 'rejected'
-  adminNote: string
-
-  contactEmail: string
-  contactPhone: string
-
-  loading: boolean
-  error: string
+export interface VisaParams {
+  country: string
+  nationality: string
+  persons: number
 }
 
-const defaultApplicant = (): ApplicantForm => ({
-  title: '', firstName: '', lastName: '', dateOfBirth: '',
-  gender: '', maritalStatus: '', nationality: '', email: '', phone: '',
-  address: '', city: '', state: '',
-  passportNumber: '', passportIssueDate: '', passportExpiry: '',
-  issuingCountry: '', issuingAuthority: '',
-  purposeOfVisit: '', departureDate: '', returnDate: '',
-  accommodationName: '', accommodationAddr: '',
-  sponsorName: '', sponsorRelation: '',
-  previousVisaRefused: false, refusalDetails: '',
-})
+export interface MetaData {
+  passport_types: Array<{ value: string; label: number }>
+  visa_types: Array<{ value: string; label: number }>
+  visa_countries: Array<{ value: string; label: number }>
+  visa_gender_types: Array<{ value: string; label: number }>
+}
 
-const defaultDocuments = (): UploadedDoc[] => [
-  { key: 'passportBio', label: 'Passport Biodata Page (Scan/Photo)', fileName: '', size: '', required: true, uploaded: false },
-  { key: 'passportPhoto', label: 'Passport Photograph (White Background)', fileName: '', size: '', required: true, uploaded: false },
-  { key: 'bankStatement', label: 'Bank Statement (Last 6 Months)', fileName: '', size: '', required: true, uploaded: false },
-  { key: 'flightBooking', label: 'Flight Booking / Itinerary', fileName: '', size: '', required: false, uploaded: false },
-  { key: 'hotelBooking', label: 'Hotel / Accommodation Booking', fileName: '', size: '', required: false, uploaded: false },
-  { key: 'employmentLetter', label: 'Employment / Sponsorship Letter', fileName: '', size: '', required: false, uploaded: false },
-]
+function blankApplicant(): ApplicantData {
+  return {
+    firstName: '', lastName: '', otherNames: '', dateOfBirth: '', gender: '',
+    maritalStatus: '', nationality: '', email: '', phone: '', address: '',
+    city: '', state: '',
+    passportNumber: '', passportIssueDate: '', passportExpiry: '',
+    issuingCountry: '', issuingAuthority: '',
+    purposeOfVisit: '', departureDate: '', returnDate: '',
+    accommodationName: '', accommodationAddr: '',
+    sponsorName: '', sponsorRelation: '',
+    previousVisaRefused: false, refusalDetails: '',
+  }
+}
 
-// ── Store
-export const useVisaStore = defineStore('visa', {
-  state: (): VisaState => ({
-    selectedVisa: null,
-    searchParams: { country: '', nationality: '', persons: 1 },
-    applicant: defaultApplicant(),
-    additionalApplicants: 0,
-    documents: defaultDocuments(),
-    invoiceNumber: '',
-    invoiceDate: '',
-    applicationRef: '',
-    status: 'idle',
-    adminNote: '',
-    contactEmail: '',
-    contactPhone: '',
-    loading: false,
-    error: '',
-  }),
+function defaultDocuments(): DocumentItem[] {
+  return [
+    { key: 'passport_bio', label: 'Passport Bio Page', required: true, uploaded: false, fileName: '', size: '' },
+    { key: 'passport_photo', label: 'Passport Photograph', required: true, uploaded: false, fileName: '', size: '' },
+    { key: 'bank_statement', label: 'Bank Statement (3 months)', required: true, uploaded: false, fileName: '', size: '' },
+    { key: 'flight_itinerary', label: 'Flight Itinerary', required: true, uploaded: false, fileName: '', size: '' },
+    { key: 'hotel_booking', label: 'Hotel Booking / Accommodation Proof', required: true, uploaded: false, fileName: '', size: '' },
+    { key: 'travel_insurance', label: 'Travel Insurance', required: false, uploaded: false, fileName: '', size: '' },
+    { key: 'invitation_letter', label: 'Invitation Letter', required: false, uploaded: false, fileName: '', size: '' },
+  ]
+}
 
-  getters: {
-    totalApplicants: (s) => s.searchParams.persons,
+export const useVisaStore = defineStore('visa', () => {
+  const selectedVisa = ref<VisaParams | null>(null)
+  const applicants = ref<ApplicantData[]>([blankApplicant()])
+  const documentSets = ref<DocumentItem[][]>([[...defaultDocuments()]])
+  const shareTravel = ref(true)
+  const personCount = computed(() => applicants.value.length)
+  const visaService = useVisaService()
+  const metaData = ref<MetaData | null>(null)
 
-    pricing: (s) => {
-      if (!s.selectedVisa) return null
-      const perPerson = s.selectedVisa.price
-      const applicants = s.searchParams.persons
-      const subtotal = perPerson * applicants
-      const serviceFee = Math.round(subtotal * 0.05) // 5% service fee
-      const tax = Math.round(subtotal * 0.075) // 7.5% VAT
-      const total = subtotal + serviceFee + tax
-      return { perPerson, applicants, subtotal, serviceFee, tax, total }
-    },
+  function setVisa(params: VisaParams) {
+    selectedVisa.value = { ...params }
+    const count = Math.max(1, params.persons)
 
-    requiredDocsUploaded: (s) =>
-      s.documents.filter(d => d.required).every(d => d.uploaded),
+    while (applicants.value.length < count) {
+      applicants.value.push(blankApplicant())
+      documentSets.value.push(defaultDocuments().map(d => ({ ...d })))
+    }
 
-    fmtNgn: () => (n: number) =>
-      new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(n),
-  },
+    applicants.value.splice(count)
+    documentSets.value.splice(count)
+  }
 
-  actions: {
-    setVisa(params: VisaState['searchParams']) {
-      this.searchParams = params
-      this.applicant = defaultApplicant()
-      this.documents = defaultDocuments()
-      this.invoiceNumber = ''
-      this.applicationRef = ''
-      this.status = 'idle'
-      this.error = ''
-      // Pre-fill nationality from search
-      this.applicant.nationality = params.nationality
-    },
+  function getApplicant(idx: number): ApplicantData {
+    return applicants.value[idx] ?? blankApplicant()
+  }
 
-    markDocumentUploaded(key: string, fileName: string, size: string) {
-      const doc = this.documents.find(d => d.key === key)
-      if (doc) { doc.uploaded = true; doc.fileName = fileName; doc.size = size }
-    },
+  function getDocuments(idx: number): DocumentItem[] {
+    return documentSets.value[idx] ?? []
+  }
 
-    removeDocument(key: string) {
-      const doc = this.documents.find(d => d.key === key)
-      if (doc) { doc.uploaded = false; doc.fileName = ''; doc.size = '' }
-    },
+  function markDocumentUploaded(personIdx: number, key: string, fileName: string, size: string) {
+    const doc = documentSets.value[personIdx]?.find(d => d.key === key)
+    if (doc) { doc.uploaded = true; doc.fileName = fileName; doc.size = size }
+  }
 
-    generateInvoice() {
-      if (!this.invoiceNumber) {
-        this.invoiceNumber = 'VIS-' + Date.now().toString(36).toUpperCase()
-        this.invoiceDate = new Date().toLocaleDateString('en-NG', { day: '2-digit', month: 'long', year: 'numeric' })
+  function removeDocument(personIdx: number, key: string) {
+    const doc = documentSets.value[personIdx]?.find(d => d.key === key)
+    if (doc) { doc.uploaded = false; doc.fileName = ''; doc.size = '' }
+  }
+
+  function requiredDocsUploaded(personIdx: number): boolean {
+    return (documentSets.value[personIdx] ?? [])
+      .filter(d => d.required)
+      .every(d => d.uploaded)
+  }
+
+  function allPersonsComplete(): boolean {
+    return applicants.value.every((_, i) => requiredDocsUploaded(i))
+  }
+
+  async function getMetaData() {
+    try {
+      const res = await visaService.getMetaData()
+
+      metaData.value = {
+        passport_types: res.passport_types.map((v: any) => ({
+          value: v.value,
+          label: v.lebel,
+        })),
+        visa_types: res.visa_types.map((v: any) => ({
+          value: v.value,
+          label: v.lebel,
+        })),
+        visa_countries: res.visa_countries.map((v: any) => ({
+          value: v.value,
+          label: v.lebel,
+        })),
+        visa_gender_types: res.visa_gender_types.map((v: any) => ({
+          value: v.value,
+          label: v.lebel,
+        })),
       }
-      this.contactEmail = this.applicant.email
-      this.contactPhone = this.applicant.phone
-    },
+    } catch (err) {
+      console.log(err)
+    }
+  }
 
-    confirmApplication(applicationRef: string) {
-      this.applicationRef = applicationRef
-      this.status = 'submitted'
-    },
+  function resetAll() {
+    selectedVisa.value = null
+    applicants.value = [blankApplicant()]
+    documentSets.value = [[...defaultDocuments()]]
+    shareTravel.value = true
+  }
 
-    reset() {
-      this.$reset()
-    },
-  },
+  return {
+    selectedVisa,
+    applicants,
+    documentSets,
+    shareTravel,
+    personCount,
+    setVisa,
+    getApplicant,
+    getDocuments,
+    markDocumentUploaded,
+    removeDocument,
+    requiredDocsUploaded,
+    allPersonsComplete,
+    resetAll,
+    getMetaData,
+  }
+}, {
+  unstorage: {
+    pick: [
+      'metaData'
+    ]
+  }
 })

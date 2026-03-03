@@ -142,6 +142,7 @@ export interface FlightSearchParams {
 export interface FlightBookingData {
     sessionCode: string
     traveller: Passenger[]
+    bookingCode: string
 }
 
 export interface FlightBookingResponse {
@@ -222,4 +223,8 @@ export interface FlightBookingConfirmation {
     ngn_total: number
     status: 'confirmed' | 'pending'
     booked_at: string
+}
+
+export interface BookingCodeResponse {
+    bookCode: string
 }

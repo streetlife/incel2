@@ -6,6 +6,8 @@ import { useFlightStore } from '../../stores/flight'
 import { useToast } from '../../composables/useToast'
 import { normaliseError } from '../../utils/api'
 import AppToast from '../toast/AppToast.vue'
+import { useAuthStore } from '../../stores/auth'
+import { useRoute } from 'vue-router'
 
 const emit = defineEmits<(e: 'next') => void>()
 const flightStore = useFlightStore()
@@ -30,27 +32,28 @@ const loginError = ref('')
 const loading = ref(false)
 const error = ref('')
 const errors = ref<Record<string, string>>({})
+const auth = useAuthStore()
+const route = useRoute()
 
 const flightService = useFlightService()
 const toast = useToast()
 
-const B2B_MOCK: Record<string, { rate: number; code: string; name: string }> = {
-  'agent@acme.com': { rate: 0.12, code: 'B2B-ACME-12', name: 'Acme Travel' },
-  'ops@globetours.com': { rate: 0.08, code: 'B2B-GLOB-08', name: 'Globe Tours' },
-}
-
 async function handleLogin() {
   loginLoading.value = true
   loginError.value = ''
-  await new Promise(r => setTimeout(r, 900))
 
-  const match = B2B_MOCK[loginEmail.value.toLowerCase()]
-  if (match && loginPassword.value.length >= 6) {
+  try {
+    const res = await auth.login(loginEmail.value, loginPassword.value)
+    if (res === null) return
+    
+    toast.success("Login successful")
     flightStore.isLoggedIn = true
-    applyB2BDiscount(match.rate, match.code)
     showLoginPanel.value = false
-  } else {
-    loginError.value = 'Invalid credentials or account not found.'
+  } catch (err) {
+    loginLoading.value = false
+    loginError.value = normaliseError(err)
+
+    toast.error(loginError.value)
   }
   loginLoading.value = false
 }
@@ -96,6 +99,7 @@ async function submit() {
     await flightService.saveBooking({
       sessionCode: session_code.value,
       traveller: passengers.value,
+      bookingCode: String(route.query.booking_code)
     })
 
     const first = passengers.value[0]
@@ -158,16 +162,15 @@ const fieldClass = (key: string) =>
         <div v-if="showLoginPanel && !isLoggedIn" class="mt-4 pt-4 border-t border-blue-200 space-y-3">
           <input v-model="loginEmail" type="email" placeholder="Work email" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-blue-200 bg-white focus:border-primary/50 outline-none" />
           <input v-model="loginPassword" type="password" placeholder="Password" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-blue-200 bg-white focus:border-primary/50 outline-none" />
-          <p v-if="loginError" class="text-xs text-red-600">{{ loginError }}</p>
+
           <button
             class="w-full py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/65 transition-colors border-none cursor-pointer disabled:opacity-60"
             :disabled="loginLoading"
             @click="handleLogin"
           >
             <span v-if="loginLoading">Verifying…</span>
-            <span v-else>Log In & Apply Discount</span>
+            <span v-else>Log In</span>
           </button>
-          <p class="text-[10px] text-primary/50 text-center">Hint: try agent@acme.com / anypassword</p>
         </div>
       </Transition>
     </div>

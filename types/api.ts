@@ -36,6 +36,7 @@ export interface PaymentInitRequest {
   callback_url: string
   invoice_code: string
   customer_name: string
+  currency: string
 }
 
 export interface PaymentInitResponse {

@@ -2,13 +2,13 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import VisaForm from '../../../components/forms/VisaForm.vue'
+import { useVisaStore } from '../../../stores/visa'
 
 const router = useRouter()
 const route = useRoute()
-
 const isLoading = ref(false)
 const hasSearched = ref(false)
-const showSearchForm = ref(true)
+const visaStore = useVisaStore()
 
 const popularDestinations = [
   { country: 'United Arab Emirates', image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800', price: 'From ₦45,000', processingTime: '3-5 Days' },
@@ -26,20 +26,21 @@ const benefits = [
   { icon: '✓', title: 'Track Application', description: 'Real-time updates on your visa application status' },
 ]
 
-const visaTypes = ['Tourist Visa', 'Business Visa', 'Transit Visa', 'Student Visa', 'Work Visa']
-const validityPeriods = ['30 Days', '60 Days', '90 Days', '180 Days', '1 Year']
+interface VisaSearch {
+  country: string
+  nationality: string
+  persons: string
+}
 
-const searchVisas = async (params?: any) => {
+const searchVisas = async (params: VisaSearch) => {
   isLoading.value = true
   hasSearched.value = true
+  visaStore.resetAll()
 
   const searchParams = params || {
     country: route.query.country as string,
     nationality: route.query.nationality as string,
-    persons: {
-      adults: Number.parseInt(route.query.adults as string) || 1,
-      children: Number.parseInt(route.query.children as string) || 0,
-    },
+    persons: Number(route.query.persons as string) || 1,
   }
 
   setTimeout(() => {
@@ -60,14 +61,23 @@ const searchVisas = async (params?: any) => {
 watch(
   () => route.query,
   (newQuery) => {
-    if (newQuery.country && newQuery.nationality && !isLoading.value) {
-      searchVisas()
+    if (
+      newQuery.country &&
+      newQuery.nationality &&
+      newQuery.persons &&
+      !isLoading.value
+    ) {
+      searchVisas({
+        country: String(newQuery.country),
+        nationality: String(newQuery.nationality),
+        persons: String(newQuery.persons),
+      })
     }
   },
   { immediate: true }
 )
 
-const handleVisaSearch = (searchData: any) => { searchVisas(searchData) }
+const handleVisaSearch = (searchData: VisaSearch) => { searchVisas(searchData) }
 
 onMounted(() => {
   const observer = new IntersectionObserver(

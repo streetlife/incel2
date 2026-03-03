@@ -66,10 +66,10 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted, onMounted, computed, useAttrs, watch } from "vue"
-import { debounce } from "lodash"
 import { useFlightService } from "../services/flight.service"
 import { normaliseError } from "../utils/api"
 import { Airport } from "../types/flight"
+import { useDebounceFn } from "@vueuse/core"
 
 const props = defineProps({
   modelValue: { type: String, default: "" },
@@ -130,7 +130,7 @@ const fetchSuggestions = async (query: string): Promise<Airport[]> => {
   }
 }
 
-const debouncedFetch = debounce(async (query: string) => {
+const debouncedFetch = useDebounceFn(async (query: string) => {
   try {
     const results = await fetchSuggestions(query)
     suggestions.value = results
@@ -210,7 +210,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  debouncedFetch.cancel()
   window.removeEventListener('scroll', updatePosition, true)
   window.removeEventListener('resize', updatePosition)
 })

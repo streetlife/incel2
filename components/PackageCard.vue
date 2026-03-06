@@ -1,6 +1,5 @@
 <template>
   <div class="card group cursor-pointer mb-10 sm:mb-20 h-full flex flex-col">
-    <!-- Image -->
     <div class="relative h-64 overflow-hidden flex-shrink-0">
       <img 
         :src="package.image" 
@@ -25,7 +24,6 @@
       </div>
     </div>
     
-    <!-- Content -->
     <div class="p-6 flex flex-col flex-grow">
       <div v-if="package.location" class="text-sm text-gray-500 mb-2">
         {{ package.location }}
@@ -34,7 +32,6 @@
         {{ package.title }}
       </h3>
       
-      <!-- Package Details -->
       <div v-if="package.duration || package.type" class="flex items-center gap-4 text-sm text-gray-600 mb-4">
         <div v-if="package.duration" class="flex items-center space-x-1">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,7 +47,6 @@
         </div>
       </div>
       
-      <!-- Features -->
       <div v-if="package.features" class="space-y-2 mb-4">
         <div v-for="feature in package.features" :key="feature" class="flex items-start space-x-2 text-sm text-gray-600">
           <svg class="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -60,19 +56,17 @@
         </div>
       </div>
       
-      <!-- Spacer to push price to bottom -->
       <div class="flex-grow"></div>
       
-      <!-- Price -->
       <div class="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
         <div>
           <p class="text-sm text-gray-500">Starting from</p>
           <div class="flex items-baseline space-x-2">
             <span v-if="package.oldPrice" class="text-sm text-gray-400 line-through">
-              AED {{ package.oldPrice.toLocaleString() }}
+              {{ format(package.oldPrice) }}
             </span>
             <span class="text-2xl font-bold text-primary">
-              AED {{ package.price.toLocaleString() }}
+              {{ format(package.price) }}
             </span>
           </div>
         </div>
@@ -85,6 +79,8 @@
 </template>
 
 <script setup>
+import { useCurrency } from '../composables/useCurrency';
+
 defineProps({
   package: {
     type: Object,
@@ -95,4 +91,6 @@ defineProps({
     default: true
   }
 })
+
+const { format } = useCurrency()
 </script>

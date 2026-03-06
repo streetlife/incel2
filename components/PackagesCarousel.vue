@@ -1,6 +1,5 @@
 <template>
   <div class="relative w-full py-8 md:py-12 overflow-hidden">
-    <!-- Navigation Arrows -->
     <button
       @click="prevSlide"
       class="absolute left-2 md:left-4 lg:left-12 top-1/2 -translate-y-1/2 z-[60] w-10 h-10 md:w-14 md:h-14 rounded-full bg-white/90 backdrop-blur-md border border-neutral-200 text-neutral-900 flex items-center justify-center shadow-xl hover:scale-110 hover:bg-white transition-all cursor-pointer"
@@ -17,7 +16,6 @@
       <ArrowRight class="w-4 h-4 md:w-6 md:h-6" />
     </button>
 
-    <!-- Carousel Container -->
     <div class="relative w-full max-w-7xl mx-auto px-4">
       <div 
         :class="carouselHeightClass"
@@ -39,14 +37,12 @@
             ]"
           />
           
-          <!-- Gradient Overlay -->
           <div 
             :class="['absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent transition-opacity duration-300',
               getOffset(index) === 0 ? 'opacity-100' : 'opacity-70'
             ]" 
           />
 
-          <!-- Content -->
           <Transition name="fade-slide">
             <div
               v-show="getOffset(index) === 0"
@@ -69,7 +65,7 @@
                 <div>
                   <p class="text-xs text-white/70 mb-1">Starting Price</p>
                   <div class="text-base md:text-lg lg:text-xl font-bold text-primary">
-                    AED {{ pkg.price.toLocaleString() }}
+                    {{ format(pkg.price) }}
                   </div>
                 </div>
                 <button 
@@ -106,6 +102,9 @@
 import { ref, computed, onMounted, onUnmounted, type CSSProperties } from 'vue'
 import { ArrowLeft, ArrowRight, MapPin } from 'lucide-vue-next'
 import { navigateTo } from 'nuxt/app'
+import { useCurrency } from '../composables/useCurrency';
+
+const { format } = useCurrency()
 
 interface Package {
   id: number | string

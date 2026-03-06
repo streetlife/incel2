@@ -4,21 +4,24 @@ import { useRouter } from 'vue-router'
 import { useVisaStore } from '../../stores/visa'
 import { useCurrency } from '../../composables/useCurrency'
 
-const store  = useVisaStore()
+const store = useVisaStore()
 const router = useRouter()
+const { format } = useCurrency()
 
-const BASE_PRICE = 45_000
+const price = computed(() => {
+  const amount = Number(store.selectedVisa?.price)
+  return amount === 0 ? 100 : amount
+})
 
 const pricing = computed(() => {
   const count = store.personCount
-  const subtotal   = BASE_PRICE * count
+  const subtotal = price.value * count
   const serviceFee = Math.round(subtotal * 0.05)
   const tax = Math.round(subtotal * 0.075)
   const total = subtotal + serviceFee + tax
   return { count, subtotal, serviceFee, tax, total }
 })
 
-const { format } = useCurrency()
 const leadApplicant = computed(() => store.applicants[0])
 
 const applicationRef = computed(() => {
@@ -35,6 +38,17 @@ const printInvoice = () => {
 const reset = () => {
   store.resetAll()
   router.push('/travel/visas')
+}
+
+function resolveCountryName(codeOrValue: string | undefined): string {
+  if (!codeOrValue) return '—'
+  const opts = store.countryOptions
+
+  return (
+    opts.find(o => o.code === codeOrValue)?.value ??
+    opts.find(o => o.value === codeOrValue)?.value ??
+    codeOrValue
+  )
 }
 </script>
 
@@ -130,12 +144,9 @@ const reset = () => {
       <div class="px-6 py-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
         <div v-for="row in [
           { label: 'Reference', value: applicationRef },
-          { label: 'Destination', value: store.selectedVisa?.country },
+          { label: 'Destination', value: resolveCountryName(store.selectedVisa?.country) },
           { label: 'Applicants', value: `${store.personCount} person${store.personCount > 1 ? 's' : ''}` },
-          { label: 'Travel Date', value: leadApplicant.departureDate
-              ? new Date(leadApplicant.departureDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-              : '—' },
-          { label: 'Amount Paid', value: format(pricing.total) },
+          { label: 'Amount Paid', value: format(pricing.total, 'AED') },
           { label: 'Status', value: 'Submitted' },
         ]" :key="row.label">
           <div>

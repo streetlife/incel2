@@ -12,7 +12,6 @@ const {
   loading,
   hasSearched,
   showSearchForm,
-  bookingLoading,
   search,
   navigateToBooking,
 } = useFlights()
@@ -137,7 +136,6 @@ onMounted(() => {
           v-else-if="results.length > 0"
           :flights="results"
           :meta="meta"
-          :loading="bookingLoading"
           @book="navigateToBooking"
         />
 

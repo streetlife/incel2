@@ -3,17 +3,30 @@ import { useRouter } from 'vue-router'
 import BookingConfirmation from '../../../../components/flight/BookingConfirmation.vue'
 import { useFlightBooking } from '../../../../composables/useFlightBooking'
 import { onMounted, ref } from 'vue'
+import { useFlightStore } from '../../../../stores/flight'
 
 const router = useRouter()
 const booking = useFlightBooking()
+const flightStore = useFlightStore()
 
 type Status = 'verifying' | 'success' | 'failed'
 const status = ref<Status>('verifying')
 
 onMounted(async () => {
-  const result = await booking.verifyPayment()
+
+  if (!flightStore.bookCode) {
+    status.value = 'failed'
+    return
+  }
+  
+  const result = await booking.verifyPayment(flightStore.bookCode)
   status.value = result
 })
+
+function goBack() {
+  flightStore.resetAll()
+  router.push('/travel/flights')
+}
 </script>
 
 <template>
@@ -38,19 +51,12 @@ onMounted(async () => {
           </svg>
         </div>
         <h2 class="text-xl font-bold text-slate-900">Payment Failed</h2>
-        <p class="text-slate-500 text-sm max-w-sm mx-auto">{{ booking.error.value }}</p>
         <div class="flex flex-col sm:flex-row gap-3 justify-center pt-2">
           <button
             class="px-6 py-2.5 border-2 border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors cursor-pointer bg-white"
-            @click="router.push('/travel/flights')"
+            @click="goBack()"
           >
             Back to Flights
-          </button>
-          <button
-            class="px-6 py-2.5 bg-primary hover:opacity-90 text-slate-900 font-semibold rounded-xl transition-colors cursor-pointer border-none"
-            @click="router.go(-1)"
-          >
-            Try Again
           </button>
         </div>
         <p class="text-xs text-slate-400 pt-2">

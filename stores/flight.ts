@@ -15,6 +15,10 @@ export interface Passenger {
     passport_nationality: string
     emailaddress: string
     phone_number: string
+    dialling_code: string
+    gender: string
+    passport_country: string
+    passport_number: string
 }
 
 export interface FlightSearchParams {
@@ -95,7 +99,7 @@ export const useFlightStore = defineStore(
         const ticketNumbers = ref<string[]>([])
         const status = ref<'idle' | 'loading' | 'confirmed' | 'error'>('idle')
         const errorMessage = ref('')
-        const bookCode = ref('')
+        const bookCode = ref<string | null>(null)
         const flightService = useFlightService()
 
         const priceBreakdown = computed(() => {
@@ -157,6 +161,10 @@ export const useFlightStore = defineStore(
                 passport_nationality: '',
                 emailaddress: i === 0 ? contactEmail.value : '',
                 phone_number: i === 0 ? contactPhone.value : '',
+                dialling_code: '',
+                gender: '',
+                passport_country: '',
+                passport_number: '',
             }))
 
             _recalcPricing()
@@ -198,6 +206,32 @@ export const useFlightStore = defineStore(
             return true
         }
 
+        async function generateBookingCode(): Promise<string> {
+            try {
+                const res = await flightService.generateBookingCode()
+                bookCode.value = res.bookCode
+
+                setBookingCode(bookCode.value)
+
+                return bookCode.value
+            } catch (err: any) {
+                throw new Error(err)
+            }
+        }
+
+        async function bookAmadeus(bookingCode: string) {
+            try {
+                const res = await flightService.bookAmadeus(bookingCode)
+                return res
+            } catch (err: any) {
+                throw new Error(err)
+            }
+        }
+
+        function setBookingCode(code: string) {
+            bookCode.value = code
+        }
+
         function hasCachedResults(key: string): boolean {
             return lastSearchKey.value === key && cachedResults.value.length > 0 && session_code.value !== undefined
         }
@@ -207,17 +241,6 @@ export const useFlightStore = defineStore(
             cachedResults.value = flights
             cachedMeta.value = metaData
             session_code.value = sessionCode
-        }
-
-        async function generateBookingCode(): Promise<string> {
-            try {
-                const res = await flightService.generateBookingCode()
-                bookCode.value = res.bookCode
-
-                return bookCode.value
-            } catch (err: any) {
-                throw new Error(err)
-            }
         }
 
         function resetBooking() {
@@ -299,6 +322,7 @@ export const useFlightStore = defineStore(
             cachedResults,
             cachedMeta,
             lastSearchKey,
+            bookCode,
             setFlight,
             setSessionCode,
             setNameEmail,
@@ -314,6 +338,7 @@ export const useFlightStore = defineStore(
             setCachedResults,
             clearCache,
             generateBookingCode,
+            bookAmadeus,
         }
     },
     {
@@ -347,6 +372,7 @@ export const useFlightStore = defineStore(
                 'cachedResults',
                 'cachedMeta',
                 'lastSearchKey',
+                'bookCode',
             ],
         },
     },

@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useVisaStore } from '../../stores/visa'
+import AppToast from '../toast/AppToast.vue';
+import { useRoute } from 'vue-router';
+import { useToast } from '../../composables/useToast';
+
+type Section = 'personal' | 'passport' | 'visa_requirement' | 'documents'
 
 const emit = defineEmits<{ next: [] }>()
 const store = useVisaStore()
+const route = useRoute()
+const toast = useToast()
 
 const activePersonIdx  = ref(0)
-const activeSection = ref<'personal' | 'passport' | 'travel' | 'documents'>('personal')
+const activeSection = ref<Section>('personal')
 const errors = ref<Record<string, string>>({})
 
 function selectPerson(idx: number) {
@@ -15,14 +22,14 @@ function selectPerson(idx: number) {
   errors.value = {}
 }
 
-const ap = computed(() => store.applicants[activePersonIdx.value])
+const ap = computed(() => store.applicants[activePersonIdx.value]!)
 const docs = computed(() => store.getDocuments(activePersonIdx.value))
 
 const sections = [
   { key: 'personal', label: 'Personal Info', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
   { key: 'passport', label: 'Passport', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-  { key: 'travel', label: 'Travel Details', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-  { key: 'documents', label: 'Documents', icon: 'M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13' },
+  { key: 'visa_requirement', label: 'Visa Requirements', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { key: 'documents', label: 'Supporting Documents', icon: 'M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13' },
 ]
 
 const sectionComplete = computed(() => {
@@ -30,18 +37,32 @@ const sectionComplete = computed(() => {
   return {
     personal: !!(a.firstName && a.lastName && a.email && a.phone && a.dateOfBirth),
     passport: !!(a.passportNumber && a.passportExpiry && a.issuingCountry),
-    travel: !!(a.departureDate && a.returnDate),
+    visa_requirement: !!(a.groupMembership && a.processingMode),
     documents: store.requiredDocsUploaded(activePersonIdx.value),
   }
 })
 
-const allPersonsReady = computed(() =>
-  Array.from({ length: store.personCount }, (_, i) => store.requiredDocsUploaded(i)).every(Boolean)
-)
+const allPersonsReady = computed(() => {
+  for (let i = 0; i < store.personCount; i++) {
+    if (!store.requiredDocsUploaded(i)) return false
+  }
+  return true
+})
+
+const isLastPerson = computed(() => activePersonIdx.value === store.personCount - 1)
+
+const currentPersonReady = computed(() => store.requiredDocsUploaded(activePersonIdx.value))
+
+const submitButtonLabel = computed(() => {
+  if (store.visaLoading) return 'Saving…'
+  if (store.personCount === 1 || isLastPerson.value) return 'Review Application →'
+  return `Save & Next Person →`
+})
 
 function personLabel(i: number) {
   const a = store.applicants[i]
-  return a.firstName ? `${a.firstName} ${a.lastName}`.trim() : `Person ${i + 1}`
+  const name = [a.firstName, a.lastName].filter(Boolean).join(' ')
+  return name || `Person ${i + 1}`
 }
 
 const fc = (k: string) =>
@@ -57,19 +78,23 @@ function validatePersonal() {
   if (!a.dateOfBirth) errors.value.dateOfBirth  = 'Required'
   if (!a.gender) errors.value.gender = 'Required'
   if (!a.nationality) errors.value.nationality  = 'Required'
-  if (!a.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) errors.value.email = 'Valid email required'
-  if (!a.phone.match(/^\+?[\d\s\-()]{8,}$/)) errors.value.phone = 'Valid phone required'
-  if (!a.address) errors.value.address = 'Required'
+  if (!a.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email)) {
+    errors.value.email = 'Valid email required'
+  }
+  if (!a.phone || !/^\+?[\d\s\-()]{8,}$/.test(a.phone)) {
+    errors.value.phone = 'Valid phone required'
+  }
   return Object.keys(errors.value).length === 0
 }
 
 function validatePassport() {
   const a = ap.value; errors.value = {}
   if (!a.passportNumber) errors.value.passportNumber = 'Required'
+  if (!a.passportName) errors.value.passportName = 'Required'
   if (!a.passportIssueDate) errors.value.passportIssueDate = 'Required'
   if (!a.passportExpiry) errors.value.passportExpiry = 'Required'
   if (!a.issuingCountry) errors.value.issuingCountry = 'Required'
-  if (!a.issuingAuthority) errors.value.issuingAuthority = 'Required'
+  if (!a.passportType) errors.value.passportType = 'Required'
   if (a.passportExpiry) {
     const expiry = new Date(a.passportExpiry)
     const sixMonths = new Date(); sixMonths.setMonth(sixMonths.getMonth() + 6)
@@ -80,45 +105,75 @@ function validatePassport() {
 
 function validateTravel() {
   const a = ap.value; errors.value = {}
-  if (!a.purposeOfVisit) errors.value.purposeOfVisit = 'Required'
-  if (!a.departureDate) errors.value.departureDate = 'Required'
-  if (!a.returnDate) errors.value.returnDate = 'Required'
-  if (!a.accommodationName) errors.value.accommodationName = 'Required'
-  if (a.previousVisaRefused && !a.refusalDetails) errors.value.refusalDetails = 'Please provide details of the refusal'
+  if (!a.groupMembership) errors.value.groupMembership = 'Required'
+  if (!a.processingMode) errors.value.processingMode = 'Required'
   return Object.keys(errors.value).length === 0
 }
 
 function nextSection() {
-  const order = ['personal', 'passport', 'travel', 'documents'] as const
+  const order = ['personal', 'passport', 'visa_requirement', 'documents'] as const
   const idx = order.indexOf(activeSection.value)
   let valid = true
   if (activeSection.value === 'personal') valid = validatePersonal()
   if (activeSection.value === 'passport') valid = validatePassport()
-  if (activeSection.value === 'travel')   valid = validateTravel()
+  if (activeSection.value === 'visa_requirement')   valid = validateTravel()
   if (!valid) return
   if (idx < order.length - 1) activeSection.value = order[idx + 1]
-}
-
-function submitForm() {
-  errors.value = {}
-  if (!allPersonsReady.value) {
-    errors.value._docs = 'Please complete all required documents for every traveller before continuing.'
-    return
-  }
-  emit('next')
 }
 
 function handleFileChange(key: string, e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
+
+  if (file.size > 5 * 1024 * 1024) {
+    errors.value._docs = 'File size must be under 5MB'
+    return
+  }
+
   const size = file.size > 1024 * 1024
     ? (file.size / (1024 * 1024)).toFixed(1) + ' MB'
     : (file.size / 1024).toFixed(0) + ' KB'
-  store.markDocumentUploaded(activePersonIdx.value, key, file.name, size)
+  store.markDocumentUploaded(activePersonIdx.value, key, file.name, size, file)
+}
+
+function getQueryString(v: unknown): string | null {
+  if (!v) return null
+  return Array.isArray(v) ? v[0] : String(v)
+}
+
+async function submitForm() {
+  errors.value = {}
+
+  if (!currentPersonReady.value) {
+    errors.value._docs = 'Please upload all required documents for this traveller before continuing.'
+    return
+  }
+
+  const bookingCode = store.bookingCode ?? getQueryString(route.query.booking_code)
+
+  if (!bookingCode) {
+    errors.value._docs = 'Booking code is missing. Please restart the visa search.'
+    return
+  }
+
+  if (store.personCount > 1 && !isLastPerson.value) {
+    const ok = await store.createAllVisas(bookingCode, activePersonIdx.value)
+    if (ok) selectPerson(activePersonIdx.value + 1)
+    return
+  }
+
+  if (!allPersonsReady.value) {
+    errors.value._docs = 'Please complete all required documents for every traveller before continuing.'
+    return
+  }
+
+  const ok = await store.createAllVisas(bookingCode)
+  if (ok) emit('next')
 }
 </script>
 
 <template>
+  <AppToast />
   <div class="space-y-5">
     <div v-if="store.personCount > 1" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
       <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
@@ -140,7 +195,7 @@ function handleFileChange(key: string, e: Event) {
             <template v-if="store.requiredDocsUploaded(i) &&
               store.applicants[i]?.firstName &&
               store.applicants[i]?.passportNumber &&
-              store.applicants[i]?.departureDate">
+              store.applicants[i]?.processingMode">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
                 :stroke="activePersonIdx === i ? 'white' : '#16a34a'" stroke-width="3">
                 <polyline points="20,6 9,17 4,12"/>
@@ -178,7 +233,7 @@ function handleFileChange(key: string, e: Event) {
         :class="activeSection === s.key
           ? 'bg-slate-900 text-white shadow'
           : 'text-slate-500 hover:text-slate-800 bg-transparent'"
-        @click="activeSection = s.key as any">
+        @click="activeSection = s.key as Section">
         <div v-if="sectionComplete[s.key as keyof typeof sectionComplete] && activeSection !== s.key"
           class="absolute top-1.5 right-1.5 w-2 h-2 bg-green-500 rounded-full"></div>
         <svg class="shrink-0 hidden sm:block" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -218,7 +273,7 @@ function handleFileChange(key: string, e: Event) {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
         <div>
           <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Date of Birth <span class="text-red-400">*</span></label>
           <input v-model="ap.dateOfBirth" type="date" :class="fc('dateOfBirth')" />
@@ -229,7 +284,9 @@ function handleFileChange(key: string, e: Event) {
           <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Gender <span class="text-red-400">*</span></label>
           <select v-model="ap.gender" :class="fc('gender')">
             <option value="">Select</option>
-            <option>Male</option><option>Female</option><option>Other</option>
+            <option :key="gender.label" :value="gender.label" v-for="gender in store.genderOptions">
+              {{ gender.value }}
+            </option>
           </select>
           <p v-if="err('gender')" class="text-xs text-red-500 mt-1">{{ err('gender') }}</p>
         </div>
@@ -238,13 +295,22 @@ function handleFileChange(key: string, e: Event) {
           <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Marital Status</label>
           <select v-model="ap.maritalStatus" :class="fc('maritalStatus')">
             <option value="">Select</option>
-            <option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option>
+            <option :key="maritalStatus.label" :value="maritalStatus.label" v-for="maritalStatus in store.maritalOptions">
+              {{ maritalStatus.value }}
+            </option>
           </select>
         </div>
+      </div>
 
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
         <div>
           <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Nationality <span class="text-red-400">*</span></label>
-          <input v-model="ap.nationality" type="text" placeholder="e.g. Nigerian" :class="fc('nationality')" />
+          <select v-model="ap.nationality" :class="fc('nationality')">
+            <option value="">Select</option>
+            <option :key="nationality.label" :value="nationality.label" v-for="nationality in store.countryOptions">
+              {{ nationality.value }}
+            </option>
+          </select>
           <p v-if="err('nationality')" class="text-xs text-red-500 mt-1">{{ err('nationality') }}</p>
         </div>
 
@@ -259,21 +325,40 @@ function handleFileChange(key: string, e: Event) {
           <input v-model="ap.phone" type="tel" placeholder="+234 802 000 0000" :class="fc('phone')" />
           <p v-if="err('phone')" class="text-xs text-red-500 mt-1">{{ err('phone') }}</p>
         </div>
+      </div>
 
-        <div class="sm:col-span-2">
-          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Residential Address <span class="text-red-400">*</span></label>
-          <input v-model="ap.address" type="text" placeholder="Full residential address" :class="fc('address')" />
-          <p v-if="err('address')" class="text-xs text-red-500 mt-1">{{ err('address') }}</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+        <div>
+          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Profession</label>
+          <select v-model="ap.profession" :class="fc('profession')">
+            <option value="">Select</option>
+            <option :key="profession.label" :value="profession.label" v-for="profession in store.professions">
+              {{ profession.value }}
+            </option>
+          </select>
+          <p v-if="err('profession')" class="text-xs text-red-500 mt-1">{{ err('profession') }}</p>
         </div>
 
         <div>
-          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">City</label>
-          <input v-model="ap.city" type="text" placeholder="City" :class="fc('city')" />
+          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Religion</label>
+          <select v-model="ap.religion" :class="fc('religion')">
+            <option value="">Select</option>
+            <option :key="religion.label" :value="religion.label" v-for="religion in store.religions">
+              {{ religion.value }}
+            </option>
+          </select>
+          <p v-if="err('religion')" class="text-xs text-red-500 mt-1">{{ err('religion') }}</p>
         </div>
 
         <div>
-          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">State / Province</label>
-          <input v-model="ap.state" type="text" placeholder="State" :class="fc('state')" />
+          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Language</label>
+          <select v-model="ap.language" :class="fc('language')">
+            <option value="">Select</option>
+            <option :key="language.label" :value="language.label" v-for="language in store.languages">
+              {{ language.value }}
+            </option>
+          </select>
+          <p v-if="err('language')" class="text-xs text-red-500 mt-1">{{ err('language') }}</p>
         </div>
       </div>
 
@@ -300,10 +385,16 @@ function handleFileChange(key: string, e: Event) {
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="sm:col-span-2">
+        <div>
           <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Passport Number <span class="text-red-400">*</span></label>
           <input v-model="ap.passportNumber" type="text" placeholder="e.g. A12345678" class="uppercase" :class="fc('passportNumber')" />
           <p v-if="err('passportNumber')" class="text-xs text-red-500 mt-1">{{ err('passportNumber') }}</p>
+        </div>
+
+        <div>
+          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Name on Passport <span class="text-red-400">*</span></label>
+          <input v-model="ap.passportName" type="text" placeholder="e.g. John Doe" class="capitalize" :class="fc('passportName')" />
+          <p v-if="err('passportName')" class="text-xs text-red-500 mt-1">{{ err('passportName') }}</p>
         </div>
 
         <div>
@@ -320,14 +411,24 @@ function handleFileChange(key: string, e: Event) {
 
         <div>
           <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Issuing Country <span class="text-red-400">*</span></label>
-          <input v-model="ap.issuingCountry" type="text" placeholder="e.g. Nigeria" :class="fc('issuingCountry')" />
+          <select v-model="ap.issuingCountry" :class="fc('issuingCountry')">
+            <option value="">Select</option>
+            <option :key="country.label" :value="country.label" v-for="country in store.countryOptions">
+              {{ country.value }}
+            </option>
+          </select>
           <p v-if="err('issuingCountry')" class="text-xs text-red-500 mt-1">{{ err('issuingCountry') }}</p>
         </div>
 
         <div>
-          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Issuing Authority <span class="text-red-400">*</span></label>
-          <input v-model="ap.issuingAuthority" type="text" placeholder="e.g. Nigeria Immigration Service" :class="fc('issuingAuthority')" />
-          <p v-if="err('issuingAuthority')" class="text-xs text-red-500 mt-1">{{ err('issuingAuthority') }}</p>
+          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Passport Type <span class="text-red-400">*</span></label>
+          <select v-model="ap.passportType" :class="fc('passportType')">
+            <option value="">Select</option>
+            <option :key="passport.label" :value="passport.label" v-for="passport in store.passportTypes">
+              {{ passport.value }}
+            </option>
+          </select>
+          <p v-if="err('passportType')" class="text-xs text-red-500 mt-1">{{ err('passportType') }}</p>
         </div>
       </div>
 
@@ -339,9 +440,9 @@ function handleFileChange(key: string, e: Event) {
       </div>
     </div>
 
-    <div v-if="activeSection === 'travel'" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div v-if="activeSection === 'visa_requirement'" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
       <div class="flex items-center justify-between mb-5">
-        <h2 class="text-base font-bold text-slate-900">Travel Details</h2>
+        <h2 class="text-base font-bold text-slate-900">Visa Requirements</h2>
         <span v-if="store.personCount > 1"
           class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500">
           Person {{ activePersonIdx + 1 }} of {{ store.personCount }}
@@ -349,72 +450,26 @@ function handleFileChange(key: string, e: Event) {
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="sm:col-span-2">
-          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Purpose of Visit <span class="text-red-400">*</span></label>
-          <select v-model="ap.purposeOfVisit" :class="fc('purposeOfVisit')">
-            <option value="">Select purpose</option>
-            <option>Tourism / Holiday</option>
-            <option>Business Meetings</option>
-            <option>Visiting Family / Friends</option>
-            <option>Medical Treatment</option>
-            <option>Study / Education</option>
-            <option>Transit</option>
-            <option>Other</option>
+        <div>
+          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Group Membership <span class="text-red-400">*</span></label>
+          <select v-model="ap.groupMembership" :class="fc('groupMembership')">
+            <option value="">Select</option>
+            <option :key="membership.label" :value="membership.label" v-for="membership in store.groupMemberships">
+              {{ membership.value }}
+            </option>
           </select>
-          <p v-if="err('purposeOfVisit')" class="text-xs text-red-500 mt-1">{{ err('purposeOfVisit') }}</p>
+          <p v-if="err('groupMembership')" class="text-xs text-red-500 mt-1">{{ err('groupMembership') }}</p>
         </div>
 
         <div>
-          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Departure Date <span class="text-red-400">*</span></label>
-          <input v-model="ap.departureDate" type="date" :class="fc('departureDate')" />
-          <p v-if="err('departureDate')" class="text-xs text-red-500 mt-1">{{ err('departureDate') }}</p>
-        </div>
-
-        <div>
-          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Return Date <span class="text-red-400">*</span></label>
-          <input v-model="ap.returnDate" type="date" :class="fc('returnDate')" />
-          <p v-if="err('returnDate')" class="text-xs text-red-500 mt-1">{{ err('returnDate') }}</p>
-        </div>
-
-        <div>
-          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Accommodation Name <span class="text-red-400">*</span></label>
-          <input v-model="ap.accommodationName" type="text" placeholder="Hotel / Host name" :class="fc('accommodationName')" />
-          <p v-if="err('accommodationName')" class="text-xs text-red-500 mt-1">{{ err('accommodationName') }}</p>
-        </div>
-
-        <div>
-          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Accommodation Address</label>
-          <input v-model="ap.accommodationAddr" type="text" placeholder="Hotel address" :class="fc('accommodationAddr')" />
-        </div>
-
-        <div class="sm:col-span-2 border-t border-slate-100 pt-4">
-          <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Sponsor / Host Details (if applicable)</p>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Sponsor Name</label>
-              <input v-model="ap.sponsorName" type="text" placeholder="Full name" :class="fc('sponsorName')" />
-            </div>
-            <div>
-              <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Relationship</label>
-              <input v-model="ap.sponsorRelation" type="text" placeholder="e.g. Business Partner" :class="fc('sponsorRelation')" />
-            </div>
-          </div>
-        </div>
-
-        <div class="sm:col-span-2 border-t border-slate-100 pt-4">
-          <label class="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" v-model="ap.previousVisaRefused" class="w-4 h-4 rounded accent-slate-900" />
-            <span class="text-sm font-medium text-slate-800">Have you ever been refused a visa to any country?</span>
-          </label>
-          <div v-if="ap.previousVisaRefused" class="mt-3">
-            <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">
-              Please provide details <span class="text-red-400">*</span>
-            </label>
-            <textarea v-model="ap.refusalDetails" rows="3"
-              placeholder="Country, visa type, date, and reason if known"
-              class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"></textarea>
-            <p v-if="err('refusalDetails')" class="text-xs text-red-500 mt-1">{{ err('refusalDetails') }}</p>
-          </div>
+          <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Processing Mode <span class="text-red-400">*</span></label>
+          <select v-model="ap.processingMode" :class="fc('processingMode')">
+            <option value="">Select purpose</option>
+            <option :key="processing.label" :value="processing.label" v-for="processing in store.processingOpts">
+              {{ processing.value }}
+            </option>
+          </select>
+          <p v-if="err('processingMode')" class="text-xs text-red-500 mt-1">{{ err('processingMode') }}</p>
         </div>
       </div>
 
@@ -517,32 +572,21 @@ function handleFileChange(key: string, e: Event) {
         </p>
       </div>
 
-      <div v-if="store.personCount > 1 && store.requiredDocsUploaded(activePersonIdx) && activePersonIdx < store.personCount - 1"
-        class="mt-4 flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        <p class="text-xs text-amber-800 font-medium flex-1">
-          Documents uploaded for this person. Don't forget to fill in details for
-          <strong>{{ personLabel(activePersonIdx + 1) }}</strong>.
-        </p>
-        <button
-          class="text-xs font-bold text-amber-700 underline cursor-pointer bg-transparent border-none shrink-0"
-          @click="selectPerson(activePersonIdx + 1)">
-          Go →
-        </button>
-      </div>
-
       <div class="flex justify-between mt-6">
         <button class="px-5 py-3 border-2 border-slate-200 text-slate-700 font-semibold text-sm rounded-xl hover:bg-slate-50 cursor-pointer bg-white"
-          @click="activeSection = 'travel'">← Back</button>
+          @click="activeSection = 'visa_requirement'">← Back</button>
         <button
           class="flex items-center gap-2 px-6 py-3 font-bold text-sm rounded-xl border-none cursor-pointer transition-all"
-          :class="allPersonsReady
+          :class="currentPersonReady && !store.visaLoading
             ? 'bg-primary hover:opacity-90 active:scale-95 text-slate-900'
             : 'bg-slate-200 text-slate-400 cursor-not-allowed'"
+          :disabled="store.visaLoading"
           @click="submitForm">
-          Review Application →
+          <svg v-if="store.visaLoading" class="animate-spin" width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83"/>
+          </svg>
+          {{ submitButtonLabel }}
         </button>
       </div>
     </div>

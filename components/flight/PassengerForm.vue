@@ -8,6 +8,7 @@ import { normaliseError } from '../../utils/api'
 import AppToast from '../toast/AppToast.vue'
 import { useAuthStore } from '../../stores/auth'
 import { useRoute } from 'vue-router'
+import PhoneInput from '../PhoneInput.vue'
 
 const emit = defineEmits<(e: 'next') => void>()
 const flightStore = useFlightStore()
@@ -77,6 +78,10 @@ function validate(): boolean {
     if (!p.birth_date) errors.value[`${px}_dob`] = 'Required'
     if (!p.passport_issuance_date.trim()) errors.value[`${px}_ppn`] = 'Required'
     if (!p.passport_expiry_date.trim()) errors.value[`${px}_ppx`] = 'Required'
+    if (!p.gender) errors.value[`${px}_gender`] = 'Required'
+    if (!p.passport_number) errors.value[`${px}_pass_num`] = 'Required'
+    if (!p.passport_country) errors.value[`${px}_country`] = 'Required'
+    if (!p.passport_nationality) errors.value[`${px}_nat`] = 'Required'
     if (i === 0) {
       if (!p.emailaddress.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))
         errors.value[`${px}_email`] = 'Valid email required'
@@ -192,60 +197,97 @@ const fieldClass = (key: string) =>
         <span class="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{{ passenger.type }}</span>
       </div>
 
-      <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">First Name <span class="text-red-400">*</span></label>
-          <input v-model="passenger.firstname" type="text" placeholder="As on passport" :class="fieldClass(`p${i}_first`)" />
-          <p v-if="errors[`p${i}_first`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_first`] }}</p>
-        </div>
+      <div class="p-5">
+        <div class="w-full grid grid-cols-1 sm:grid-cols-3 gap-4 pb-5">
+          <div>
+            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">First Name <span class="text-red-400">*</span></label>
+            <input v-model="passenger.firstname" type="text" placeholder="As on passport" :class="fieldClass(`p${i}_first`)" />
+            <p v-if="errors[`p${i}_first`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_first`] }}</p>
+          </div>
 
-        <div>
-          <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Last Name <span class="text-red-400">*</span></label>
-          <input v-model="passenger.surname" type="text" placeholder="As on passport" :class="fieldClass(`p${i}_last`)" />
-          <p v-if="errors[`p${i}_last`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_last`] }}</p>
-        </div>
+          <div>
+            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Last Name <span class="text-red-400">*</span></label>
+            <input v-model="passenger.surname" type="text" placeholder="As on passport" :class="fieldClass(`p${i}_last`)" />
+            <p v-if="errors[`p${i}_last`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_last`] }}</p>
+          </div>
 
-        <div>
-          <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Date of Birth <span class="text-red-400">*</span></label>
-          <input v-model="passenger.birth_date" type="date" :max="new Date().toISOString().split('T')[0]" :class="fieldClass(`p${i}_dob`)" />
-          <p v-if="errors[`p${i}_dob`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_dob`] }}</p>
-        </div>
+          <div>
+            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Date of Birth <span class="text-red-400">*</span></label>
+            <input v-model="passenger.birth_date" type="date" :max="new Date().toISOString().split('T')[0]" :class="fieldClass(`p${i}_dob`)" />
+            <p v-if="errors[`p${i}_dob`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_dob`] }}</p>
+          </div>
 
-        <div>
-          <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Nationality <span class="text-red-400">*</span></label>
-          <select v-model="passenger.passport_nationality" :class="fieldClass(`p${i}_nat`)">
-            <option value="">Select nationality</option>
-            <option v-for="n in NATIONALITIES" :key="n" :value="n">{{ n }}</option>
-          </select>
-          <p v-if="errors[`p${i}_nat`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_nat`] }}</p>
-        </div>
+          <div>
+            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Number <span class="text-red-400">*</span></label>
+            <input v-model="passenger.passport_number" type="text" placeholder="As on passport" :class="fieldClass(`p${i}_pass_num`)" />
+            <p v-if="errors[`p${i}_pass_num`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_pass_num`] }}</p>
+          </div>
 
-        <div>
-          <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Issuance Date <span class="text-red-400">*</span></label>
-          <input v-model="passenger.passport_issuance_date" type="date" :class="fieldClass(`p${i}_ppn`)" />
-          <p v-if="errors[`p${i}_ppn`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_ppn`] }}</p>
-        </div>
+          <div>
+            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Country <span class="text-red-400">*</span></label>
+            <select v-model="passenger.passport_country" :class="fieldClass(`p${i}_country`)">
+              <option value="">Select country</option>
+              <option v-for="n in NATIONALITIES" :key="n" :value="n">{{ n }}</option>
+            </select>
+            <p v-if="errors[`p${i}_country`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_country`] }}</p>
+          </div>
 
-        <div>
-          <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Expiry Date <span class="text-red-400">*</span></label>
-          <input v-model="passenger.passport_expiry_date" type="date" :min="new Date().toISOString().split('T')[0]" :class="fieldClass(`p${i}_ppx`)" />
-          <p v-if="errors[`p${i}_ppx`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_ppx`] }}</p>
+          <div>
+            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Nationality <span class="text-red-400">*</span></label>
+            <select v-model="passenger.passport_nationality" :class="fieldClass(`p${i}_nat`)">
+              <option value="">Select nationality</option>
+              <option v-for="n in NATIONALITIES" :key="n" :value="n">{{ n }}</option>
+            </select>
+            <p v-if="errors[`p${i}_nat`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_nat`] }}</p>
+          </div>
+
+          <div>
+            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Issuance Date <span class="text-red-400">*</span></label>
+            <input v-model="passenger.passport_issuance_date" type="date" :class="fieldClass(`p${i}_ppn`)" />
+            <p v-if="errors[`p${i}_ppn`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_ppn`] }}</p>
+          </div>
+
+          <div>
+            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Expiry Date <span class="text-red-400">*</span></label>
+            <input v-model="passenger.passport_expiry_date" type="date" :min="new Date().toISOString().split('T')[0]" :class="fieldClass(`p${i}_ppx`)" />
+            <p v-if="errors[`p${i}_ppx`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_ppx`] }}</p>
+          </div>
+
+          <div>
+            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Gender <span class="text-red-400">*</span></label>
+            <select v-model="passenger.gender" :class="fieldClass(`p${i}_gender`)">
+              <option value="">Select</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+            <p v-if="errors[`p${i}_gender`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_gender`] }}</p>
+          </div>
         </div>
 
         <template v-if="i === 0">
-          <div class="sm:col-span-2 border-t border-slate-100 pt-4 mt-1">
-            <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Contact Details</p>
-          </div>
-          <div>
-            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Email Address <span class="text-red-400">*</span></label>
-            <input v-model="passenger.emailaddress" type="email" placeholder="ticket@example.com" :class="fieldClass(`p${i}_email`)" />
-            <p class="text-[10px] text-slate-400 mt-1">Invoice & ticket will be sent here</p>
-            <p v-if="errors[`p${i}_email`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_email`] }}</p>
-          </div>
-          <div>
-            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Phone Number <span class="text-red-400">*</span></label>
-            <input v-model="passenger.phone_number" type="tel" placeholder="+234 800 000 0000" :class="fieldClass(`p${i}_phone`)" />
-            <p v-if="errors[`p${i}_phone`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_phone`] }}</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2 border-t border-slate-100 pt-4 mt-1">
+              <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Contact Details</p>
+            </div>
+            <div>
+              <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Email Address <span class="text-red-400">*</span></label>
+              <input v-model="passenger.emailaddress" type="email" placeholder="ticket@example.com" :class="fieldClass(`p${i}_email`)" />
+              <p class="text-[10px] text-slate-400 mt-1">Invoice & ticket will be sent here</p>
+              <p v-if="errors[`p${i}_email`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_email`] }}</p>
+            </div>
+            <div>
+              <PhoneInput
+                v-model="passenger.phone_number"
+                label="Phone Number"
+                default-country="NG"
+                important
+                :error="errors[`p${i}_phone`]"
+                @change="({ number, dialCode }) => {
+                  passenger.phone_number = number
+                  passenger.dialling_code = dialCode.replace('+', '')
+                }"
+              />
+            </div>
           </div>
         </template>
       </div>

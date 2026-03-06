@@ -5,11 +5,14 @@ import { useCurrency } from '../../composables/useCurrency'
 
 const store = useVisaStore()
 
-const BASE_PRICE_PER_PERSON = 45000
+const price = computed(() => {
+  const amount = Number(store.selectedVisa?.price)
+  return amount === 0 ? 100 : amount
+})
 
 const pricing = computed(() => {
   const count = store.personCount
-  const subtotal = BASE_PRICE_PER_PERSON * count
+  const subtotal = price.value * count
   const serviceFee = Math.round(subtotal * 0.05)
   const tax = Math.round(subtotal * 0.075)
   const total = subtotal + serviceFee + tax
@@ -27,6 +30,24 @@ function uploadedCount(key: string): number {
 }
 
 const leadEmail = computed(() => store.applicants[0]?.email || '')
+
+function resolveCountryName(codeOrValue: string | undefined): string {
+  if (!codeOrValue) return '—'
+  const opts = store.countryOptions
+
+  return (
+    opts.find(o => o.code === codeOrValue)?.value ??
+    opts.find(o => o.value === codeOrValue)?.value ??
+    codeOrValue
+  )
+}
+
+function toTitleCase(str: string): string {
+  return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+}
+
+const countryName = computed(() => toTitleCase(resolveCountryName(store.selectedVisa?.country)))
+const nationalityName = computed(() => toTitleCase(resolveCountryName(store.selectedVisa?.nationality)))
 </script>
 
 <template>
@@ -39,30 +60,20 @@ const leadEmail = computed(() => store.applicants[0]?.email || '')
           </svg>
           <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Visa Application</span>
         </div>
+        <p class="text-white font-bold text-lg leading-tight capitalize">{{ countryName }}</p>
+        <p class="text-slate-400 text-sm">{{ store.selectedVisa?.visa_type }}</p>
       </div>
 
       <div class="px-5 py-4 space-y-4">
         <div class="grid grid-cols-2 gap-x-4 gap-y-3">
           <div>
             <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nationality</p>
-            <p class="text-sm font-semibold text-slate-800 mt-0.5">{{ store.selectedVisa?.nationality || '—' }}</p>
+            <p class="text-sm font-semibold text-slate-800 mt-0.5">{{ nationalityName || '—' }}</p>
           </div>
           <div>
             <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Applicants</p>
             <p class="text-sm font-semibold text-slate-800 mt-0.5">
               {{ store.personCount }} person{{ store.personCount > 1 ? 's' : '' }}
-            </p>
-          </div>
-          <div v-if="store.applicants[0]?.departureDate">
-            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Departure</p>
-            <p class="text-sm font-semibold text-slate-800 mt-0.5">
-              {{ new Date(store.applicants[0].departureDate).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) }}
-            </p>
-          </div>
-          <div v-if="store.applicants[0]?.returnDate">
-            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Return</p>
-            <p class="text-sm font-semibold text-slate-800 mt-0.5">
-              {{ new Date(store.applicants[0].returnDate).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) }}
             </p>
           </div>
         </div>
@@ -97,21 +108,21 @@ const leadEmail = computed(() => store.applicants[0]?.email || '')
           <div class="space-y-2">
             <div class="flex justify-between text-sm">
               <span class="text-slate-600">
-                {{ format(BASE_PRICE_PER_PERSON) }} × {{ pricing.count }} applicant{{ pricing.count > 1 ? 's' : '' }}
+                {{ format(price, 'AED') }} × {{ pricing.count }} applicant{{ pricing.count > 1 ? 's' : '' }}
               </span>
-              <span class="font-semibold text-slate-800">{{ format(pricing.subtotal) }}</span>
+              <span class="font-semibold text-slate-800">{{ format(pricing.subtotal, 'AED') }}</span>
             </div>
             <div class="flex justify-between text-sm">
               <span class="text-slate-600">Service fee (5%)</span>
-              <span class="font-semibold text-slate-800">{{ format(pricing.serviceFee) }}</span>
+              <span class="font-semibold text-slate-800">{{ format(pricing.serviceFee, 'AED') }}</span>
             </div>
             <div class="flex justify-between text-sm">
               <span class="text-slate-600">VAT (7.5%)</span>
-              <span class="font-semibold text-slate-800">{{ format(pricing.tax) }}</span>
+              <span class="font-semibold text-slate-800">{{ format(pricing.tax, 'AED') }}</span>
             </div>
             <div class="flex justify-between pt-2 border-t border-slate-100">
               <span class="font-bold text-slate-900">Total</span>
-              <span class="font-bold text-slate-900 text-lg">{{ format(pricing.total) }}</span>
+              <span class="font-bold text-slate-900 text-lg">{{ format(pricing.total, 'AED') }}</span>
             </div>
           </div>
         </div>

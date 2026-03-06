@@ -1,90 +1,144 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useVisaStore } from '../../stores/visa'
 import { useCurrency } from '../../composables/useCurrency';
+import AppToast from '../toast/AppToast.vue';
+import { normaliseError } from '../../utils/api';
+import { useToast } from '../../composables/useToast';
+import { useRoute } from 'vue-router';
 
+type GatewayKey = '' | 'paystack' | 'flutterwave'
+type Gateway = {
+  key: GatewayKey
+  name: string
+  description: string
+  color: string
+  bgClass: string
+}
+
+const selectedGateway = ref<GatewayKey>('')
+const loading = ref(false)
+const error = ref('')
 const emit = defineEmits<{ back: [] }>()
 const store = useVisaStore()
+const { format, formatNumber, currentConfig } = useCurrency()
+const toast = useToast()
+const route = useRoute()
 
-const BASE_PRICE = 45_000
+const price = computed(() => {
+  const amount = Number(store.selectedVisa?.price)
+  return amount === 0 ? 100 : amount
+})
 
 const pricing = computed(() => {
   const count = store.personCount
-  const subtotal = BASE_PRICE * count
+  const subtotal = price.value * count
   const serviceFee = Math.round(subtotal * 0.05)
   const tax = Math.round(subtotal * 0.075)
   const total = subtotal + serviceFee + tax
   return { count, subtotal, serviceFee, tax, total }
 })
 
-const { format } = useCurrency()
-
 const leadApplicant = computed(() => store.applicants[0])
 
-const selectedGateway = ref<'paystack' | 'flutterwave' | ''>('')
-const loading = ref(false)
-const error = ref('')
+const gateways = computed<Gateway[]>(() => {
+  if (currentConfig.value?.code === 'NGN') {
+    return [
+      {
+        key: 'paystack',
+        name: 'Paystack',
+        description: 'Cards, bank transfer, USSD',
+        color: '#00C3F7',
+        bgClass: 'bg-[#00C3F7]/10 border-[#00C3F7]',
+      }
+    ]
+  }
 
-const gateways = [
-  {
-    key: 'paystack',
-    name: 'Paystack',
-    description: 'Cards, bank transfer, USSD',
-    color: '#00C3F7',
-    bgClass: 'bg-[#00C3F7]/10 border-[#00C3F7]',
-  },
-  {
-    key: 'flutterwave',
-    name: 'Flutterwave',
-    description: 'Cards, mobile money, USSD',
-    color: '#F5A623',
-    bgClass: 'bg-[#F5A623]/10 border-[#F5A623]',
-  },
-]
+  return [
+    {
+      key: 'flutterwave',
+      name: 'Flutterwave',
+      description: 'Cards, mobile money, USSD',
+      color: '#F5A623',
+      bgClass: 'bg-[#F5A623]/10 border-[#F5A623]',
+    }
+  ]
+})
+
+function getQueryString(v: unknown): string | null {
+  if (!v) return null
+  return Array.isArray(v) ? v[0] : String(v)
+}
 
 async function pay() {
   if (!selectedGateway.value) return
   loading.value = true
   error.value   = ''
-  try {
-    // POST /api/payments/initialize
-    // {
-    //   gateway:   selectedGateway.value,
-    //   amount:    pricing.value.total,
-    //   email:     leadApplicant.value.email,
-    //   phone:     leadApplicant.value.phone,
-    //   metadata: {
-    //     type:        'visa',
-    //     visaCountry: store.selectedVisa.country,
-    //     visaType:    store.selectedVisa.visaType,
-    //     applicants:  store.personCount,
-    //     travellers:  store.applicants.map(a => ({
-    //       firstName: a.firstName, lastName: a.lastName,
-    //       passport:  a.passportNumber, nationality: a.nationality,
-    //     })),
-    //   },
-    //   callbackUrl: `${window.location.origin}/travel/visas/booking/confirm`
-    // }
-    await new Promise(r => setTimeout(r, 1200))
 
-    const mockRedirect = `/travel/visas/booking/confirm?reference=VIS_${Date.now()}&gateway=${selectedGateway.value}`
-    globalThis.location.href = mockRedirect
-  } catch {
-    error.value   = 'Payment initialisation failed. Please try again.'
-    loading.value = false
+  const bookingCode = store.bookingCode ?? getQueryString(route.query.booking_code)
+
+  if (!bookingCode) {
+    error.value = 'Booking code is missing.'
+    return
   }
+
+  try {
+
+    const amount = Number(formatNumber(pricing.value.total, 'AED'))
+    
+    const res = await store.initializePayment({
+      amount: amount,
+      currency: currentConfig.value?.code,
+      booking_code: bookingCode,
+      customer_name: `${leadApplicant.value.firstName} ${leadApplicant.value.lastName}`,
+      customer_email: leadApplicant.value.email,
+      callback_url: `${globalThis.location.origin}/travel/visas/booking/confirm`,
+      payment_type: selectedGateway.value,
+    })
+
+    if (!res?.link) {
+      error.value = store.paymentError
+      loading.value = false
+      toast.error(error.value)
+      return
+    }
+
+    globalThis.location.href = res.link
+  } catch(e) {
+    error.value = normaliseError(e)
+    loading.value = false
+    toast.error(error.value)
+  }
+}
+
+watch(gateways, (gws) => {
+  if (gws.length) {
+    selectedGateway.value = gws[0].key
+  }
+}, { immediate: true })
+
+function resolveCountryName(codeOrValue: string | undefined): string {
+  if (!codeOrValue) return '—'
+  const opts = store.countryOptions
+
+  return (
+    opts.find(o => o.code === codeOrValue)?.value ??
+    opts.find(o => o.value === codeOrValue)?.value ??
+    codeOrValue
+  )
 }
 </script>
 
 <template>
+  <AppToast />
   <div class="space-y-5">
     <div class="bg-slate-900 rounded-2xl px-6 py-5 flex items-center justify-between">
       <div>
         <p class="text-slate-400 text-sm">Total Amount Due</p>
-        <p class="text-3xl font-bold text-white mt-0.5">{{ format(pricing.total) }}</p>
+        <p class="text-3xl font-bold text-white mt-0.5">{{ format(pricing.total, 'AED') }}</p>
         <p class="text-slate-400 text-xs mt-1">
           {{ store.personCount }} applicant{{ store.personCount > 1 ? 's' : '' }} ·
-          Tourist Visa · {{ store.selectedVisa?.country || '—' }}
+          {{ store.selectedVisa?.visa_type }} · {{ resolveCountryName(store.selectedVisa?.country) }}
         </p>
       </div>
       <div class="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center shrink-0">
@@ -99,21 +153,21 @@ async function pay() {
       <div class="space-y-2">
         <div class="flex justify-between text-sm">
           <span class="text-slate-600">
-            {{ format(BASE_PRICE) }} × {{ pricing.count }} applicant{{ pricing.count > 1 ? 's' : '' }}
+            {{ format(price, 'AED') }} × {{ pricing.count }} applicant{{ pricing.count > 1 ? 's' : '' }}
           </span>
-          <span class="font-semibold text-slate-800">{{ format(pricing.subtotal) }}</span>
+          <span class="font-semibold text-slate-800">{{ format(pricing.subtotal, 'AED') }}</span>
         </div>
         <div class="flex justify-between text-sm">
           <span class="text-slate-600">Service fee (5%)</span>
-          <span class="font-semibold text-slate-800">{{ format(pricing.serviceFee) }}</span>
+          <span class="font-semibold text-slate-800">{{ format(pricing.serviceFee, 'AED') }}</span>
         </div>
         <div class="flex justify-between text-sm">
           <span class="text-slate-600">VAT (7.5%)</span>
-          <span class="font-semibold text-slate-800">{{ format(pricing.tax) }}</span>
+          <span class="font-semibold text-slate-800">{{ format(pricing.tax, 'AED') }}</span>
         </div>
         <div class="flex justify-between pt-2 border-t border-slate-100">
           <span class="font-bold text-slate-900">Total</span>
-          <span class="font-bold text-slate-900 text-lg">{{ format(pricing.total) }}</span>
+          <span class="font-bold text-slate-900 text-lg">{{ format(pricing.total, 'AED') }}</span>
         </div>
       </div>
     </div>
@@ -148,13 +202,6 @@ async function pay() {
         </label>
       </div>
 
-      <div v-if="error" class="mt-4 flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-        <svg class="shrink-0 mt-0.5" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        <p class="text-sm text-red-700">{{ error }}</p>
-      </div>
-
       <p v-if="selectedGateway" class="text-xs text-slate-400 mt-4 leading-relaxed">
         You'll be taken to
         <span class="font-semibold">{{ selectedGateway === 'paystack' ? 'Paystack' : 'Flutterwave' }}</span>
@@ -184,7 +231,7 @@ async function pay() {
         </svg>
         <span v-if="loading">Redirecting…</span>
         <span v-else-if="selectedGateway">
-          Pay {{ format(pricing.total) }} with {{ selectedGateway === 'paystack' ? 'Paystack' : 'Flutterwave' }}
+          Pay {{ format(pricing.total, 'AED') }} with {{ selectedGateway === 'paystack' ? 'Paystack' : 'Flutterwave' }}
         </span>
         <span v-else>Select a payment method</span>
       </button>

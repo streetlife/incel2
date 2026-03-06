@@ -133,5 +133,13 @@ export function useFlightService() {
       })
       return res.data
     },
+
+    async bookAmadeus(bookingCode: string): Promise<BookingCodeResponse> {
+      const res = await $api<ApiResponse<BookingCodeResponse>>(`/flights/preProcessBookingFlight/${bookingCode}`, {
+        method: 'POST',
+        body: [],
+      })
+      return res.data
+    },
   }
 }

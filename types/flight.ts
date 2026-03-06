@@ -201,8 +201,12 @@ export interface Passenger {
     passport_issuance_date: string
     passport_expiry_date: string
     passport_nationality: string
-    emailaddress?: string // lead passenger only
-    phone_number?: string // lead passenger only
+    emailaddress?: string
+    phone_number?: string
+    dialling_code: string
+    gender: string
+    passport_country: string
+    passport_number: string
 }
 
 export interface FlightPaymentMeta {

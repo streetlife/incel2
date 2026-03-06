@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useVisaStore } from '../../../../stores/visa'
 import VisaApplicationForm from '../../../../components/visa/VisaApplicationForm.vue'
@@ -16,23 +16,28 @@ const step = computed({
   set: (n: number) =>
     router.replace({
       query: {
+        session_code: String(store.selectedVisaResult?.session_code),
+        visa_type: String(store.selectedVisaResult?.visa_type),
         country: String(route.query.country ?? ''),
         nationality: String(route.query.nationality ?? ''),
         persons: String(route.query.persons ?? 1),
+        booking_code: String(store.bookingCode),
         step: String(n),
       },
     }),
 })
 
 function hydrateStoreFromUrl() {
-  const { country, nationality, persons } = route.query
-
-   store.resetAll()
+  const { country, nationality, persons, session_code, visa_type } = route.query
+  const result = store.selectedVisaResult
 
   store.setVisa({
     country: country ? String(country) : '',
     nationality: nationality ? String(nationality) : '',
     persons: persons ? Number(persons) : 1,
+    session_code: session_code ? String(session_code) : '',
+    visa_type: visa_type ? String(visa_type) : '',
+    price: result ? Number(result.price) : 0,
   })
 }
 
@@ -52,6 +57,11 @@ function goBack() {
   }
 }
 
+async function goToStep(n: number) {
+  await nextTick()
+  step.value = n
+}
+
 watch(
   () => ({
     country: route.query.country,
@@ -59,10 +69,15 @@ watch(
     persons: route.query.persons,
   }),
   (newQuery, oldQuery) => {
-    if (JSON.stringify(newQuery) === JSON.stringify(oldQuery)) return
+    if (oldQuery === undefined) {
+      hydrateStoreFromUrl()
+      return
+    }
 
-    store.resetAll()
-    hydrateStoreFromUrl()
+    if (JSON.stringify(newQuery) !== JSON.stringify(oldQuery)) {
+      store.resetAll()
+      hydrateStoreFromUrl()
+    }
   },
   { immediate: true }
 )
@@ -116,9 +131,11 @@ watch(
 
         <div class="flex-1 sm:min-w-0 w-full">
           <Transition name="slide" mode="out-in">
-            <VisaApplicationForm v-if="step === 1" key="1" @next="step = 2" />
-            <VisaBookingReview v-else-if="step === 2" key="2" @next="step = 3" @back="step = 1" />
-            <VisaPaymentForm v-else-if="step === 3" key="3" @back="step = 2" />
+            <div :key="step">
+              <VisaApplicationForm v-if="step === 1" @next="goToStep(2)" />
+              <VisaBookingReview v-else-if="step === 2" @next="goToStep(3)" @back="goToStep(1)" />
+              <VisaPaymentForm v-else-if="step === 3" @back="goToStep(2)" />
+            </div>
           </Transition>
         </div>
 

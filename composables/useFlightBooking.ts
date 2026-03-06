@@ -32,6 +32,10 @@ export function useFlightBooking() {
           passport_nationality: '',
           emailaddress: i === 0 ? flightStore.contactEmail : '',
           phone_number: i === 0 ? flightStore.contactPhone : '',
+          dialling_code: '',
+          gender: '',
+          passport_country: '',
+          passport_number: '',
         }))
       }
     } catch {
@@ -85,7 +89,7 @@ export function useFlightBooking() {
     }
   }
 
-  async function verifyPayment() {
+  async function verifyPayment(bookCode: string) {
     loading.value = true
     error.value = ''
 
@@ -112,6 +116,9 @@ export function useFlightBooking() {
 
       // const result = await service.verifyPayment(verifyPayload)
       // confirmation.value = result
+
+      await flightStore.bookAmadeus(bookCode)
+
       return 'success'
     } catch (err) {
       error.value = normaliseError(err)

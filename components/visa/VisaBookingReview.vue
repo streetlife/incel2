@@ -2,15 +2,19 @@
 import { computed } from 'vue'
 import { useVisaStore } from '../../stores/visa'
 import { useCurrency } from '../../composables/useCurrency';
+import AppToast from '../toast/AppToast.vue';
 
 const emit = defineEmits<{ next: []; back: [] }>()
 const store = useVisaStore()
 
-const BASE_PRICE = 45_000
+const price = computed(() => {
+  const amount = Number(store.selectedVisa?.price)
+  return amount === 0 ? 100 : amount
+})
 
 const pricing = computed(() => {
   const count = store.personCount
-  const subtotal = BASE_PRICE * count
+  const subtotal = price.value * count
   const serviceFee = Math.round(subtotal * 0.05)
   const tax = Math.round(subtotal * 0.075)
   const total = subtotal + serviceFee + tax
@@ -54,9 +58,21 @@ const missingDocs = computed(() => {
 function proceed() {
   emit('next')
 }
+
+function resolveCountryName(codeOrValue: string | undefined): string {
+  if (!codeOrValue) return '—'
+  const opts = store.countryOptions
+
+  return (
+    opts.find(o => o.code === codeOrValue)?.value ??
+    opts.find(o => o.value === codeOrValue)?.value ??
+    codeOrValue
+  )
+}
 </script>
 
 <template>
+  <AppToast />
   <div class="space-y-5">
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div class="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -87,15 +103,9 @@ function proceed() {
         <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Application Details</p>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div v-for="row in [
-            { label: 'Destination', value: store.selectedVisa?.country },
-            { label: 'Nationality', value: store.selectedVisa?.nationality },
-            { label: 'Travel Date', value: leadApplicant.departureDate
-                ? new Date(leadApplicant.departureDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-                : '—' },
-            { label: 'Return Date',  value: leadApplicant.returnDate
-                ? new Date(leadApplicant.returnDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-                : '—' },
-            { label: 'Travellers',   value: `${store.personCount} person${store.personCount > 1 ? 's' : ''}` },
+            { label: 'Destination', value: resolveCountryName(store.selectedVisa?.country) },
+            { label: 'Nationality', value: resolveCountryName(store.selectedVisa?.nationality) },
+            { label: 'Travellers', value: `${store.personCount} person${store.personCount > 1 ? 's' : ''}` },
           ]" :key="row.label">
             <div>
               <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">{{ row.label }}</p>
@@ -105,7 +115,6 @@ function proceed() {
         </div>
       </div>
 
-      <!-- All travellers -->
       <div class="px-6 py-5 border-b border-slate-100">
         <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Travellers</p>
         <div class="space-y-3">
@@ -156,22 +165,22 @@ function proceed() {
         <div class="space-y-2.5">
           <div class="flex justify-between text-sm">
             <span class="text-slate-600">
-              Visa fee — Tourist Visa
-              ({{ format(BASE_PRICE) }} × {{ pricing.count }} applicant{{ pricing.count > 1 ? 's' : '' }})
+              Visa fee — {{ store.selectedVisa?.visa_type }}
+              ({{ format(price, 'AED') }} × {{ pricing.count }} applicant{{ pricing.count > 1 ? 's' : '' }})
             </span>
-            <span class="font-semibold text-slate-900">{{ format(pricing.subtotal) }}</span>
+            <span class="font-semibold text-slate-900">{{ format(pricing.subtotal, 'AED') }}</span>
           </div>
           <div class="flex justify-between text-sm">
             <span class="text-slate-600">Service & processing fee (5%)</span>
-            <span class="font-semibold text-slate-900">{{ format(pricing.serviceFee) }}</span>
+            <span class="font-semibold text-slate-900">{{ format(pricing.serviceFee, 'AED') }}</span>
           </div>
           <div class="flex justify-between text-sm">
             <span class="text-slate-600">VAT (7.5%)</span>
-            <span class="font-semibold text-slate-900">{{ format(pricing.tax) }}</span>
+            <span class="font-semibold text-slate-900">{{ format(pricing.tax, 'AED') }}</span>
           </div>
           <div class="flex justify-between pt-3 border-t border-slate-100">
             <span class="font-bold text-slate-900 text-base">Total Due</span>
-            <span class="font-bold text-slate-900 text-xl">{{ format(pricing.total) }}</span>
+            <span class="font-bold text-slate-900 text-xl">{{ format(pricing.total, 'AED') }}</span>
           </div>
         </div>
       </div>

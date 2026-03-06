@@ -57,7 +57,6 @@ export function useApi() {
     credentials: 'include',
     headers: {
       'Accept': 'application/json',
-      'Content-Type': 'application/json',
       'X-Requested-With': 'XMLHttpRequest',
     },
     onRequest({ options }) {
@@ -68,6 +67,10 @@ export function useApi() {
 
       if (authStore.token) {
         headers.set('Authorization', `Bearer ${authStore.token}`)
+      }
+
+      if (!(options.body instanceof FormData)) {
+        headers.set('Content-Type', 'application/json')
       }
 
       options.headers = headers

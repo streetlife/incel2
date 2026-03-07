@@ -10,7 +10,6 @@ type Section = 'personal' | 'passport' | 'visa_requirement' | 'documents'
 const emit = defineEmits<{ next: [] }>()
 const store = useVisaStore()
 const route = useRoute()
-const toast = useToast()
 
 const activePersonIdx  = ref(0)
 const activeSection = ref<Section>('personal')

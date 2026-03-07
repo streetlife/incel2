@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useFlightService } from '../../services/flight.service'
 import { useFlightStore } from '../../stores/flight'
@@ -9,6 +9,14 @@ import AppToast from '../toast/AppToast.vue'
 import { useAuthStore } from '../../stores/auth'
 import { useRoute } from 'vue-router'
 import PhoneInput from '../PhoneInput.vue'
+
+interface Country {
+  id: number
+  country: string
+  iso_code: string
+  visa: string
+  description: string
+}
 
 const emit = defineEmits<(e: 'next') => void>()
 const flightStore = useFlightStore()
@@ -35,6 +43,8 @@ const error = ref('')
 const errors = ref<Record<string, string>>({})
 const auth = useAuthStore()
 const route = useRoute()
+const countryLoading = ref(false)
+const country = ref<Country[]>([])
 
 const flightService = useFlightService()
 const toast = useToast()
@@ -121,11 +131,29 @@ async function submit() {
 }
 
 const fieldClass = (key: string) =>
-  `w-full px-3.5 py-2.5 text-sm rounded-xl border transition-colors outline-none focus:ring-2 focus:ring-primary/20 ${
+  `w-full px-3.5 py-2.5 text-sm rounded-xl border transition-colors outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50 ${
     errors.value[key]
       ? 'border-red-300 bg-red-50 focus:border-red-400'
       : 'border-slate-200 bg-white focus:border-primary'
   }`
+
+const getCountries = async () => {
+  try {
+    countryLoading.value = true
+    const res = await flightService.getCountries()
+    country.value = res
+  } catch (err) {
+    countryLoading.value = false
+    const e = normaliseError(err)
+    toast.error(e)
+  } finally {
+    countryLoading.value = false
+  }
+}
+
+onMounted(async () => {
+  getCountries()
+})
 </script>
 
 <template>
@@ -225,18 +253,18 @@ const fieldClass = (key: string) =>
 
           <div>
             <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Country <span class="text-red-400">*</span></label>
-            <select v-model="passenger.passport_country" :class="fieldClass(`p${i}_country`)">
-              <option value="">Select country</option>
-              <option v-for="n in NATIONALITIES" :key="n" :value="n">{{ n }}</option>
+            <select v-model="passenger.passport_country" :class="fieldClass(`p${i}_country`)" :disabled="countryLoading">
+              <option value="">{{ countryLoading ? 'Loading countries…' : 'Select country' }}</option>
+              <option v-for="n in country" :key="n.id" :value="n.iso_code">{{ n.country }}</option>
             </select>
             <p v-if="errors[`p${i}_country`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_country`] }}</p>
           </div>
 
           <div>
             <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Nationality <span class="text-red-400">*</span></label>
-            <select v-model="passenger.passport_nationality" :class="fieldClass(`p${i}_nat`)">
-              <option value="">Select nationality</option>
-              <option v-for="n in NATIONALITIES" :key="n" :value="n">{{ n }}</option>
+            <select v-model="passenger.passport_nationality" :class="fieldClass(`p${i}_nat`)" :disabled="countryLoading">
+              <option value="">{{ countryLoading ? 'Loading countries…' : 'Select nationality' }}</option>
+              <option v-for="n in country" :key="n.id" :value="n.iso_code">{{ n.country }}</option>
             </select>
             <p v-if="errors[`p${i}_nat`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_nat`] }}</p>
           </div>
@@ -282,8 +310,8 @@ const fieldClass = (key: string) =>
                 default-country="NG"
                 important
                 :error="errors[`p${i}_phone`]"
-                @change="({ number, dialCode }) => {
-                  passenger.phone_number = number
+                @change="({ full, dialCode }) => {
+                  passenger.phone_number = full
                   passenger.dialling_code = dialCode.replace('+', '')
                 }"
               />

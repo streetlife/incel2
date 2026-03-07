@@ -11,12 +11,14 @@ const props = withDefaults(defineProps<{
   meta?: FlightMeta
   origin?: string
   destination?: string
+  bookingLoadingId?: string | null
 }>(), {
   flights: () => [],
   meta: () => ({ count: 0, airlines: {}, recommended: null, fastest: null }),
   origin: '',
   destination: '',
   loading: false,
+  bookingLoadingId: null,
 })
 
 defineEmits<{ (e: 'book', id: string): void }>()
@@ -289,6 +291,7 @@ const toggleExpand = (id: string) => { expanded[id] = !expanded[id] }
               :expanded="!!expanded[recommended.id]"
               :airlines="meta?.airlines ?? {}"
               highlight="recommended"
+              :booking-loading-id="bookingLoadingId"
               @toggle="toggleExpand(recommended.id)"
               @book="(id) => $emit('book', id)"
             />
@@ -306,6 +309,7 @@ const toggleExpand = (id: string) => { expanded[id] = !expanded[id] }
               :expanded="!!expanded[timeSaver.id]"
               :airlines="meta?.airlines ?? {}"
               highlight="timesaver"
+              :booking-loading-id="bookingLoadingId"
               @toggle="toggleExpand(timeSaver.id)"
               @book="(id) => $emit('book', id)"
             />
@@ -326,6 +330,7 @@ const toggleExpand = (id: string) => { expanded[id] = !expanded[id] }
               :flight="flight"
               :expanded="!!expanded[flight.id]"
               :airlines="meta?.airlines ?? {}"
+              :booking-loading-id="bookingLoadingId"
               @toggle="toggleExpand(flight.id)"
               @book="(id) => $emit('book', id)"
             />

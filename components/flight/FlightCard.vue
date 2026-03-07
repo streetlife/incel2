@@ -3,19 +3,18 @@ import { computed, ref, watch } from 'vue'
 import type { FlightOffer, AirlineInfo } from '../../types/flight'
 import { useCurrency } from '../../composables/useCurrency';
 import { useAirportResolver } from '../../composables/useAirportResolver';
-import { useFlights } from '../../composables/useFlights';
 
 const props = defineProps<{
   flight: FlightOffer
   expanded: boolean
   highlight?: 'recommended' | 'timesaver' | null
   airlines?: Record<string, AirlineInfo>
+  bookingLoadingId?: string | null
 }>()
 const emit = defineEmits<{ (e: 'toggle'): void; (e: 'book', id: string): void }>()
 
 const { format } = useCurrency()
 const { resolveAirports } = useAirportResolver()
-const { bookingLoading } = useFlights()
 
 const FALLBACK_COLORS: Record<string, string> = {
   BA:'#075AAA', VS:'#E31837', LH:'#05164D', TP:'#00843D',
@@ -81,8 +80,9 @@ watch(segs, async (segments) => {
 
 <template>
   <article
-    class="bg-white rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg"
+    class="bg-white rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg cursor-pointer select-none"
     :class="highlight ? 'border-2 border-blue-300 shadow-md shadow-blue-50' : 'border border-slate-200 hover:border-slate-300'"
+    @click="emit('toggle')"
   >
     <div class="md:hidden p-4 flex flex-col gap-3">
       <div class="flex items-center justify-between">
@@ -147,23 +147,23 @@ watch(segs, async (segments) => {
           {{ flight.numberOfBookableSeats }} seats left
         </span>
       </div>
-
+      
       <div class="flex items-center gap-2 pt-1">
         <button class="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary hover:opacity-90 active:scale-95 text-white text-sm font-semibold rounded-xl transition-all cursor-pointer border-none disabled:opacity-60 disabled:cursor-not-allowed"
-          :disabled="bookingLoading"
+          :disabled="bookingLoadingId === flight.id"
           @click.stop="emit('book', flight.id)"
         >
-          <svg v-if="bookingLoading" class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <svg v-if="bookingLoadingId === flight.id" class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M21 12a9 9 0 1 1-6.219-8.56" />
           </svg>
 
           <span>
-            {{ bookingLoading ? 'Processing…' : 'Book Now' }}
+            {{ bookingLoadingId === flight.id ? 'Processing…' : 'Book Now' }}
           </span>
         </button>
 
         <button class="flex items-center gap-1 text-xs font-medium text-primary transition-colors cursor-pointer bg-transparent border-none p-0 font-[inherit] shrink-0"
-          @click="emit('toggle')">
+          @click.stop="emit('toggle')">
           {{ expanded ? 'Hide' : 'Details' }}
           <svg class="transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="6 9 12 15 18 9"/>
@@ -236,7 +236,7 @@ watch(segs, async (segments) => {
         <button class="mt-1 w-full px-5 py-2.5 bg-primary hover:opacity-90 active:scale-95 text-white text-sm font-semibold rounded-xl transition-all duration-150 cursor-pointer border-none"
           @click.stop="emit('book', flight.id)">Book Now</button>
         <button class="flex items-center gap-1 text-xs font-medium text-primary transition-colors cursor-pointer bg-transparent border-none p-0 font-[inherit]"
-          @click="emit('toggle')">
+          @click.stop="emit('toggle')">
           {{ expanded ? 'Hide details' : 'View details' }}
           <svg class="transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="6 9 12 15 18 9"/>

@@ -10,6 +10,7 @@ import type {
   FlightBookingResponse,
   BookingCodeResponse,
 } from '../types/flight'
+import { CountryResponse } from '../types/visa'
 import { useApi } from '../utils/api'
 
 export function useFlightService() {
@@ -79,11 +80,11 @@ export function useFlightService() {
         currency: 'NGN'
       }
 
-      const res = await $api<ApiResponse<{ payment_link: string; reference: string }>>(
+      const res = await $api<{ payment_link: string; reference: string }>(
         '/paystack/payment/initialize',
         { method: 'POST', body }
       )
-      return res.data
+      return res
     },
 
     /**
@@ -140,6 +141,14 @@ export function useFlightService() {
         body: [],
       })
       return res.data
+    },
+
+    async getCountries(): Promise<CountryResponse[]> {
+      const res = await $api<CountryResponse[]>('/countries/all-countries', {
+        method: 'GET'
+      })
+
+      return res
     },
   }
 }

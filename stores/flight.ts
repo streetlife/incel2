@@ -102,6 +102,40 @@ export const useFlightStore = defineStore(
         const bookCode = ref<string | null>(null)
         const flightService = useFlightService()
 
+        async function confirmBooking(): Promise<boolean> {
+            status.value = 'loading'
+            await new Promise((r) => setTimeout(r, 2200))
+
+            bookingReference.value = `BK${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+            ticketNumbers.value = passengers.value.map(
+                (_, i) => `TK${Math.random().toString(36).slice(2, 10).toUpperCase()}${i}`,
+            )
+            status.value = 'confirmed'
+            generateInvoice()
+            return true
+        }
+
+        async function generateBookingCode(): Promise<string> {
+            try {
+                const res = await flightService.generateBookingCode()
+                bookCode.value = res.bookCode
+                setBookingCode(bookCode.value)
+
+                return bookCode.value
+            } catch (err: any) {
+                throw new Error(err)
+            }
+        }
+
+        async function bookAmadeus(bookingCode: string) {
+            try {
+                const res = await flightService.bookAmadeus(bookingCode)
+                return res
+            } catch (err: any) {
+                throw new Error(err)
+            }
+        }
+
         const priceBreakdown = computed(() => {
             const base = basePrice.value * passengerCount.value
             const tax = Math.round(base * 0.075)
@@ -191,41 +225,6 @@ export const useFlightStore = defineStore(
                 month: 'short',
                 year: 'numeric',
             })
-        }
-
-        async function confirmBooking(): Promise<boolean> {
-            status.value = 'loading'
-            await new Promise((r) => setTimeout(r, 2200))
-
-            bookingReference.value = `BK${Math.random().toString(36).slice(2, 8).toUpperCase()}`
-            ticketNumbers.value = passengers.value.map(
-                (_, i) => `TK${Math.random().toString(36).slice(2, 10).toUpperCase()}${i}`,
-            )
-            status.value = 'confirmed'
-            generateInvoice()
-            return true
-        }
-
-        async function generateBookingCode(): Promise<string> {
-            try {
-                const res = await flightService.generateBookingCode()
-                bookCode.value = res.bookCode
-
-                setBookingCode(bookCode.value)
-
-                return bookCode.value
-            } catch (err: any) {
-                throw new Error(err)
-            }
-        }
-
-        async function bookAmadeus(bookingCode: string) {
-            try {
-                const res = await flightService.bookAmadeus(bookingCode)
-                return res
-            } catch (err: any) {
-                throw new Error(err)
-            }
         }
 
         function setBookingCode(code: string) {

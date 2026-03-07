@@ -122,7 +122,7 @@ export function useFlightBooking() {
       return 'success'
     } catch (err) {
       error.value = normaliseError(err)
-      return 'failed'
+      return 'booking_failed'
     } finally {
       loading.value = false
     }

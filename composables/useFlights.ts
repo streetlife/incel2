@@ -15,7 +15,7 @@ export function useFlights() {
     const flightStore = useFlightStore()
 
     const showSearchForm = ref(true)
-    const bookingLoading = ref(false)
+    const bookingLoadingId = ref<string | null>(null)
 
     const results: Ref<FlightOffer[]> = ref([])
     const meta = ref<FlightMeta>({
@@ -216,12 +216,12 @@ export function useFlights() {
         selectOffer(offer, passengerTypes)
 
         try {
-            bookingLoading.value = true
+            bookingLoadingId.value = offerId
             bookingCode = await flightStore.generateBookingCode()
         } catch (e) {
             error.value = normaliseError(e)
             toast.error(error.value)
-            bookingLoading.value = false
+            bookingLoadingId.value = null
             return
         }
 
@@ -247,7 +247,7 @@ export function useFlights() {
         hasSearched,
         paramsFromUrl,
         showSearchForm,
-        bookingLoading,
+        bookingLoadingId,
         search,
         navigateToBooking,
     }

@@ -29,7 +29,7 @@ async function copyRef() {
 onMounted(async () => {
 
   if (!flightStore.bookCode) {
-    status.value = 'failed'
+    status.value = 'booking_failed'
     return
   }
   

@@ -7,7 +7,6 @@ import { navigateTo, useRoute } from 'nuxt/app'
 
 const route = useRoute()
 
-// Define emit
 const emit = defineEmits<{
   search: [searchData: any]
 }>()
@@ -24,10 +23,9 @@ const form = ref({
   travelClass: 'economy',
   direct: false,
   flexibleDates: false,
-  stops: 'any' // For multi-city
+  stops: 'any'
 })
 
-// Validation errors
 const errors = ref({
   from: '',
   to: '',
@@ -36,7 +34,6 @@ const errors = ref({
   general: ''
 })
 
-// Multi-city flights array
 const multiCityFlights = ref([
   { from: '', to: '', dateFrom: '' },
   { from: '', to: '', dateFrom: '' },
@@ -46,7 +43,6 @@ const multiCityFlights = ref([
   { from: '', to: '', dateFrom: '' }
 ])
 
-// Multi-city errors
 const multiCityErrors = ref<Array<{ from: string; to: string; dateFrom: string }>>([
   { from: '', to: '', dateFrom: '' },
   { from: '', to: '', dateFrom: '' },

@@ -234,7 +234,17 @@ watch(segs, async (segments) => {
         <div class="text-xs text-slate-400">per person</div>
         <div v-if="bags" class="text-xs text-amber-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded">+{{ format(Number(bags.amount)) }} bags</div>
         <button class="mt-1 w-full px-5 py-2.5 bg-primary hover:opacity-90 active:scale-95 text-white text-sm font-semibold rounded-xl transition-all duration-150 cursor-pointer border-none"
-          @click.stop="emit('book', flight.id)">Book Now</button>
+          :disabled="bookingLoadingId === flight.id"
+          @click.stop="emit('book', flight.id)">
+          
+          <svg v-if="bookingLoadingId === flight.id" class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+
+          <span>
+            {{ bookingLoadingId === flight.id ? 'Processing…' : 'Book Now' }}
+          </span>
+        </button>
         <button class="flex items-center gap-1 text-xs font-medium text-primary transition-colors cursor-pointer bg-transparent border-none p-0 font-[inherit]"
           @click.stop="emit('toggle')">
           {{ expanded ? 'Hide details' : 'View details' }}

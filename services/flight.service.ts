@@ -137,8 +137,7 @@ export function useFlightService() {
 
     async bookAmadeus(bookingCode: string): Promise<BookingCodeResponse> {
       const res = await $api<ApiResponse<BookingCodeResponse>>(`/flights/preProcessBookingFlight/${bookingCode}`, {
-        method: 'POST',
-        body: [],
+        method: 'GET',
       })
       return res.data
     },

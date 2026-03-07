@@ -26,14 +26,21 @@ async function copyRef() {
   setTimeout(() => (copied.value = false), 2000)
 }
 
+function getQueryString(v: unknown): string | null {
+  if (!v) return null
+  return Array.isArray(v) ? v[0] : String(v)
+}
+
 onMounted(async () => {
 
-  if (!flightStore.bookCode) {
+  const bookingCode = flightStore.bookCode ?? getQueryString(route.query.booking_code)
+
+  if (!bookingCode) {
     status.value = 'booking_failed'
     return
   }
-  
-  const result = await booking.verifyPayment(flightStore.bookCode)
+
+  const result = await booking.verifyPayment(bookingCode)
   status.value = result
 })
 

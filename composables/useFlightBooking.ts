@@ -51,7 +51,7 @@ export function useFlightBooking() {
     error.value = ''
 
     try {
-      const callbackUrl = `${globalThis.location.origin}/travel/flights/booking/confirm`
+      const callbackUrl = `${globalThis.location.origin}/travel/flights/booking/confirm?booking_code=${flightStore.bookCode}`
       const amount = formatNumber(flightStore.priceBreakdown.total)
 
       const result = await paymentGateway(gateway, callbackUrl, Number(amount))

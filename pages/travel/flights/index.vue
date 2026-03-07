@@ -5,6 +5,9 @@ import FlightResult from '../../../components/flight/FlightResult.vue'
 import { useFlights } from '../../../composables/useFlights'
 import { onMounted, nextTick, watch } from 'vue'
 import AppToast from '../../../components/toast/AppToast.vue'
+import { useRoute } from 'nuxt/app'
+
+const route = useRoute()
 
 const {
   results,
@@ -52,6 +55,7 @@ const popularDestinations = [
   { city: 'Johannesburg', country: 'South Africa', image: 'https://images.unsplash.com/photo-1577948000111-9c970dfe3743?w=800', price: 'From ₦350,000' },
   { city: 'Istanbul', country: 'Turkey', image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800', price: 'From ₦500,000' },
 ]
+
 const benefits = [
   { title: 'Best Price Guarantee', description: 'We offer competitive prices on all flight bookings' },
   { title: '24/7 Support', description: 'Our team is available round the clock to assist you' },
@@ -61,21 +65,36 @@ const benefits = [
 
 function scrollToTopAndShowForm() {
   showSearchForm.value = true
-
   if (typeof globalThis !== 'undefined') {
     globalThis.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
 
-watch(hasSearched, (val) => {
-  if (val) scrollToResults()
-}, { once: true })
-
-watch(loading, (val) => {
-  if (!val && hasSearched.value) scrollToResults()
-})
-
 onMounted(() => {
+  const q = route.query
+
+  if (q.from && q.to && q.dateFrom) {
+    search({
+      supplier: 'amadeus',
+      from: String(q.from),
+      to: String(q.to),
+      dateFrom: String(q.dateFrom),
+      dateTo: q.dateTo ? String(q.dateTo) : undefined,
+      search_type: String(q.tripType ?? 'roundtrip'),
+      flight_class: String(q.travelClass ?? 'economy'),
+      adult_number: Number(q.adult_number) || 1,
+      child_number: Number(q.child_number) || 0,
+      infants_number: Number(q.infants_number) || 0,
+    })
+
+    const stopWatch = watch(loading, (isLoading) => {
+      if (!isLoading && hasSearched.value) {
+        nextTick(() => scrollToResults())
+        stopWatch()
+      }
+    })
+  }
+
   const observer = new IntersectionObserver(
     entries => entries.forEach(e => {
       if (e.isIntersecting) { e.target.classList.add('reveal-visible'); observer.unobserve(e.target) }

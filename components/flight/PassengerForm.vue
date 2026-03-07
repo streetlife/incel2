@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useFlightService } from '../../services/flight.service'
 import { useFlightStore } from '../../stores/flight'
@@ -9,13 +9,12 @@ import AppToast from '../toast/AppToast.vue'
 import { useAuthStore } from '../../stores/auth'
 import { useRoute } from 'vue-router'
 import PhoneInput from '../PhoneInput.vue'
+import { countryCode } from './country'
 
 interface Country {
-  id: number
   country: string
-  iso_code: string
-  visa: string
-  description: string
+  code: string
+  iso: string
 }
 
 const emit = defineEmits<(e: 'next') => void>()
@@ -76,8 +75,6 @@ function handleLogout() {
   loginPassword.value = ''
 }
 
-const NATIONALITIES = ['NG', 'GB', 'US', 'GH', 'KE', 'ZA', 'CA', 'DE', 'FR', 'AE']
-
 function validate(): boolean {
   errors.value = {}
 
@@ -137,23 +134,7 @@ const fieldClass = (key: string) =>
       : 'border-slate-200 bg-white focus:border-primary'
   }`
 
-const getCountries = async () => {
-  try {
-    countryLoading.value = true
-    const res = await flightService.getCountries()
-    country.value = res
-  } catch (err) {
-    countryLoading.value = false
-    const e = normaliseError(err)
-    toast.error(e)
-  } finally {
-    countryLoading.value = false
-  }
-}
-
-onMounted(async () => {
-  getCountries()
-})
+country.value = countryCode
 </script>
 
 <template>
@@ -255,7 +236,7 @@ onMounted(async () => {
             <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Country <span class="text-red-400">*</span></label>
             <select v-model="passenger.passport_country" :class="fieldClass(`p${i}_country`)" :disabled="countryLoading">
               <option value="">{{ countryLoading ? 'Loading countries…' : 'Select country' }}</option>
-              <option v-for="n in country" :key="n.id" :value="n.iso_code">{{ n.country }}</option>
+              <option v-for="n in country" :key="n.code" :value="n.iso">{{ n.country }}</option>
             </select>
             <p v-if="errors[`p${i}_country`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_country`] }}</p>
           </div>
@@ -264,7 +245,7 @@ onMounted(async () => {
             <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Nationality <span class="text-red-400">*</span></label>
             <select v-model="passenger.passport_nationality" :class="fieldClass(`p${i}_nat`)" :disabled="countryLoading">
               <option value="">{{ countryLoading ? 'Loading countries…' : 'Select nationality' }}</option>
-              <option v-for="n in country" :key="n.id" :value="n.iso_code">{{ n.country }}</option>
+              <option v-for="n in country" :key="n.code" :value="n.iso">{{ n.country }}</option>
             </select>
             <p v-if="errors[`p${i}_nat`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_nat`] }}</p>
           </div>

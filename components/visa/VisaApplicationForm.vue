@@ -20,8 +20,8 @@ function selectPerson(idx: number) {
   errors.value = {}
 }
 
-const ap = computed(() => store.applicants?.[activePersonIdx.value] ?? null)
-const docs = computed(() => store.getDocuments(activePersonIdx.value) ?? [])
+const ap = computed(() => store.safeApplicants()[activePersonIdx.value] ?? null)
+const docs = computed(() => store.getDocuments(activePersonIdx.value))
 
 const sections = [
   { key: 'personal', label: 'Personal Info', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
@@ -59,8 +59,8 @@ const submitButtonLabel = computed(() => {
 })
 
 function personLabel(i: number) {
-  const a = store.applicants[i]
-  const name = [a.firstName, a.lastName].filter(Boolean).join(' ')
+  const a = store.safeApplicants()[i]
+  const name = [a?.firstName, a?.lastName].filter(Boolean).join(' ')
   return name || `Person ${i + 1}`
 }
 
@@ -71,7 +71,9 @@ const fc = (k: string) =>
 function err(k: string) { return errors.value[k] }
 
 function validatePersonal() {
-  const a = ap.value; errors.value = {}
+  const a = ap.value
+  if (!a) return false
+  errors.value = {}
   if (!a.firstName) errors.value.firstName = 'Required'
   if (!a.lastName) errors.value.lastName = 'Required'
   if (!a.dateOfBirth) errors.value.dateOfBirth  = 'Required'
@@ -87,7 +89,9 @@ function validatePersonal() {
 }
 
 function validatePassport() {
-  const a = ap.value; errors.value = {}
+  const a = ap.value
+  if (!a) return false
+  errors.value = {}
   if (!a.passportNumber) errors.value.passportNumber = 'Required'
   if (!a.passportName) errors.value.passportName = 'Required'
   if (!a.passportIssueDate) errors.value.passportIssueDate = 'Required'
@@ -103,7 +107,9 @@ function validatePassport() {
 }
 
 function validateTravel() {
-  const a = ap.value; errors.value = {}
+  const a = ap.value
+  if (!a) return false
+  errors.value = {}
   if (!a.groupMembership) errors.value.groupMembership = 'Required'
   if (!a.processingMode) errors.value.processingMode = 'Required'
   return Object.keys(errors.value).length === 0
@@ -115,7 +121,7 @@ function nextSection() {
   let valid = true
   if (activeSection.value === 'personal') valid = validatePersonal()
   if (activeSection.value === 'passport') valid = validatePassport()
-  if (activeSection.value === 'visa_requirement')   valid = validateTravel()
+  if (activeSection.value === 'visa_requirement') valid = validateTravel()
   if (!valid) return
   if (idx < order.length - 1) activeSection.value = order[idx + 1]
 }
@@ -123,12 +129,10 @@ function nextSection() {
 function handleFileChange(key: string, e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
-
   if (file.size > 5 * 1024 * 1024) {
     errors.value._docs = 'File size must be under 5MB'
     return
   }
-
   const size = file.size > 1024 * 1024
     ? (file.size / (1024 * 1024)).toFixed(1) + ' MB'
     : (file.size / 1024).toFixed(0) + ' KB'
@@ -181,7 +185,7 @@ async function submitForm() {
 
       <div class="flex flex-wrap gap-2">
         <button
-          v-for="(_, i) in store.applicants"
+          v-for="(_, i) in store.safeApplicants()"
           :key="i"
           class="relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all cursor-pointer"
           :class="activePersonIdx === i
@@ -192,9 +196,9 @@ async function submitForm() {
           <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
             :class="activePersonIdx === i ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'">
             <template v-if="store.requiredDocsUploaded(i) &&
-              store.applicants[i]?.firstName &&
-              store.applicants[i]?.passportNumber &&
-              store.applicants[i]?.processingMode">
+              store.safeApplicants()[i]?.firstName &&
+              store.safeApplicants()[i]?.passportNumber &&
+              store.safeApplicants()[i]?.processingMode">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
                 :stroke="activePersonIdx === i ? 'white' : '#16a34a'" stroke-width="3">
                 <polyline points="20,6 9,17 4,12"/>
@@ -210,15 +214,13 @@ async function submitForm() {
       </div>
 
       <div class="mt-4 grid gap-2">
-        <div v-for="(_, i) in store.applicants" :key="'bar-' + i" class="flex items-center gap-3">
+        <div v-for="(_, i) in store.safeApplicants()" :key="'bar-' + i" class="flex items-center gap-3">
           <span class="text-xs text-slate-500 w-20 truncate shrink-0">{{ personLabel(i) }}</span>
           <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div class="h-full bg-primary rounded-full transition-all duration-500"
               :style="{
-                width: `${((store.getDocuments(i) ?? []).filter(d => d.uploaded).length /
-                  Math.max((store.getDocuments(i) ?? []).length, 1)) * 100}%`
-              }"
-            >
+                width: `${(store.getDocuments(i).filter(d => d.uploaded).length / Math.max(store.getDocuments(i).length, 1)) * 100}%`
+              }">
             </div>
           </div>
           <span class="text-xs text-slate-400 shrink-0">
@@ -245,7 +247,9 @@ async function submitForm() {
       </button>
     </div>
 
+    <!-- Guard entire form body — don't render until ap is available -->
     <template v-if="ap">
+
       <div v-if="activeSection === 'personal'" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
         <div class="flex items-center justify-between mb-5">
           <h2 class="text-base font-bold text-slate-900">Personal Information</h2>
@@ -261,17 +265,14 @@ async function submitForm() {
             <input v-model="ap.firstName" type="text" placeholder="As on passport" :class="fc('firstName')" />
             <p v-if="err('firstName')" class="text-xs text-red-500 mt-1">{{ err('firstName') }}</p>
           </div>
-
           <div>
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Last Name <span class="text-red-400">*</span></label>
             <input v-model="ap.lastName" type="text" placeholder="As on passport" :class="fc('lastName')" />
             <p v-if="err('lastName')" class="text-xs text-red-500 mt-1">{{ err('lastName') }}</p>
           </div>
-
           <div>
-            <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Other Names <span class="text-red-400">*</span></label>
+            <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Other Names</label>
             <input v-model="ap.otherNames" type="text" placeholder="As on passport" :class="fc('otherNames')" />
-            <p v-if="err('otherNames')" class="text-xs text-red-500 mt-1">{{ err('otherNames') }}</p>
           </div>
         </div>
 
@@ -281,25 +282,19 @@ async function submitForm() {
             <input v-model="ap.dateOfBirth" type="date" :class="fc('dateOfBirth')" />
             <p v-if="err('dateOfBirth')" class="text-xs text-red-500 mt-1">{{ err('dateOfBirth') }}</p>
           </div>
-
           <div>
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Gender <span class="text-red-400">*</span></label>
             <select v-model="ap.gender" :class="fc('gender')">
               <option value="">Select</option>
-              <option :key="gender.label" :value="gender.label" v-for="gender in store.genderOptions">
-                {{ gender.value }}
-              </option>
+              <option v-for="gender in store.genderOptions" :key="gender.label" :value="gender.label">{{ gender.value }}</option>
             </select>
             <p v-if="err('gender')" class="text-xs text-red-500 mt-1">{{ err('gender') }}</p>
           </div>
-
           <div>
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Marital Status</label>
             <select v-model="ap.maritalStatus" :class="fc('maritalStatus')">
               <option value="">Select</option>
-              <option :key="maritalStatus.label" :value="maritalStatus.label" v-for="maritalStatus in store.maritalOptions">
-                {{ maritalStatus.value }}
-              </option>
+              <option v-for="s in store.maritalOptions" :key="s.label" :value="s.label">{{ s.value }}</option>
             </select>
           </div>
         </div>
@@ -309,19 +304,15 @@ async function submitForm() {
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Nationality <span class="text-red-400">*</span></label>
             <select v-model="ap.nationality" :class="fc('nationality')">
               <option value="">Select</option>
-              <option :key="nationality.label" :value="nationality.label" v-for="nationality in store.countryOptions">
-                {{ nationality.value }}
-              </option>
+              <option v-for="n in store.countryOptions" :key="n.label" :value="n.label">{{ n.value }}</option>
             </select>
             <p v-if="err('nationality')" class="text-xs text-red-500 mt-1">{{ err('nationality') }}</p>
           </div>
-
           <div>
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Email Address <span class="text-red-400">*</span></label>
             <input v-model="ap.email" type="email" placeholder="For visa delivery" :class="fc('email')" />
             <p v-if="err('email')" class="text-xs text-red-500 mt-1">{{ err('email') }}</p>
           </div>
-
           <div>
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Phone Number <span class="text-red-400">*</span></label>
             <input v-model="ap.phone" type="tel" placeholder="+234 802 000 0000" :class="fc('phone')" />
@@ -334,33 +325,22 @@ async function submitForm() {
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Profession</label>
             <select v-model="ap.profession" :class="fc('profession')">
               <option value="">Select</option>
-              <option :key="profession.label" :value="profession.label" v-for="profession in store.professions">
-                {{ profession.value }}
-              </option>
+              <option v-for="p in store.professions" :key="p.label" :value="p.label">{{ p.value }}</option>
             </select>
-            <p v-if="err('profession')" class="text-xs text-red-500 mt-1">{{ err('profession') }}</p>
           </div>
-
           <div>
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Religion</label>
             <select v-model="ap.religion" :class="fc('religion')">
               <option value="">Select</option>
-              <option :key="religion.label" :value="religion.label" v-for="religion in store.religions">
-                {{ religion.value }}
-              </option>
+              <option v-for="r in store.religions" :key="r.label" :value="r.label">{{ r.value }}</option>
             </select>
-            <p v-if="err('religion')" class="text-xs text-red-500 mt-1">{{ err('religion') }}</p>
           </div>
-
           <div>
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Language</label>
             <select v-model="ap.language" :class="fc('language')">
               <option value="">Select</option>
-              <option :key="language.label" :value="language.label" v-for="language in store.languages">
-                {{ language.value }}
-              </option>
+              <option v-for="l in store.languages" :key="l.label" :value="l.label">{{ l.value }}</option>
             </select>
-            <p v-if="err('language')" class="text-xs text-red-500 mt-1">{{ err('language') }}</p>
           </div>
         </div>
 
@@ -392,43 +372,34 @@ async function submitForm() {
             <input v-model="ap.passportNumber" type="text" placeholder="e.g. A12345678" class="uppercase" :class="fc('passportNumber')" />
             <p v-if="err('passportNumber')" class="text-xs text-red-500 mt-1">{{ err('passportNumber') }}</p>
           </div>
-
           <div>
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Name on Passport <span class="text-red-400">*</span></label>
             <input v-model="ap.passportName" type="text" placeholder="e.g. John Doe" class="capitalize" :class="fc('passportName')" />
             <p v-if="err('passportName')" class="text-xs text-red-500 mt-1">{{ err('passportName') }}</p>
           </div>
-
           <div>
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Issue Date <span class="text-red-400">*</span></label>
             <input v-model="ap.passportIssueDate" type="date" :class="fc('passportIssueDate')" />
             <p v-if="err('passportIssueDate')" class="text-xs text-red-500 mt-1">{{ err('passportIssueDate') }}</p>
           </div>
-
           <div>
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Expiry Date <span class="text-red-400">*</span></label>
             <input v-model="ap.passportExpiry" type="date" :class="fc('passportExpiry')" />
             <p v-if="err('passportExpiry')" class="text-xs text-red-500 mt-1">{{ err('passportExpiry') }}</p>
           </div>
-
           <div>
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Issuing Country <span class="text-red-400">*</span></label>
             <select v-model="ap.issuingCountry" :class="fc('issuingCountry')">
               <option value="">Select</option>
-              <option :key="country.label" :value="country.label" v-for="country in store.countryOptions">
-                {{ country.value }}
-              </option>
+              <option v-for="c in store.countryOptions" :key="c.label" :value="c.label">{{ c.value }}</option>
             </select>
             <p v-if="err('issuingCountry')" class="text-xs text-red-500 mt-1">{{ err('issuingCountry') }}</p>
           </div>
-
           <div>
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Passport Type <span class="text-red-400">*</span></label>
             <select v-model="ap.passportType" :class="fc('passportType')">
               <option value="">Select</option>
-              <option :key="passport.label" :value="passport.label" v-for="passport in store.passportTypes">
-                {{ passport.value }}
-              </option>
+              <option v-for="p in store.passportTypes" :key="p.label" :value="p.label">{{ p.value }}</option>
             </select>
             <p v-if="err('passportType')" class="text-xs text-red-500 mt-1">{{ err('passportType') }}</p>
           </div>
@@ -456,20 +427,15 @@ async function submitForm() {
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Group Membership <span class="text-red-400">*</span></label>
             <select v-model="ap.groupMembership" :class="fc('groupMembership')">
               <option value="">Select</option>
-              <option :key="membership.label" :value="membership.label" v-for="membership in store.groupMemberships">
-                {{ membership.value }}
-              </option>
+              <option v-for="m in store.groupMemberships" :key="m.label" :value="m.label">{{ m.value }}</option>
             </select>
             <p v-if="err('groupMembership')" class="text-xs text-red-500 mt-1">{{ err('groupMembership') }}</p>
           </div>
-
           <div>
             <label for="" class="text-xs font-semibold text-slate-600 mb-1.5 block">Processing Mode <span class="text-red-400">*</span></label>
             <select v-model="ap.processingMode" :class="fc('processingMode')">
               <option value="">Select purpose</option>
-              <option :key="processing.label" :value="processing.label" v-for="processing in store.processingOpts">
-                {{ processing.value }}
-              </option>
+              <option v-for="p in store.processingOpts" :key="p.label" :value="p.label">{{ p.value }}</option>
             </select>
             <p v-if="err('processingMode')" class="text-xs text-red-500 mt-1">{{ err('processingMode') }}</p>
           </div>
@@ -560,14 +526,11 @@ async function submitForm() {
         <div class="mt-5 p-4 bg-slate-50 rounded-xl border border-slate-100">
           <div class="flex items-center justify-between text-xs mb-2">
             <span class="font-semibold text-slate-700">Upload Progress — {{ personLabel(activePersonIdx) }}</span>
-            <span class="text-slate-500">
-              {{ docs.filter(d => d.uploaded).length }} / {{ docs.length }} files
-            </span>
+            <span class="text-slate-500">{{ docs.filter(d => d.uploaded).length }} / {{ docs.length }} files</span>
           </div>
           <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
             <div class="h-full bg-primary rounded-full transition-all duration-500"
-              :style="{ width: `${(docs.filter(d => d.uploaded).length / Math.max(docs.length, 1)) * 100}%` }"
-            >
+              :style="{ width: `${(docs.filter(d => d.uploaded).length / Math.max(docs.length, 1)) * 100}%` }">
             </div>
           </div>
           <p class="text-xs text-slate-500 mt-1.5">
@@ -593,6 +556,17 @@ async function submitForm() {
           </button>
         </div>
       </div>
+
     </template>
+    <!-- ap is null — store not yet hydrated, show skeleton -->
+    <div v-else class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 animate-pulse">
+      <div class="h-4 bg-slate-200 rounded w-1/3 mb-4"></div>
+      <div class="space-y-3">
+        <div class="h-10 bg-slate-100 rounded-xl"></div>
+        <div class="h-10 bg-slate-100 rounded-xl"></div>
+        <div class="h-10 bg-slate-100 rounded-xl"></div>
+      </div>
+    </div>
+
   </div>
 </template>

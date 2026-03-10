@@ -96,6 +96,17 @@ function defaultDocuments(): DocumentItem[] {
   ]
 }
 
+function sanitiseDocumentSets(sets: DocumentItem[][]): DocumentItem[][] {
+  return (sets ?? []).map(docs =>
+    (docs ?? []).map(({ file: _file, ...rest }) => ({
+      ...rest,
+      uploaded: false,
+      fileName: '',
+      size: '',
+    }))
+  )
+}
+
 export const useVisaStore = defineStore('visa', () => {
   let _service: ReturnType<typeof useVisaService> | null = null
   function getService() {
@@ -116,7 +127,17 @@ export const useVisaStore = defineStore('visa', () => {
   const hasSearched = ref(false)
   const selectedResult = ref<SearchResultResponse | null>(null)
   const applicants = ref<ApplicantData[]>([blankApplicant()])
-  const documentSets = ref<DocumentItem[][]>([[...defaultDocuments()]])
+  const documentSets = ref<DocumentItem[][] | null | undefined>([[...defaultDocuments()]])
+
+  function safeDocSets(): DocumentItem[][] {
+    if (!documentSets.value?.length) {
+      documentSets.value = Array.from(
+        { length: Math.max(1, applicants.value?.length ?? 1) },
+        () => defaultDocuments().map(d => ({ ...d }))
+      )
+    }
+    return documentSets.value as DocumentItem[][]
+  }
   const shareTravel = ref(true)
   const personCount = computed(() => applicants.value.length)
   const bookingCode = ref<string | null>(null)
@@ -146,11 +167,11 @@ export const useVisaStore = defineStore('visa', () => {
 
     while (applicants.value.length < count) {
       applicants.value.push(blankApplicant())
-      documentSets.value.push(defaultDocuments().map(d => ({ ...d })))
+      safeDocSets().push(defaultDocuments().map(d => ({ ...d })))
     }
 
     applicants.value.splice(count)
-    documentSets.value.splice(count)
+    safeDocSets().splice(count)
   }
 
   function setSelectedVisaResult(params: VisaParams) {
@@ -265,7 +286,7 @@ export const useVisaStore = defineStore('visa', () => {
     try {
       for (const i of indices) {
         const a = applicants.value[i]
-        const docs = documentSets.value[i]
+        const docs = safeDocSets()[i]
 
         const passportPage = docs.find(d => d.key === 'passport_bio')?.file
         const photo = docs.find(d => d.key === 'passport_photo')?.file
@@ -343,10 +364,10 @@ export const useVisaStore = defineStore('visa', () => {
     const n = Math.max(1, count)
     while (applicants.value.length < n) {
       applicants.value.push(blankApplicant())
-      documentSets.value.push(defaultDocuments().map(d => ({ ...d })))
+      safeDocSets().push(defaultDocuments().map(d => ({ ...d })))
     }
     applicants.value.splice(n)
-    documentSets.value.splice(n)
+    safeDocSets().splice(n)
   }
 
   function getApplicant(idx: number): ApplicantData {
@@ -354,11 +375,11 @@ export const useVisaStore = defineStore('visa', () => {
   }
 
   function getDocuments(idx: number): DocumentItem[] {
-    return documentSets.value[idx] ?? []
+    return safeDocSets()[idx] ?? defaultDocuments().map(d => ({ ...d }))
   }
 
   function markDocumentUploaded(personIdx: number, key: string, fileName: string, size: string, file?: File) {
-    const doc = documentSets.value[personIdx]?.find(d => d.key === key)
+    const doc = safeDocSets()[personIdx]?.find(d => d.key === key)
     if (doc) {
       doc.uploaded = true
       doc.fileName = fileName
@@ -368,16 +389,31 @@ export const useVisaStore = defineStore('visa', () => {
   }
 
   function removeDocument(personIdx: number, key: string) {
-    const doc = documentSets.value[personIdx]?.find(d => d.key === key)
+    const doc = safeDocSets()[personIdx]?.find(d => d.key === key)
     if (doc) { doc.uploaded = false; doc.fileName = ''; doc.size = '' }
   }
 
   function requiredDocsUploaded(personIdx: number): boolean {
-    return (documentSets.value[personIdx] ?? []).filter(d => d.required).every(d => d.uploaded)
+    return (safeDocSets()[personIdx] ?? []).filter(d => d.required).every(d => d.uploaded)
   }
 
   function allPersonsComplete(): boolean {
     return applicants.value.every((_, i) => requiredDocsUploaded(i))
+  }
+
+  function $onRehydrated() {
+    if (!applicants.value?.length) {
+      applicants.value = [blankApplicant()]
+    }
+
+    documentSets.value = sanitiseDocumentSets(safeDocSets())
+
+    const count = applicants.value.length
+    const sets = safeDocSets()
+    while (sets.length < count) {
+      sets.push(defaultDocuments().map(d => ({ ...d })))
+    }
+    sets.splice(count)
   }
 
   function resetSearch() {
@@ -453,9 +489,10 @@ export const useVisaStore = defineStore('visa', () => {
     setSelectedVisaResult,
     generateBookingCode,
     initializePayment,
+    $onRehydrated,
   }
 }, {
   unstorage: {
-    pick: ['metaData', 'country', 'bookingCode', 'applicants', 'selectedVisa', 'selectedVisaResult'],
+    pick: ['metaData', 'country', 'bookingCode', 'applicants', 'documentSets', 'selectedVisa', 'selectedVisaResult'],
   },
 })

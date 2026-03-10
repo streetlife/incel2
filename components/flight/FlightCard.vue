@@ -84,6 +84,19 @@ watch(segs, async (segments) => {
     :class="highlight ? 'border-2 border-blue-300 shadow-md shadow-blue-50' : 'border border-slate-200 hover:border-slate-300'"
     @click="emit('toggle')"
   >
+    <div v-if="highlight"
+      class="flex items-center gap-1.5 text-xs font-bold px-4 py-2 border-b bg-primary/10 text-primary border-primary/20"
+    >
+      <svg v-if="highlight === 'recommended'" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+      </svg>
+
+      <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+      </svg>
+      {{ highlight === 'recommended' ? 'Recommended · Best Value' : 'Time Saver · Fastest Flight' }}
+    </div>
+
     <div class="md:hidden p-4 flex flex-col gap-3">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">

@@ -280,12 +280,6 @@ const toggleExpand = (id: string) => { expanded[id] = !expanded[id] }
         <div v-if="filteredFlights.length" class="flex flex-col gap-3 md:gap-3.5">
 
           <div v-if="recommended" class="flex flex-col min-w-0">
-            <div class="self-start flex items-center gap-1.5 text-xs font-bold bg-primary text-white px-3 py-1.5 rounded-t-lg">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
-              Recommended · Best Value
-            </div>
             <FlightCard
               :flight="recommended"
               :expanded="!!expanded[recommended.id]"
@@ -298,12 +292,6 @@ const toggleExpand = (id: string) => { expanded[id] = !expanded[id] }
           </div>
 
           <div v-if="timeSaver && timeSaver.id !== recommended?.id" class="flex flex-col min-w-0">
-            <div class="self-start flex items-center gap-1.5 text-xs font-bold bg-sky-700 text-white px-3 py-1.5 rounded-t-lg">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
-              </svg>
-              Time Saver · Fastest Flight
-            </div>
             <FlightCard
               :flight="timeSaver"
               :expanded="!!expanded[timeSaver.id]"

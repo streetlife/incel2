@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { MapPin, Phone, Mail, Clock, MessageCircle } from 'lucide-vue-next'
 import { useContactData } from '../../composables/useContactData'
 import { useContactForm } from '../../composables/useContactForm'
+import { useGeneralService } from '../../services/general.service'
+import { useToast } from '../../composables/useToast'
+import AppToast from '../../components/toast/AppToast.vue'
 
 const { offices, quickSupport } = useContactData()
 const {
@@ -13,11 +16,24 @@ const {
   resetForm
 } = useContactForm()
 
-const handleSubmit = () => {
+const toast = useToast()
+const loading = ref(false)
+
+const handleSubmit = async () => {
+
   if (submitMessage()) {
-    console.log('Message submitted:', form.value)
-    alert('Thank you for your message! We\'ll get back to you within 24 hours.')
-    resetForm()
+    try {
+      loading.value = true
+      await useGeneralService().contactUs(form.value)
+      resetForm()
+
+      toast.success("Message sent successfully")
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to send message")
+    } finally {
+      loading.value = false
+    }
   }
 }
 
@@ -27,8 +43,8 @@ onMounted(() => {
 </script>
 
 <template>
+  <AppToast />
   <div class="min-h-screen">
-    <!-- Hero Section -->
     <section 
       class="relative py-44 px-6 bg-cover bg-center bg-no-repeat"
       style="background-image: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.75)), url('https://images.unsplash.com/photo-1423666639041-f56000c27a9a?w=1600')"
@@ -43,11 +59,9 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- Office Information Cards -->
     <section class="py-16 px-6 bg-gray-50">
       <div class="max-w-7xl mx-auto">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <!-- Dubai & Lagos Offices -->
           <div 
             v-for="office in offices" 
             :key="office.id"
@@ -86,7 +100,6 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- Quick Support Card -->
           <div class="bg-gray-900 rounded-xl shadow-lg p-8 text-white">
             <h3 class="text-2xl font-bold mb-4">{{ quickSupport.title }}</h3>
             <p class="text-gray-300 mb-6">
@@ -115,7 +128,6 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- Contact Form Section -->
     <section class="py-16 px-6 bg-white">
       <div class="max-w-4xl mx-auto">
         <div class="text-center mb-12">
@@ -127,20 +139,18 @@ onMounted(() => {
           </p>
         </div>
 
-        <!-- Form Card -->
         <div class="bg-gray-50 rounded-xl shadow-lg p-8">
           <form @submit.prevent="handleSubmit" class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- Name -->
               <div>
                 <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
-                  Your Name *
+                  Full Name <span class="text-red-500">*</span>
                 </label>
                 <input 
                   id="name"
                   v-model="form.name"
                   type="text"
-                  placeholder="John Doe"
+                  placeholder="Eg. John Doe"
                   :class="[
                     'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
                     errors.name
@@ -151,10 +161,9 @@ onMounted(() => {
                 <p v-if="errors.name" class="mt-1 text-xs text-red-600">{{ errors.name }}</p>
               </div>
 
-              <!-- Email -->
               <div>
                 <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address *
+                  Email Address <span class="text-red-500">*</span>
                 </label>
                 <input 
                   id="email"
@@ -171,30 +180,28 @@ onMounted(() => {
                 <p v-if="errors.email" class="mt-1 text-xs text-red-600">{{ errors.email }}</p>
               </div>
 
-              <!-- Phone -->
               <div>
                 <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number *
+                  Phone Number <span class="text-red-500">*</span>
                 </label>
                 <input 
                   id="phone"
-                  v-model="form.phone"
+                  v-model="form.mobile_phone"
                   type="tel"
                   placeholder="+234 xxx xxx xxxx"
                   :class="[
                     'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
-                    errors.phone
+                    errors.mobile_phone
                       ? 'border-red-500 focus:ring-red-500 border-2'
                       : 'border border-gray-300 focus:ring-[#0076ad] bg-white'
                   ]"
                 />
-                <p v-if="errors.phone" class="mt-1 text-xs text-red-600">{{ errors.phone }}</p>
+                <p v-if="errors.mobile_phone" class="mt-1 text-xs text-red-600">{{ errors.mobile_phone }}</p>
               </div>
 
-              <!-- Subject -->
               <div>
                 <label for="subject" class="block text-sm font-medium text-gray-700 mb-2">
-                  Subject *
+                  Subject <span class="text-red-500">*</span>
                 </label>
                 <input 
                   id="subject"
@@ -211,10 +218,9 @@ onMounted(() => {
                 <p v-if="errors.subject" class="mt-1 text-xs text-red-600">{{ errors.subject }}</p>
               </div>
 
-              <!-- Message -->
               <div class="md:col-span-2">
                 <label for="message" class="block text-sm font-medium text-gray-700 mb-2">
-                  Message *
+                  Message <span class="text-red-500">*</span>
                 </label>
                 <textarea 
                   id="message"
@@ -232,12 +238,13 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- Submit Button -->
             <button 
               type="submit"
-              class="w-full py-4 bg-gray-900 text-white rounded-lg font-bold text-lg hover:bg-gray-800 transition-colors"
+              class="w-full py-4 bg-gray-900 text-white rounded-lg font-bold text-lg hover:bg-gray-800 transition-colors flex gap-3 items-center justify-center"
+              :disabled="loading"
             >
-              Send Message
+              <svg v-if="loading" class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              {{ loading ? 'Sending...' : 'Send Message' }}
             </button>
           </form>
         </div>

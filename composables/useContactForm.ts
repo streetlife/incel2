@@ -4,7 +4,7 @@ export const useContactForm = () => {
   const form = ref({
     name: '',
     email: '',
-    phone: '',
+    mobile_phone: '',
     subject: '',
     message: ''
   })
@@ -12,7 +12,7 @@ export const useContactForm = () => {
   const errors = ref({
     name: '',
     email: '',
-    phone: '',
+    mobile_phone: '',
     subject: '',
     message: ''
   })
@@ -31,7 +31,7 @@ export const useContactForm = () => {
     errors.value = {
       name: '',
       email: '',
-      phone: '',
+      mobile_phone: '',
       subject: '',
       message: ''
     }
@@ -60,10 +60,10 @@ export const useContactForm = () => {
       isValid = false
     }
 
-    if (form.value.phone) {
+    if (form.value.mobile_phone) {
       // Valid
     } else {
-      errors.value.phone = 'Phone number is required'
+      errors.value.mobile_phone = 'Phone number is required'
       isValid = false
     }
 
@@ -95,7 +95,7 @@ export const useContactForm = () => {
     if (validateForm()) {
       return true
     }
-    
+
     scrollToError()
     return false
   }
@@ -104,7 +104,7 @@ export const useContactForm = () => {
     form.value = {
       name: '',
       email: '',
-      phone: '',
+      mobile_phone: '',
       subject: '',
       message: ''
     }

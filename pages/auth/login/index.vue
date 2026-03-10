@@ -96,7 +96,6 @@ const fieldClass = (k: string) =>
             <p v-if="errors.password" class="text-xs text-red-500 mt-1">{{ errors.password }}</p>
           </div>
 
-          <!-- Submit -->
           <button
             class="w-full h-12 bg-primary hover:opacity-90 active:scale-95 text-slate-900 font-bold rounded-xl transition-all border-none cursor-pointer flex items-center justify-center gap-2 mt-2 disabled:opacity-60"
             :disabled="loading" @click="submit">
@@ -105,7 +104,6 @@ const fieldClass = (k: string) =>
           </button>
         </div>
 
-        <!-- Divider -->
         <div class="flex items-center gap-3 my-6">
           <div class="flex-1 h-px bg-slate-200"></div>
           <span class="text-xs text-slate-400 font-medium">OR</span>

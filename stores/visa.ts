@@ -96,6 +96,17 @@ function defaultDocuments(): DocumentItem[] {
   ]
 }
 
+function sanitiseDocumentSets(sets: DocumentItem[][]): DocumentItem[][] {
+  return (sets ?? []).map(docs =>
+    (docs ?? []).map(({ file: _file, ...rest }) => ({
+      ...rest,
+      uploaded: false,
+      fileName: '',
+      size: '',
+    }))
+  )
+}
+
 export const useVisaStore = defineStore('visa', () => {
   let _service: ReturnType<typeof useVisaService> | null = null
   function getService() {
@@ -115,50 +126,21 @@ export const useVisaStore = defineStore('visa', () => {
   const searchError = ref('')
   const hasSearched = ref(false)
   const selectedResult = ref<SearchResultResponse | null>(null)
-
   const applicants = ref<ApplicantData[]>([blankApplicant()])
-  const documentSets = ref<DocumentItem[][]>([[...defaultDocuments()]])
-
-  const shareTravel = ref(true)
-  const bookingCode = ref<string | null>(null)
-  const selectedVisa = ref<VisaParams | undefined>()
-  const selectedVisaResult = ref<VisaParams | undefined>()
-  const visaLoading = ref(false)
-  const visaError = ref('')
-  const paymentLoading = ref(false)
-  const paymentError = ref('')
-
-  const toast = useToast()
-
-  function safeApplicants(): ApplicantData[] {
-    if (!Array.isArray(applicants.value) || applicants.value.length === 0) {
-      applicants.value = [blankApplicant()]
-    }
-    return applicants.value
-  }
+  const documentSets = ref<DocumentItem[][] | null | undefined>([[...defaultDocuments()]])
 
   function safeDocSets(): DocumentItem[][] {
-    const count = safeApplicants().length
-
-    if (!Array.isArray(documentSets.value) || documentSets.value.length === 0) {
-      documentSets.value = Array.from({ length: count }, () =>
-        defaultDocuments().map(d => ({ ...d }))
+    if (!documentSets.value?.length) {
+      documentSets.value = Array.from(
+        { length: Math.max(1, applicants.value?.length ?? 1) },
+        () => defaultDocuments().map(d => ({ ...d }))
       )
-      return documentSets.value
     }
-
-    while (documentSets.value.length < count) {
-      documentSets.value.push(defaultDocuments().map(d => ({ ...d })))
-    }
-
-    documentSets.value = documentSets.value.map(docs =>
-      (docs ?? []).map(({ file: _file, ...rest }) => rest)
-    )
-
-    return documentSets.value
+    return documentSets.value as DocumentItem[][]
   }
-
-  const personCount = computed(() => safeApplicants().length)
+  const shareTravel = ref(true)
+  const personCount = computed(() => applicants.value.length)
+  const bookingCode = ref<string | null>(null)
 
   const countryOptions = computed<SelectOption[]>(() => metaData.value?.visa_countries ?? [])
   const genderOptions = computed<SelectOption[]>(() => metaData.value?.visa_gender_types ?? [])
@@ -171,19 +153,25 @@ export const useVisaStore = defineStore('visa', () => {
   const religions = computed<SelectOption[]>(() => metaData.value?.religions ?? [])
   const groupMemberships = computed<SelectOption[]>(() => metaData.value?.group_memberships ?? [])
 
+  const selectedVisa = ref<VisaParams>()
+  const selectedVisaResult = ref<VisaParams>()
+  const toast = useToast()
+  const visaLoading = ref(false)
+  const visaError = ref('')
+  const paymentLoading = ref(false)
+  const paymentError = ref('')
+
   function setVisa(params: VisaParams) {
     selectedVisa.value = { ...params }
     const count = Math.max(1, params.persons)
-    const apps = safeApplicants()
-    const sets = safeDocSets()
 
-    while (apps.length < count) {
-      apps.push(blankApplicant())
-      sets.push(defaultDocuments().map(d => ({ ...d })))
+    while (applicants.value.length < count) {
+      applicants.value.push(blankApplicant())
+      safeDocSets().push(defaultDocuments().map(d => ({ ...d })))
     }
 
-    apps.splice(count)
-    sets.splice(count)
+    applicants.value.splice(count)
+    safeDocSets().splice(count)
   }
 
   function setSelectedVisaResult(params: VisaParams) {
@@ -192,8 +180,10 @@ export const useVisaStore = defineStore('visa', () => {
 
   async function loadMetaData() {
     if (metaData.value !== null) return
+
     metaLoading.value = true
     metaError.value = ''
+
     try {
       const raw = await getService().getMetaData()
       metaData.value = {
@@ -217,8 +207,10 @@ export const useVisaStore = defineStore('visa', () => {
 
   async function loadCountry() {
     if (country.value !== null) return
+
     countryLoading.value = true
     countryError.value = ''
+
     try {
       const res = await getService().getCountries()
       country.value = res
@@ -233,6 +225,7 @@ export const useVisaStore = defineStore('visa', () => {
     try {
       const res = await getService().generateBookingCode()
       setBookingCode(res.booking_code)
+
       return res.booking_code
     } catch (err) {
       const e = normaliseError(err)
@@ -257,16 +250,21 @@ export const useVisaStore = defineStore('visa', () => {
     searchResults.value = []
     sessionCode.value = ''
     const toast = useToast()
+
     try {
       const step1 = await getService().visaSearch({
         country_destination: params.country,
         country_nationality: params.nationality,
         adult_number: Number(params.persons),
       })
+
       sessionCode.value = step1.session_code
+
       const step2 = await getService().getSearchResults(sessionCode.value)
       searchResults.value = step2
+
       return { sessionCode: sessionCode.value }
+
     } catch (err: any) {
       searchError.value = normaliseError(err)
       toast.error(searchError.value)
@@ -279,20 +277,23 @@ export const useVisaStore = defineStore('visa', () => {
   async function createAllVisas(bookingCode: string, personIdx?: number): Promise<boolean> {
     visaLoading.value = true
     visaError.value = ''
-    const apps = safeApplicants()
-    const sets = safeDocSets()
-    const indices = personIdx === undefined ? apps.map((_, i) => i) : [personIdx]
+
+    const indices =
+      personIdx === undefined
+        ? applicants.value.map((_, i) => i)
+        : [personIdx]
+
     try {
       for (const i of indices) {
-        const a = apps[i]
-        const docs = sets[i] ?? []
+        const a = applicants.value[i]
+        const docs = safeDocSets()[i]
+
         const passportPage = docs.find(d => d.key === 'passport_bio')?.file
         const photo = docs.find(d => d.key === 'passport_photo')?.file
 
-        const personName = a?.firstName ? a.firstName : 'Person ' + (i + 1)
-
         if (!passportPage || !photo) {
-          toast.error(`Missing required documents for ${personName}`)
+          const name = a.firstName || `Person ${i + 1}`
+          toast.error(`Missing required documents for ${name}`)
           return false
         }
 
@@ -316,9 +317,12 @@ export const useVisaStore = defineStore('visa', () => {
         formData.append('profession_id', a.profession)
         formData.append('language_id', a.language)
         formData.append('religion_id', a.religion)
+
         await getService().createVisa(formData as any)
+
         toast.success('Created successfully')
       }
+
       return true
     } catch (err) {
       visaError.value = normaliseError(err)
@@ -332,6 +336,7 @@ export const useVisaStore = defineStore('visa', () => {
   async function initializePayment(data: InitializePaymentData) {
     paymentLoading.value = true
     paymentError.value = ''
+
     try {
       const res = await getService().initializePayment({
         amount: data.amount,
@@ -357,18 +362,16 @@ export const useVisaStore = defineStore('visa', () => {
 
   function setPersonCount(count: number) {
     const n = Math.max(1, count)
-    const apps = safeApplicants()
-    const sets = safeDocSets()
-    while (apps.length < n) {
-      apps.push(blankApplicant())
-      sets.push(defaultDocuments().map(d => ({ ...d })))
+    while (applicants.value.length < n) {
+      applicants.value.push(blankApplicant())
+      safeDocSets().push(defaultDocuments().map(d => ({ ...d })))
     }
-    apps.splice(n)
-    sets.splice(n)
+    applicants.value.splice(n)
+    safeDocSets().splice(n)
   }
 
   function getApplicant(idx: number): ApplicantData {
-    return safeApplicants()[idx] ?? blankApplicant()
+    return applicants.value[idx] ?? blankApplicant()
   }
 
   function getDocuments(idx: number): DocumentItem[] {
@@ -387,21 +390,30 @@ export const useVisaStore = defineStore('visa', () => {
 
   function removeDocument(personIdx: number, key: string) {
     const doc = safeDocSets()[personIdx]?.find(d => d.key === key)
-    if (doc) {
-      doc.uploaded = false
-      doc.fileName = ''
-      doc.size = ''
-    }
+    if (doc) { doc.uploaded = false; doc.fileName = ''; doc.size = '' }
   }
 
   function requiredDocsUploaded(personIdx: number): boolean {
-    return (safeDocSets()[personIdx] ?? [])
-      .filter(d => d.required)
-      .every(d => d.uploaded)
+    return (safeDocSets()[personIdx] ?? []).filter(d => d.required).every(d => d.uploaded)
   }
 
   function allPersonsComplete(): boolean {
-    return safeApplicants().every((_, i) => requiredDocsUploaded(i))
+    return applicants.value.every((_, i) => requiredDocsUploaded(i))
+  }
+
+  function $onRehydrated() {
+    if (!applicants.value?.length) {
+      applicants.value = [blankApplicant()]
+    }
+
+    documentSets.value = sanitiseDocumentSets(safeDocSets())
+
+    const count = applicants.value.length
+    const sets = safeDocSets()
+    while (sets.length < count) {
+      sets.push(defaultDocuments().map(d => ({ ...d })))
+    }
+    sets.splice(count)
   }
 
   function resetSearch() {
@@ -425,31 +437,11 @@ export const useVisaStore = defineStore('visa', () => {
   }
 
   return {
-    // State
     metaData,
     metaLoading,
     metaError,
     countryLoading,
     countryError,
-    sessionCode,
-    searchResults,
-    searchLoading,
-    searchError,
-    hasSearched,
-    selectedResult,
-    applicants,
-    documentSets,
-    shareTravel,
-    bookingCode,
-    selectedVisa,
-    country,
-    selectedVisaResult,
-    visaLoading,
-    visaError,
-    paymentLoading,
-    paymentError,
-    // Computed
-    personCount,
     countryOptions,
     genderOptions,
     visaTypes,
@@ -460,10 +452,24 @@ export const useVisaStore = defineStore('visa', () => {
     professions,
     religions,
     groupMemberships,
-    // Safe accessors (also useful in components that read applicants directly)
-    safeApplicants,
-    safeDocSets,
-    // Actions
+    sessionCode,
+    searchResults,
+    searchLoading,
+    searchError,
+    hasSearched,
+    selectedResult,
+    applicants,
+    documentSets,
+    shareTravel,
+    personCount,
+    selectedVisa,
+    country,
+    selectedVisaResult,
+    bookingCode,
+    visaLoading,
+    visaError,
+    paymentLoading,
+    paymentError,
     createAllVisas,
     search,
     resetSearch,
@@ -483,7 +489,7 @@ export const useVisaStore = defineStore('visa', () => {
     setSelectedVisaResult,
     generateBookingCode,
     initializePayment,
-    setBookingCode,
+    $onRehydrated,
   }
 }, {
   unstorage: {

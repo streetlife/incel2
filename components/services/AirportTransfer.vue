@@ -1,122 +1,71 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import DateInput from '../forms/DateInput.vue'
+import { ref, watch } from 'vue'
+import { useToast } from '../../composables/useToast'
+import { useGeneralService } from '../../services/general.service'
+import { normaliseError } from '../../utils/api'
+import AppToast from '../toast/AppToast.vue'
 
 const form = ref({
-  serviceType: 'airport-to-hotel',
-  pickupLocation: '',
-  dropoffLocation: '',
-  date: '',
-  time: '',
-  flightNumber: '',
-  passengers: 1,
-  luggage: 1,
-  vehicleType: 'sedan',
+  booking_code: '',
   firstName: '',
   lastName: '',
   email: '',
   phone: '',
-  specialRequests: ''
+  numberOfPassenger: 1,
+  pickUpAndDropOff: '',
+  additionalInformation: '',
+  terms_and_conditions: false
 })
 
 const errors = ref({
-  pickupLocation: '',
-  dropoffLocation: '',
-  date: '',
-  time: '',
   firstName: '',
   lastName: '',
   email: '',
   phone: '',
+  numberOfPassenger: '',
+  pickUpAndDropOff: '',
+  terms_and_conditions: '',
   general: ''
 })
 
-const vehicleTypes = [
-  { 
-    value: 'sedan', 
-    label: 'Sedan', 
-    capacity: '3 passengers, 2 luggage',
-    price: 15000,
-    image: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400'
-  },
-  { 
-    value: 'suv', 
-    label: 'SUV', 
-    capacity: '5 passengers, 4 luggage',
-    price: 25000,
-    image: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=400'
-  },
-  { 
-    value: 'van', 
-    label: 'Van', 
-    capacity: '8 passengers, 6 luggage',
-    price: 35000,
-    image: 'https://images.unsplash.com/photo-1527786356703-4b100091cd2c?w=400'
-  },
-  { 
-    value: 'luxury', 
-    label: 'Luxury Sedan', 
-    capacity: '3 passengers, 2 luggage',
-    price: 45000,
-    image: 'https://images.unsplash.com/photo-1563720360172-67b8f3dce741?w=400'
-  }
-]
+const loading = ref(false)
+const toast = useToast()
+const generalService = useGeneralService()
 
-const totalPrice = computed(() => {
-  return vehicleTypes.find(v => v.value === form.value.vehicleType)?.price || 0
-})
+const watchField = (field: keyof typeof errors.value, source: () => any) => {
+  watch(source, () => {
+    if (errors.value[field]) (errors.value as any)[field] = ''
+  })
+}
 
-// Clear errors on field change
-watch(() => form.value.pickupLocation, () => { if (errors.value.pickupLocation) errors.value.pickupLocation = '' })
-watch(() => form.value.dropoffLocation, () => { if (errors.value.dropoffLocation) errors.value.dropoffLocation = '' })
-watch(() => form.value.date, () => { if (errors.value.date) errors.value.date = '' })
-watch(() => form.value.time, () => { if (errors.value.time) errors.value.time = '' })
-watch(() => form.value.firstName, () => { if (errors.value.firstName) errors.value.firstName = '' })
-watch(() => form.value.lastName, () => { if (errors.value.lastName) errors.value.lastName = '' })
-watch(() => form.value.email, () => { if (errors.value.email) errors.value.email = '' })
-watch(() => form.value.phone, () => { if (errors.value.phone) errors.value.phone = '' })
+watchField('firstName', () => form.value.firstName)
+watchField('lastName', () => form.value.lastName)
+watchField('email', () => form.value.email)
+watchField('phone', () => form.value.phone)
+watchField('numberOfPassenger', () => form.value.numberOfPassenger)
+watchField('pickUpAndDropOff', () => form.value.pickUpAndDropOff)
+watchField('terms_and_conditions', () => form.value.terms_and_conditions)
 
 const validateForm = (): boolean => {
   errors.value = {
-    pickupLocation: '',
-    dropoffLocation: '',
-    date: '',
-    time: '',
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
+    numberOfPassenger: '',
+    pickUpAndDropOff: '',
+    terms_and_conditions: '',
     general: ''
   }
 
   let isValid = true
 
-  if (!form.value.pickupLocation) {
-    errors.value.pickupLocation = 'Pickup location is required'
-    isValid = false
-  }
-
-  if (!form.value.dropoffLocation) {
-    errors.value.dropoffLocation = 'Drop-off location is required'
-    isValid = false
-  }
-
-  if (!form.value.date) {
-    errors.value.date = 'Date is required'
-    isValid = false
-  }
-
-  if (!form.value.time) {
-    errors.value.time = 'Time is required'
-    isValid = false
-  }
-
-  if (!form.value.firstName) {
+  if (!form.value.firstName.trim()) {
     errors.value.firstName = 'First name is required'
     isValid = false
   }
 
-  if (!form.value.lastName) {
+  if (!form.value.lastName.trim()) {
     errors.value.lastName = 'Last name is required'
     isValid = false
   }
@@ -134,10 +83,39 @@ const validateForm = (): boolean => {
     isValid = false
   }
 
+  if (!form.value.numberOfPassenger || form.value.numberOfPassenger < 1) {
+    errors.value.numberOfPassenger = 'At least 1 passenger is required'
+    isValid = false
+  }
+
+  if (!form.value.pickUpAndDropOff.trim()) {
+    errors.value.pickUpAndDropOff = 'Pickup and drop-off location is required'
+    isValid = false
+  }
+
+  if (!form.value.terms_and_conditions) {
+    errors.value.terms_and_conditions = 'You must accept the terms and conditions'
+    isValid = false
+  }
+
   return isValid
 }
 
-const submit = () => {
+const resetForm = () => {
+  form.value = {
+    booking_code: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    numberOfPassenger: 1,
+    pickUpAndDropOff: '',
+    additionalInformation: '',
+    terms_and_conditions: false
+  }
+}
+
+const submit = async () => {
   if (!validateForm()) {
     const firstError = document.querySelector('.border-red-500')
     if (firstError) {
@@ -146,323 +124,197 @@ const submit = () => {
     return
   }
 
-  console.log('Transfer booking:', form.value)
-  alert('Transfer booking submitted successfully!')
+  const payload = {
+    service: 'airport',
+    booking_code: form.value.booking_code,
+    terms_and_conditions: form.value.terms_and_conditions,
+    status: 'pending',
+    request_details: {
+      name: `${form.value.firstName} ${form.value.lastName}`,
+      email: form.value.email,
+      phone: form.value.phone,
+      numberOfPassenger: form.value.numberOfPassenger,
+      pickUpAndDropOff: form.value.pickUpAndDropOff,
+      additionalInformation: form.value.additionalInformation || ''
+    }
+  }
+
+  try {
+    loading.value = true
+    await generalService.saveAirportTransfer(payload)
+
+    toast.success('Request created successfully')
+    resetForm()
+  } catch(err) {
+    const res = normaliseError(err)
+    toast.error(res)
+  } finally {
+    loading.value = false
+  }
 }
 
-const formatPrice = (price: number) => {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0
-  }).format(price)
-}
+const inputClass = (hasError: boolean) => [
+  'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent transition-colors',
+  hasError
+    ? 'border-red-500 focus:ring-red-500 border-2'
+    : 'border border-gray-300 focus:ring-primary'
+]
 </script>
 
 <template>
   <div>
-    <!-- Hero Section -->
-    <section 
+    <AppToast />
+    <section
       class="relative py-40 px-6 bg-cover bg-center bg-no-repeat"
       style="background-image: url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=1600')"
     >
       <div class="absolute inset-0 bg-black/50"></div>
-      
       <div class="relative z-10 max-w-7xl mx-auto text-center">
-        <h1 class="text-4xl md:text-5xl font-bold mb-4 text-white">
-          Airport Transfer
-        </h1>
-        <p class="text-xl text-gray-100">
-          Comfortable and reliable airport transportation
-        </p>
+        <h1 class="text-4xl md:text-5xl font-bold mb-4 text-white">Airport Transfer</h1>
+        <p class="text-xl text-gray-100">Comfortable and reliable airport transportation</p>
       </div>
     </section>
 
-    <!-- Form Section -->
     <section class="py-16 px-6 bg-gray-50">
-      <div class="max-w-6xl mx-auto">
+      <div class="max-w-3xl mx-auto">
         <div class="bg-white rounded-xl shadow-lg p-8">
-          <h2 class="text-2xl font-bold text-gray-900 mb-6">Book Your Transfer</h2>
+          <h2 class="text-2xl font-bold text-gray-900 mb-8">Book Your Transfer</h2>
 
-          <!-- General Error -->
-          <div v-if="errors.general" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p class="text-red-600 text-sm font-medium">{{ errors.general }}</p>
-          </div>
-
-          <form @submit.prevent="submit" class="space-y-6">
-            <!-- Service Type -->
-            <div>
-              <label for="serviceType" class="block text-sm font-medium text-gray-700 mb-3">
-                Service Type
-              </label>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <label for="airport-to-hotel" class="relative cursor-pointer">
-                  <input 
-                    v-model="form.serviceType"
-                    type="radio"
-                    value="airport-to-hotel"
-                    class="peer sr-only"
-                  />
-                  <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-primary peer-checked:bg-primary/10 hover:border-gray-300 transition-colors text-center">
-                    <p class="font-bold text-gray-900">Airport to Hotel</p>
+          <form @submit.prevent="submit" class="space-y-8">
+            <fieldset>
+              <legend class="text-base font-semibold text-gray-800 mb-4 pb-2 border-b w-full">
+                Contact Information
+              </legend>
+              <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+                  <div>
+                    <label for="" class="block text-sm font-medium text-gray-700 mb-2">Booking Code (leave empty if you haven't booked)</label>
+                    <input
+                      v-model="form.booking_code"
+                      type="text"
+                      class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:border-transparent transition-colors"
+                    />
                   </div>
-                </label>
-                <label class="relative cursor-pointer">
-                  <input 
-                    v-model="form.serviceType"
-                    type="radio"
-                    value="hotel-to-airport"
-                    class="peer sr-only"
-                  />
-                  <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-primary peer-checked:bg-blue-50 hover:border-gray-300 transition-colors text-center">
-                    <p class="font-bold text-gray-900">Hotel to Airport</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label for="" class="block text-sm font-medium text-gray-700 mb-2">First Name <span class="text-red-500">*</span></label>
+                    <input
+                      v-model="form.firstName"
+                      type="text"
+                      :class="inputClass(!!errors.firstName)"
+                    />
+                    <p v-if="errors.firstName" class="mt-1 text-xs text-red-600">{{ errors.firstName }}</p>
                   </div>
-                </label>
-                <label class="relative cursor-pointer">
-                  <input 
-                    v-model="form.serviceType"
-                    type="radio"
-                    value="city-transfer"
-                    class="peer sr-only"
-                  />
-                  <div class="border-2 border-gray-200 rounded-lg p-4 peer-checked:border-primary peer-checked:bg-blue-50 hover:border-gray-300 transition-colors text-center">
-                    <p class="font-bold text-gray-900">City Transfer</p>
+                  <div>
+                    <label for="" class="block text-sm font-medium text-gray-700 mb-2">Last Name <span class="text-red-500">*</span></label>
+                    <input
+                      v-model="form.lastName"
+                      type="text"
+                      :class="inputClass(!!errors.lastName)"
+                    />
+                    <p v-if="errors.lastName" class="mt-1 text-xs text-red-600">{{ errors.lastName }}</p>
                   </div>
-                </label>
-              </div>
-            </div>
+                </div>
 
-            <!-- Pickup & Dropoff -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label for="pickupLocation" class="block text-sm font-medium text-gray-700 mb-2">
-                  Pickup Location *
-                </label>
-                <input 
-                  v-model="form.pickupLocation"
-                  type="text"
-                  placeholder="e.g., Murtala Muhammed Airport"
-                  :class="[
-                    'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
-                    errors.pickupLocation 
-                      ? 'border-red-500 focus:ring-red-500 border-2' 
-                      : 'border border-gray-300 focus:ring-primary'
-                  ]"
-                />
-              </div>
-
-              <div>
-                <label for="dropoffLocation" class="block text-sm font-medium text-gray-700 mb-2">
-                  Drop-off Location *
-                </label>
-                <input 
-                  v-model="form.dropoffLocation"
-                  type="text"
-                  placeholder="e.g., Eko Hotel, Victoria Island"
-                  :class="[
-                    'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
-                    errors.dropoffLocation 
-                      ? 'border-red-500 focus:ring-red-500 border-2' 
-                      : 'border border-gray-300 focus:ring-primary'
-                  ]"
-                />
-              </div>
-            </div>
-
-            <!-- Date & Time -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <DateInput
-                  v-model="form.date"
-                  label="Pickup Date *"
-                  :allow-past-dates="false"
-                  :class="{ 'border-red-500 focus:ring-red-500': errors.date }"
-                />
-              </div>
-
-              <div>
-                <label for="time" class="block text-sm font-medium text-gray-700 mb-2">
-                  Pickup Time *
-                </label>
-                <input 
-                  v-model="form.time"
-                  type="time"
-                  :class="[
-                    'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
-                    errors.time 
-                      ? 'border-red-500 focus:ring-red-500 border-2' 
-                      : 'border border-gray-300 focus:ring-primary'
-                  ]"
-                />
-              </div>
-            </div>
-
-            <!-- Flight Number & Passengers -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label for="flightNumber" class="block text-sm font-medium text-gray-700 mb-2">
-                  Flight Number (Optional)
-                </label>
-                <input 
-                  v-model="form.flightNumber"
-                  type="text"
-                  placeholder="e.g., BA075"
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label for="passengers" class="block text-sm font-medium text-gray-700 mb-2">
-                  Passengers
-                </label>
-                <input 
-                  v-model.number="form.passengers"
-                  type="number"
-                  min="1"
-                  max="20"
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label for="luggage" class="block text-sm font-medium text-gray-700 mb-2">
-                  Luggage Pieces
-                </label>
-                <input 
-                  v-model.number="form.luggage"
-                  type="number"
-                  min="0"
-                  max="20"
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <!-- Vehicle Selection -->
-            <div>
-              <label for="vehicleType" class="block text-sm font-medium text-gray-700 mb-3">
-                Select Vehicle
-              </label>
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <label 
-                  v-for="vehicle in vehicleTypes" 
-                  :key="vehicle.value"
-                  class="relative cursor-pointer"
-                >
-                  <input 
-                    v-model="form.vehicleType"
-                    type="radio"
-                    :value="vehicle.value"
-                    class="peer sr-only"
-                  />
-                  <div class="border-2 border-gray-200 rounded-lg overflow-hidden peer-checked:border-primary peer-checked:ring-2 peer-checked:ring-primary hover:border-gray-300 transition-all">
-                    <img :src="vehicle.image" :alt="vehicle.label" class="w-full h-32 object-cover" />
-                    <div class="p-3">
-                      <p class="font-bold text-gray-900">{{ vehicle.label }}</p>
-                      <p class="text-xs text-gray-600 mt-1">{{ vehicle.capacity }}</p>
-                      <p class="text-lg font-bold text-primary mt-2">{{ formatPrice(vehicle.price) }}</p>
-                    </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label for="" class="block text-sm font-medium text-gray-700 mb-2">Email <span class="text-red-500">*</span></label>
+                    <input
+                      v-model="form.email"
+                      type="email"
+                      :class="inputClass(!!errors.email)"
+                    />
+                    <p v-if="errors.email" class="mt-1 text-xs text-red-600">{{ errors.email }}</p>
                   </div>
-                </label>
+                  <div>
+                    <label for="" class="block text-sm font-medium text-gray-700 mb-2">Phone Number <span class="text-red-500">*</span></label>
+                    <input
+                      v-model="form.phone"
+                      type="tel"
+                      placeholder="e.g. 08012345678"
+                      :class="inputClass(!!errors.phone)"
+                    />
+                    <p v-if="errors.phone" class="mt-1 text-xs text-red-600">{{ errors.phone }}</p>
+                  </div>
+                </div>
               </div>
-            </div>
+            </fieldset>
 
-            <!-- Personal Information -->
-            <div class="border-t pt-6">
-              <h3 class="text-lg font-bold text-gray-900 mb-4">Contact Information</h3>
-              
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <fieldset>
+              <legend class="text-base font-semibold text-gray-800 mb-4 pb-2 border-b w-full">
+                Transfer Details
+              </legend>
+              <div class="space-y-4">
                 <div>
-                  <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">
-                    First Name *
+                  <label for="" class="block text-sm font-medium text-gray-700 mb-2">
+                    Pickup &amp; Drop-off Location <span class="text-red-500">*</span>
                   </label>
-                  <input 
-                    v-model="form.firstName"
+                  <input
+                    v-model="form.pickUpAndDropOff"
                     type="text"
-                    :class="[
-                      'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
-                      errors.firstName 
-                        ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-primary'
-                    ]"
+                    placeholder="e.g. Murtala Muhammed Airport to Eko Hotel, Victoria Island"
+                    :class="inputClass(!!errors.pickUpAndDropOff)"
                   />
+                  <p v-if="errors.pickUpAndDropOff" class="mt-1 text-xs text-red-600">{{ errors.pickUpAndDropOff }}</p>
                 </div>
 
                 <div>
-                  <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">
-                    Last Name *
+                  <label for="" class="block text-sm font-medium text-gray-700 mb-2">
+                    Number of Passengers <span class="text-red-500">*</span>
                   </label>
-                  <input 
-                    v-model="form.lastName"
-                    type="text"
-                    :class="[
-                      'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
-                      errors.lastName 
-                        ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-primary'
-                    ]"
+                  <input
+                    v-model.number="form.numberOfPassenger"
+                    type="number"
+                    min="1"
+                    max="20"
+                    :class="inputClass(!!errors.numberOfPassenger)"
                   />
+                  <p v-if="errors.numberOfPassenger" class="mt-1 text-xs text-red-600">{{ errors.numberOfPassenger }}</p>
                 </div>
 
                 <div>
-                  <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-                    Email *
+                  <label for="" class="block text-sm font-medium text-gray-700 mb-2">
+                    Additional Information
                   </label>
-                  <input 
-                    v-model="form.email"
-                    type="email"
-                    :class="[
-                      'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
-                      errors.email 
-                        ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-primary'
-                    ]"
-                  />
-                </div>
-
-                <div>
-                  <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number *
-                  </label>
-                  <input 
-                    v-model="form.phone"
-                    type="tel"
-                    :class="[
-                      'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
-                      errors.phone 
-                        ? 'border-red-500 focus:ring-red-500 border-2' 
-                        : 'border border-gray-300 focus:ring-primary'
-                    ]"
+                  <textarea
+                    v-model="form.additionalInformation"
+                    rows="3"
+                    placeholder="e.g. Child seat needed, wheelchair accessible, flight number BA075..."
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                   />
                 </div>
               </div>
+            </fieldset>
 
-              <div class="mt-4">
-                <label for="specialRequests" class="block text-sm font-medium text-gray-700 mb-2">
-                  Special Requests (Optional)
-                </label>
-                <textarea 
-                  v-model="form.specialRequests"
-                  rows="3"
-                  placeholder="Child seat, wheelchair accessible, etc."
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                ></textarea>
-              </div>
-            </div>
-
-            <!-- Submit -->
-            <div class="flex items-center justify-between pt-6 border-t">
-              <div>
-                <p class="text-sm text-gray-600">Total Price</p>
-                <p class="text-3xl font-bold text-gray-900">{{ formatPrice(totalPrice) }}</p>
-              </div>
-              <button 
-                type="submit"
-                class="px-8 py-4 bg-primary text-white rounded-lg font-bold text-lg hover:bg-primary/80 transition-colors"
+            <div>
+              <label
+                class="flex items-start gap-3 cursor-pointer p-4 rounded-lg border"
+                :class="errors.terms_and_conditions ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:bg-gray-50'"
               >
-                Book Transfer
-              </button>
+                <input
+                  v-model="form.terms_and_conditions"
+                  type="checkbox"
+                  class="w-5 h-5 text-primary mt-0.5 shrink-0"
+                />
+                <span class="text-sm text-gray-700">
+                  I agree to the
+                  <a href="#" class="text-primary underline hover:text-primary-dark">Terms and Conditions</a>
+                  and confirm that all information provided is accurate and complete.
+                </span>
+              </label>
+              <p v-if="errors.terms_and_conditions" class="mt-1 text-xs text-red-600">
+                {{ errors.terms_and_conditions }}
+              </p>
             </div>
+
+            <button
+              type="submit"
+              class="w-full flex gap-3 items-center justify-center py-4 bg-primary text-white rounded-lg font-bold text-lg hover:bg-primary-dark transition-colors"
+            >
+              <svg v-if="loading" class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              {{ loading ? 'Sending...' : 'Book Transfer' }}
+            </button>
           </form>
         </div>
       </div>

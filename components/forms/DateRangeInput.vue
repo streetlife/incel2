@@ -1,15 +1,13 @@
 <template>
   <div class="relative" ref="containerRef">
-    <!-- Label -->
     <label
       v-if="label"
       :for="id"
-      class="block text-sm font-medium text-gray-700 mb-2"
+      class="text-sm font-medium text-gray-700 mb-2 flex gap-1"
     >
-      {{ label }}
+      {{ label }} <span v-if="important" class="text-red-500">*</span>
     </label>
     
-    <!-- Input Field -->
     <div class="relative">
       <input
         :id="id"
@@ -186,9 +184,9 @@ interface Props {
   allowPastDates?: boolean
   maxDate?: string
   placeholder?: string
+  important?: boolean
 }
 
-/* Props */
 const props = withDefaults(defineProps<Props>(), {
   modelValue: () => ({ start: '', end: '' }),
   label: '',

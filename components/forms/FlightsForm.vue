@@ -4,8 +4,13 @@ import AirportSelect from '../AirportSelect.vue'
 import DateInput from './DateInput.vue'
 import PassengerSelect from './PassengerSelect.vue'
 import { navigateTo, useRoute } from 'nuxt/app'
+import { useFlights } from '../../composables/useFlights'
 
 const route = useRoute()
+const {
+  hasSearched,
+  showSearchForm,
+} = useFlights()
 
 const emit = defineEmits<{
   search: [searchData: any]
@@ -437,6 +442,9 @@ const submit = async () => {
   const searchData = buildSearchData()
   
   emit('search', searchData)
+  
+  hasSearched.value = true
+  showSearchForm.value = false
   
   await navigateToFlightsPage(searchData)
 }

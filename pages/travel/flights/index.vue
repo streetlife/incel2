@@ -3,7 +3,7 @@ import { Plane } from 'lucide-vue-next'
 import FlightsForm from '../../../components/forms/FlightsForm.vue'
 import FlightResult from '../../../components/flight/FlightResult.vue'
 import { useFlights } from '../../../composables/useFlights'
-import { onMounted, nextTick, watch } from 'vue'
+import { onMounted, nextTick } from 'vue'
 import AppToast from '../../../components/toast/AppToast.vue'
 import { useRoute } from 'nuxt/app'
 
@@ -71,30 +71,6 @@ function scrollToTopAndShowForm() {
 }
 
 onMounted(() => {
-  const q = route.query
-
-  if (q.from && q.to && q.dateFrom) {
-    search({
-      supplier: 'amadeus',
-      from: String(q.from),
-      to: String(q.to),
-      dateFrom: String(q.dateFrom),
-      dateTo: q.dateTo ? String(q.dateTo) : undefined,
-      search_type: String(q.tripType ?? 'roundtrip'),
-      flight_class: String(q.travelClass ?? 'economy'),
-      adult_number: Number(q.adult_number) || 1,
-      child_number: Number(q.child_number) || 0,
-      infants_number: Number(q.infants_number) || 0,
-    })
-
-    const stopWatch = watch(loading, (isLoading) => {
-      if (!isLoading && hasSearched.value) {
-        nextTick(() => scrollToResults())
-        stopWatch()
-      }
-    })
-  }
-
   const observer = new IntersectionObserver(
     entries => entries.forEach(e => {
       if (e.isIntersecting) { e.target.classList.add('reveal-visible'); observer.unobserve(e.target) }

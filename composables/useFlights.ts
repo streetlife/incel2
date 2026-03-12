@@ -14,9 +14,7 @@ export function useFlights() {
     const { selectOffer } = useFlightStore()
     const flightStore = useFlightStore()
 
-    const showSearchForm = ref(true)
     const bookingLoadingId = ref<string | null>(null)
-
     const results: Ref<FlightOffer[]> = ref([])
     const meta = ref<FlightMeta>({
         count: 0,
@@ -26,7 +24,16 @@ export function useFlights() {
     })
     const loading: Ref<boolean> = ref(false)
     const error: Ref<string> = ref('')
-    const hasSearched: Ref<boolean> = ref(false)
+
+    const showSearchForm = computed({
+        get: () => flightStore.showSearchForm,
+        set: (val) => { flightStore.showSearchForm = val }
+    })
+
+    const hasSearched = computed({
+        get: () => flightStore.hasSearched,
+        set: (val) => { flightStore.hasSearched = val }
+    })
 
     function rehydrateFromStore(key: string, params: any): boolean {
         if (flightStore.hasCachedResults(key)) {

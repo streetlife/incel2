@@ -101,6 +101,8 @@ export const useFlightStore = defineStore(
         const errorMessage = ref('')
         const bookCode = ref<string | null>(null)
         const flightService = useFlightService()
+        const hasSearched = ref(false)
+        const showSearchForm = ref(true)
 
         async function confirmBooking(): Promise<boolean> {
             status.value = 'loading'
@@ -322,6 +324,8 @@ export const useFlightStore = defineStore(
             cachedMeta,
             lastSearchKey,
             bookCode,
+            hasSearched,
+            showSearchForm,
             setFlight,
             setSessionCode,
             setNameEmail,

@@ -165,7 +165,7 @@ const inputClass = (hasError: boolean) => [
   <div>
     <AppToast />
     <section
-      class="relative py-40 px-6 bg-cover bg-center bg-no-repeat"
+      class="relative pt-40 pb-28 px-6 bg-cover bg-center bg-no-repeat"
       style="background-image: url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=1600')"
     >
       <div class="absolute inset-0 bg-black/50"></div>

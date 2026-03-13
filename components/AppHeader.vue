@@ -454,9 +454,9 @@ const startAutoScroll = () => {
   }, 5000)
 }
 
-const pauseAutoScroll  = () => { isPaused.value = true }
+const pauseAutoScroll = () => { isPaused.value = true }
 const resumeAutoScroll = () => { isPaused.value = false }
-const navigateToDeal   = (deal: HotDeal) => { navigateTo(deal.link) }
+const navigateToDeal = (deal: HotDeal) => { navigateTo(deal.link) }
 
 interface NavLink {
   name: string
@@ -481,11 +481,32 @@ const navLinks: NavLink[] = [
 ]
 
 const isMainPage = computed(() => {
-  const mainPages = ['/', '/about-us', '/contact', '/travel/flights', '/travel/packages',
-    '/travel/hotels', '/travel/tours', '/travel/visas', '/visa',
-    '/services/vacation-packages', '/services/travel-insurance', '/services/airport-transfer',
-    '/services/airport-protocol', '/services/tour-guide', '/privacy-policy', '/faq', '/terms']
-  return mainPages.includes(route.path)
+  const mainPages = [
+    '/',
+    '/about-us',
+    '/contact',
+    '/travel/flights',
+    '/travel/packages',
+    '/travel/hotels',
+    '/travel/tours',
+    '/travel/visas',
+    '/visa',
+    '/services/vacation-packages',
+    '/services/travel-insurance',
+    '/services/airport-transfer',
+    '/services/airport-protocol',
+    '/services/tour-guide',
+    '/privacy-policy',
+    '/faq',
+    '/terms',
+    '/deals',
+  ]
+
+  const mainPagePrefixes = [
+    '/deals/',
+  ]
+
+  return mainPages.includes(route.path) || mainPagePrefixes.some(prefix => route.path.startsWith(prefix))
 })
 
 const handleScroll = () => { scrolled.value = window.scrollY > 50 }

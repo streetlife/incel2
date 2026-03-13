@@ -102,9 +102,8 @@ onMounted(() => {
 
 <template>
   <div>
-    <!-- Hero Section -->
     <section 
-      class="relative py-40 px-6 bg-cover bg-center bg-no-repeat"
+      class="relative pt-40 pb-28 px-6 bg-cover bg-center bg-no-repeat"
       style="background-image: url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1600')"
     >
       <div class="absolute inset-0 bg-black/40"></div>
@@ -119,7 +118,6 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- Packages Grid -->
     <section class="py-16 px-6 bg-gray-50">
       <div class="max-w-7xl mx-auto">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -129,7 +127,6 @@ onMounted(() => {
             class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden reveal"
             :style="{ transitionDelay: `${index * 100}ms` }"
           >
-            <!-- Package Image -->
             <div class="relative h-64 overflow-hidden">
               <img 
                 :src="pkg.image" 
@@ -141,7 +138,6 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- Package Info -->
             <div class="p-6">
               <div class="flex items-start gap-3 mb-3">
                 <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">

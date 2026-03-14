@@ -174,27 +174,27 @@ const submit = async () => {
   }
 
   const payload = {
-    service: 'airport-protocol',
+    service_type: 'arrival',
+    airport_name: form.value.airport,
+    flight_number: form.value.flightNumber,
+    service_required: {
+      meet_and_greet: form.value.assistanceTypes.includes('meet-greet'),
+      fast_track_imgration: form.value.assistanceTypes.includes('fast-track'),
+      lounge_access: form.value.assistanceTypes.includes('lounge-access'),
+      porter_service: form.value.assistanceTypes.includes('porter-service'),
+      wheelchair: form.value.assistanceTypes.includes('wheelchair'),
+      unaccompanied_minor: form.value.assistanceTypes.includes('unaccompanied-minor'),
+    },
+    additional_info: form.value.additionalInformation,
     booking_code: form.value.booking_code,
     terms_and_conditions: form.value.terms_and_conditions,
-    status: 'pending',
-    request_details: {
-      name: `${form.value.firstName} ${form.value.lastName}`,
-      email: form.value.email,
-      phone: form.value.phone,
-      numberOfPassengers: form.value.numberOfPassengers,
-      airport: form.value.airport,
-      flightNumber: form.value.flightNumber,
-      airline: form.value.airline,
-      serviceType: form.value.serviceType,
-      assistanceTypes: form.value.assistanceTypes,
-      additionalInformation: form.value.additionalInformation || ''
-    }
+    airline: form.value.airline,
+    number_of_passengers: form.value.numberOfPassengers,
   }
 
   try {
     loading.value = true
-    //await generalService.saveAirportProtocol(payload)
+    await generalService.saveAirportProtocol(payload)
     toast.success('Request created successfully')
     resetForm()
   } catch (err) {

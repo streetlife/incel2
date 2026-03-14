@@ -165,27 +165,24 @@ const submit = async () => {
   }
 
   const payload = {
-    service: 'tour-guide',
-    booking_code: form.value.booking_code,
+    first_name: form.value.firstName,
+    last_name: form.value.lastName,
+    email: form.value.email,
+    phone_number: form.value.phone,
+    destination: form.value.destination,
+    date: form.value.tourDate,
+    duration: form.value.duration,
+    group_size: form.value.groupSize,
+    preferred_language: form.value.language,
+    tour_interests: form.value.tourInterests,
+    additional_information: form.value.additionalInformation,
     terms_and_conditions: form.value.terms_and_conditions,
-    status: 'pending',
-    request_details: {
-      name: `${form.value.firstName} ${form.value.lastName}`,
-      email: form.value.email,
-      phone: form.value.phone,
-      destination: form.value.destination,
-      tourDate: form.value.tourDate,
-      duration: `${form.value.duration} hours`,
-      groupSize: form.value.groupSize,
-      language: form.value.language,
-      tourInterests: form.value.tourInterests,
-      additionalInformation: form.value.additionalInformation || ''
-    }
+    booking_code: form.value.booking_code
   }
 
   try {
     loading.value = true
-    //await generalService.saveTourGuide(payload)
+    await generalService.saveTourGuide(payload)
     toast.success('Request created successfully')
     resetForm()
   } catch (err) {

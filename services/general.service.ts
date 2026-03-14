@@ -1,5 +1,5 @@
 import { ApiResponse } from "../types/api"
-import { AirpotTransferData, AirpotTransferResponse, ContactUsData, ContactUsResponse, TravelInsuranceData, TravelInsuranceResponse } from "../types/general"
+import { AirportProtocolData, AirportProtocolResponse, AirpotTransferData, AirpotTransferResponse, ContactUsData, ContactUsResponse, TourGuideData, TourGuideResponse, TravelInsuranceData, TravelInsuranceResponse } from "../types/general"
 import { useApi } from "../utils/api"
 
 export function useGeneralService() {
@@ -24,6 +24,22 @@ export function useGeneralService() {
 
         async saveAirportTransfer(data: AirpotTransferData): Promise<AirpotTransferResponse> {
             const res = await $api<ApiResponse<AirpotTransferResponse>>('/services/airport-transfer', {
+                method: 'POST',
+                body: data,
+            })
+            return res.data
+        },
+
+        async saveTourGuide(data: TourGuideData): Promise<TourGuideResponse> {
+            const res = await $api<ApiResponse<TourGuideResponse>>('/services/tour-guide', {
+                method: 'POST',
+                body: data,
+            })
+            return res.data
+        },
+
+        async saveAirportProtocol(data: AirportProtocolData): Promise<AirportProtocolResponse> {
+            const res = await $api<ApiResponse<AirportProtocolResponse>>('/services/airport-protocol', {
                 method: 'POST',
                 body: data,
             })

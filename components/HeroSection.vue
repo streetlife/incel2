@@ -1,6 +1,5 @@
 <template>
   <section class="relative h-screen w-full overflow-hidden pb-5">
-    <!-- Video Background -->
     <div class="absolute inset-0 w-full h-full">
       <video 
         autoplay
@@ -26,10 +25,9 @@
           class="w-full h-full object-cover"
         />
       </video>
-      <div class="absolute inset-0 video-overlay"></div>
+      <div class="absolute inset-0 bg-black/20"></div>
     </div>
     
-    <!-- Hero Content -->
     <div class="relative z-20 h-full flex flex-col items-center justify-center text-center px-4 max-w-7xl mx-auto">
       <h1 class="text-[3.5rem] sm:text-6xl md:text-7xl lg:text-[8rem] font-bold text-white tracking-tighter leading-[0.9] mix-blend-overlay opacity-90">
         DISCOVER

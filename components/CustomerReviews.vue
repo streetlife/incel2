@@ -63,7 +63,7 @@ const videoReviews = [
 </script>
 
 <template>
-  <section class="py-20 bg-gray-50 overflow-hidden">
+  <section class="py-20 bg-gray-50 overflow-hidden sm:px-24 px-4">
     <div class="container mx-auto px-4">
       <div class="text-center mb-14 reveal">
         <p class="text-xs font-semibold tracking-[0.25em] uppercase text-primary mb-3">What Travellers Say</p>

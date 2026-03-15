@@ -55,7 +55,7 @@ export function useGeneralService() {
         },
 
         async getPackage(id: string | number) {
-            const response = await $api<ApiResponse<PackageResponse>>(`/services/packages/${id}`)
+            const response = await $api<ApiResponse<PackageResponse>>(`/services/travel-package/${id}`)
             return response.data
         },
 

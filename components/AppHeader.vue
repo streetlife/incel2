@@ -5,16 +5,14 @@
       scrolled ? 'bg-white backdrop-blur-md shadow-lg' : 'bg-transparent'
     ]"
   >
-    <!-- Hot Deals Scroller -->
     <Transition name="slide-down">
-      <div 
-        v-if="hotDeals.length > 0 && !hideDeals"
+      <div
+        v-if="hotDealsStore.activeDeals.length > 0 && !hideDeals"
         class="text-white overflow-hidden relative"
         :style="{ background: 'linear-gradient(135deg, #0168a7 0%, #01427a 100%)' }"
-        :class="{ 'shadow-md': scrolled }"
       >
         <div class="relative">
-          <div 
+          <div
             ref="dealsContainer"
             class="flex whitespace-nowrap overflow-x-auto scrollbar-hide py-2.5 sm:py-3"
             style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch;"
@@ -22,43 +20,37 @@
             @mouseleave="resumeAutoScroll"
           >
             <div class="inline-flex space-x-6 sm:space-x-8 px-4 sm:px-24 min-w-full">
-              <div 
-                v-for="(deal, index) in hotDeals" 
-                :key="index"
+              <div
+                v-for="(deal, index) in hotDealsStore.activeDeals"
+                :key="deal.id"
                 class="inline-flex items-center gap-2 sm:gap-3 text-sm sm:text-base font-medium cursor-pointer hover:text-blue-200 transition-colors group"
-                @click="navigateToDeal(deal)"
+                @click="navigateTo(`/deals/${deal.id}`)"
               >
                 <span class="bg-white/20 p-1.5 rounded-full group-hover:bg-white/30 transition-colors">
-                  <svg v-if="deal.type === 'flight'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                  <svg v-else-if="deal.type === 'package'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                   </svg>
-                  <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                  </svg>
                 </span>
-                
-                <span class="flex items-center gap-1">
+
+                <span class="flex items-center gap-1.5">
                   <span class="font-semibold">{{ deal.title }}</span>
                   <span class="text-blue-200">•</span>
-                  <span class="text-blue-100">{{ deal.description }}</span>
-                  <!-- Prices auto-convert via useCurrency; source currency stored on each deal -->
+                  <span class="text-blue-100 truncate max-w-[200px] sm:max-w-none">{{ deal.deal_includes }}</span>
                   <span class="ml-1 font-bold text-neutral-900 bg-yellow-400 px-2 py-0.5 rounded-full text-xs">
-                    {{ format(deal.price, deal.currency ?? 'USD') }}
-                  </span>
-                  <span v-if="deal.originalPrice" class="text-xs line-through text-blue-300 ml-1">
-                    {{ format(deal.originalPrice, deal.currency ?? 'USD') }}
+                    {{ format(deal.price) }}
                   </span>
                 </span>
 
-                <span v-if="index < hotDeals.length - 1" class="text-blue-300 opacity-50">|</span>
+                <span class="text-[11px] text-blue-200/70 hidden sm:inline">
+                  {{ formatDealDate(deal.start_date) }} – {{ formatDealDate(deal.end_date) }}
+                </span>
+
+                <span v-if="index < hotDealsStore.activeDeals.length - 1" class="text-blue-300 opacity-50">|</span>
               </div>
             </div>
           </div>
 
-          <button 
+          <button
             @click="hideDeals = true"
             class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-neutral-900 rounded-full p-1.5 shadow-lg transition-all"
             aria-label="Close deals"
@@ -71,27 +63,23 @@
       </div>
     </Transition>
 
-    <!-- Main Navigation -->
     <nav class="container mx-auto sm:px-24 px-4 py-2">
       <div class="flex items-center justify-between">
-        <NuxtLink 
-          to="/" 
+        <NuxtLink
+          to="/"
           class="flex items-center space-x-2 z-50 relative transition-opacity duration-300"
           :class="{ 'lg:opacity-100': true, 'opacity-0 pointer-events-none': mobileMenuOpen }"
         >
-          <div class="text-2xl font-bold">
-            <img 
-              src="https://ik.imagekit.io/7ptk19utb/incel_tourism_logo_wide.png" 
-              class="w-auto h-12 object-contain"
-              alt="Incel Tourism Logo"
-            />
-          </div>
+          <img
+            src="https://ik.imagekit.io/7ptk19utb/incel_tourism_logo_wide.png"
+            class="w-auto h-12 object-contain"
+            alt="Incel Tourism Logo"
+          />
         </NuxtLink>
 
-        <!-- Desktop Navigation -->
         <div class="hidden lg:flex justify-center items-center space-x-8">
           <template v-for="link in navLinks" :key="link.name">
-            <NuxtLink 
+            <NuxtLink
               v-if="!link.dropdown"
               :to="link.path"
               :class="[
@@ -101,8 +89,8 @@
             >
               {{ link.name }}
             </NuxtLink>
-            
-            <div 
+
+            <div
               v-else
               class="relative group py-2"
               @mouseenter="openDropdown = link.name"
@@ -115,7 +103,7 @@
                 ]"
               >
                 {{ link.name }}
-                <svg 
+                <svg
                   class="w-4 h-4 transition-transform duration-200"
                   :class="{ 'rotate-180': openDropdown === link.name }"
                   fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -123,7 +111,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              
+
               <div
                 v-show="openDropdown === link.name"
                 class="absolute left-0 pt-2 w-48 opacity-0 translate-y-[-10px] transition-all duration-200"
@@ -145,28 +133,19 @@
         </div>
 
         <div class="hidden lg:flex items-center gap-4">
-          <!-- ── Currency Dropdown ── -->
-          <div 
+          <div
             class="relative"
             @mouseenter="currencyDropdownOpen = true"
             @mouseleave="currencyDropdownOpen = false"
           >
             <button class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-              <!-- Flag of selected currency -->
-              <img
-                class="w-6 h-6 object-cover rounded-full ring-1 ring-white/20"
-                :src="currentConfig.flag"
-                :alt="currentConfig.code"
-              />
-              <span :class="scrolled || !isMainPage ? 'text-primary' : 'text-white'" class="text-sm font-semibold">
-                {{ currentConfig.code }}
-              </span>
-              <!-- Spinner while fetching -->
+              <img class="w-6 h-6 object-cover rounded-full ring-1 ring-white/20" :src="currentConfig.flag" :alt="currentConfig.code" />
+              <span :class="scrolled || !isMainPage ? 'text-primary' : 'text-white'" class="text-sm font-semibold">{{ currentConfig.code }}</span>
               <svg v-if="ratesLoading" class="animate-spin w-3.5 h-3.5 opacity-60" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
               </svg>
-              <svg 
+              <svg
                 class="w-4 h-4 transition-transform duration-200"
                 :class="[{ 'rotate-180': currencyDropdownOpen }, scrolled || !isMainPage ? 'text-primary' : 'text-white']"
                 fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -174,7 +153,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
-            
+
             <div
               v-show="currencyDropdownOpen"
               class="absolute right-0 pt-2 w-56 opacity-0 translate-y-[-10px] transition-all duration-200"
@@ -193,7 +172,6 @@
                     <span class="font-semibold text-sm">{{ currency.code }}</span>
                     <span class="text-xs text-gray-500 truncate">{{ currency.name }}</span>
                   </div>
-                  <!-- Live rate relative to USD -->
                   <span class="text-xs text-slate-400 tabular-nums shrink-0">
                     {{ currency.code === 'USD' ? '1.00' : (rates[currency.code]?.toLocaleString('en', { maximumFractionDigits: 2 }) ?? '…') }}
                   </span>
@@ -201,32 +179,24 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                   </svg>
                 </button>
-                <p v-if="ratesError" class="px-4 py-2 text-xs text-amber-600 border-t border-slate-100 mt-1">
-                  ⚠ Using estimated rates
-                </p>
+                <p v-if="ratesError" class="px-4 py-2 text-xs text-amber-600 border-t border-slate-100 mt-1">⚠ Using estimated rates</p>
               </div>
             </div>
           </div>
 
           <div v-if="auth.isLoggedIn">
-            <button 
-              class="px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 shadow-lg hover:shadow-xl"
-              @click="navigateTo('/dashboard')"
-            >
+            <button class="px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 shadow-lg hover:shadow-xl" @click="navigateTo('/dashboard')">
               Dashboard
             </button>
           </div>
           <div v-else>
-            <button 
-              class="px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 shadow-lg hover:shadow-xl"
-              @click="navigateTo('/auth/login')"
-            >
+            <button class="px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 shadow-lg hover:shadow-xl" @click="navigateTo('/auth/login')">
               Login
             </button>
           </div>
         </div>
-        
-        <button 
+
+        <button
           @click="mobileMenuOpen = !mobileMenuOpen"
           class="lg:hidden z-50 relative p-2 rounded-lg transition-colors duration-200"
           :class="scrolled || !isMainPage
@@ -240,10 +210,9 @@
         </button>
       </div>
     </nav>
-    
-    <!-- Mobile Menu -->
+
     <Transition name="slide">
-      <div 
+      <div
         v-if="mobileMenuOpen"
         class="fixed top-0 right-0 h-full w-full sm:w-96 bg-white lg:hidden z-40 overflow-y-auto shadow-2xl"
       >
@@ -259,7 +228,7 @@
         <div class="flex flex-col h-full justify-between">
           <div class="flex flex-col p-6 space-y-2">
             <template v-for="link in navLinks" :key="link.name">
-              <NuxtLink 
+              <NuxtLink
                 v-if="!link.dropdown"
                 :to="link.path"
                 :class="[
@@ -275,7 +244,7 @@
                 </svg>
                 <span class="font-medium text-base">{{ link.name }}</span>
               </NuxtLink>
-              
+
               <div v-else>
                 <button
                   @click="toggleMobileDropdown(link.name)"
@@ -283,11 +252,11 @@
                 >
                   <div class="flex items-center gap-4">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path v-if="link.name === 'Services'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     <span class="font-medium text-base">{{ link.name }}</span>
                   </div>
-                  <svg 
+                  <svg
                     class="w-5 h-5 transition-transform duration-300"
                     :class="{ 'rotate-180': mobileOpenDropdown === link.name }"
                     fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -295,7 +264,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                
+
                 <Transition name="expand">
                   <div v-show="mobileOpenDropdown === link.name" class="ml-14 space-y-1 mt-1">
                     <NuxtLink
@@ -314,7 +283,6 @@
           </div>
 
           <div class="p-6 space-y-6 border-t border-gray-100">
-            <!-- Currency Selector (Mobile) -->
             <div class="bg-gray-50 rounded-xl p-4">
               <div class="flex items-center justify-between mb-3">
                 <p class="text-sm font-semibold text-gray-700">Currency</p>
@@ -375,9 +343,11 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useCurrency } from '../composables/useCurrency'
+import { useHotDealsStore } from '../stores/hotdeal'
 
 const route = useRoute()
 const auth = useAuthStore()
+const hotDealsStore = useHotDealsStore()
 
 const {
   selectedCurrency,
@@ -400,7 +370,6 @@ const formatRateHint = computed(() => {
   const code = selectedCurrency.value
   const cfg  = CURRENCIES.find(c => c.code === code)
   if (!cfg) return ''
-  // When USD is selected, still show the NGN equivalent as useful context
   if (code === 'USD') {
     const ngn = rates.value['NGN']
     return ngn ? `₦${ngn.toLocaleString('en', { maximumFractionDigits: 0 })}` : ''
@@ -409,42 +378,27 @@ const formatRateHint = computed(() => {
   return rate ? `${cfg.symbol}${rate.toLocaleString('en', { maximumFractionDigits: 2 })}` : ''
 })
 
+function formatDealDate(dateStr: string) {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
 const scrolled = ref(false)
+const handleScroll = () => { scrolled.value = window.scrollY > 50 }
+
 const mobileMenuOpen = ref(false)
 const openDropdown = ref<string | null>(null)
 const mobileOpenDropdown = ref<string | null>(null)
 const currencyDropdownOpen = ref(false)
-
-interface HotDeal {
-  title: string
-  description: string
-  price: number
-  originalPrice?: number
-  type: 'flight' | 'package' | 'hotel'
-  link: string
-  currency?: string
-}
-
-const hotDeals = ref<HotDeal[]>([])
 const hideDeals = ref(false)
 const dealsContainer = ref<HTMLElement | null>(null)
 const autoScrollInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const isPaused = ref(false)
 
-const fetchHotDeals = async () => {
-  await new Promise(resolve => setTimeout(resolve, 100))
-  hotDeals.value = [
-    { title: 'Dubai Escape', description: 'Return flights + 5* Hotel', price: 599, originalPrice: 899,  type: 'package', link: '/deals/dubai-escape', currency: 'USD' },
-    { title: 'London', description: 'Direct flights', price: 449, originalPrice: 649,  type: 'flight',  link: '/deals/london-flights', currency: 'USD' },
-    { title: 'Maldives', description: 'All-inclusive resort', price: 1299, originalPrice: 1799, type: 'package', link: '/deals/maldives', currency: 'USD' },
-    { title: 'New York', description: '3 nights at The Plaza', price: 799, originalPrice: 1199, type: 'hotel', link: '/deals/nyc-hotel', currency: 'USD' },
-  ]
-}
-
 const startAutoScroll = () => {
   if (autoScrollInterval.value) clearInterval(autoScrollInterval.value)
   autoScrollInterval.value = setInterval(() => {
-    if (!dealsContainer.value || isPaused.value || hotDeals.value.length <= 3) return
+    if (!dealsContainer.value || isPaused.value || hotDealsStore.activeDeals.length <= 3) return
     const { scrollLeft, scrollWidth, clientWidth } = dealsContainer.value
     if (scrollLeft >= scrollWidth - clientWidth - 10) {
       dealsContainer.value.scrollTo({ left: 0, behavior: 'smooth' })
@@ -454,9 +408,8 @@ const startAutoScroll = () => {
   }, 5000)
 }
 
-const pauseAutoScroll = () => { isPaused.value = true }
+const pauseAutoScroll  = () => { isPaused.value = true }
 const resumeAutoScroll = () => { isPaused.value = false }
-const navigateToDeal = (deal: HotDeal) => { navigateTo(deal.link) }
 
 interface NavLink {
   name: string
@@ -482,41 +435,23 @@ const navLinks: NavLink[] = [
 
 const isMainPage = computed(() => {
   const mainPages = [
-    '/',
-    '/about-us',
-    '/contact',
-    '/travel/flights',
-    '/travel/packages',
-    '/travel/hotels',
-    '/travel/tours',
-    '/travel/visas',
-    '/visa',
-    '/services/vacation-packages',
-    '/services/travel-insurance',
-    '/services/airport-transfer',
-    '/services/airport-protocol',
-    '/services/tour-guide',
-    '/privacy-policy',
-    '/faq',
-    '/terms',
-    '/deals',
+    '/', '/about-us', '/contact', '/travel/flights', '/travel/packages',
+    '/travel/hotels', '/travel/tours', '/travel/visas', '/visa',
+    '/services/vacation-packages', '/services/travel-insurance',
+    '/services/airport-transfer', '/services/airport-protocol',
+    '/services/tour-guide', '/privacy-policy', '/faq', '/terms', '/deals',
   ]
-
-  const mainPagePrefixes = [
-    '/deals/',
-  ]
-
-  return mainPages.includes(route.path) || mainPagePrefixes.some(prefix => route.path.startsWith(prefix))
+  return mainPages.includes(route.path) || route.path.startsWith('/deals/')
 })
 
-const handleScroll = () => { scrolled.value = window.scrollY > 50 }
 const toggleMobileDropdown = (name: string) => { mobileOpenDropdown.value = mobileOpenDropdown.value === name ? null : name }
 const handleMobileNavigation = (path: string) => { mobileMenuOpen.value = false; navigateTo(path) }
 const handleLogout = () => { mobileMenuOpen.value = false; auth.logout(); navigateTo('/') }
 
 onMounted(async () => {
   window.addEventListener('scroll', handleScroll)
-  await Promise.all([fetchRates(), fetchHotDeals()])
+
+  await Promise.all([fetchRates(), hotDealsStore.fetchDeals()])
   await nextTick()
   startAutoScroll()
 })

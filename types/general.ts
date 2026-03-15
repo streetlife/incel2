@@ -113,3 +113,42 @@ export interface AirportProtocolResponse {
     email: string
 }
 
+export interface PackageResponse {
+    id: number,
+    package_name: string,
+    country_code: string,
+    description: string,
+    inclusions: string,
+    exclusions: string,
+    terms: string,
+    location: string,
+    category: string,
+    date_from: string,
+    date_to: string,
+    poster: string,
+    status: number,
+    picture1: string,
+    picture2: string,
+    picture3: string,
+    picture4: string,
+    banner: string
+}
+
+export interface HotDealResponse {
+    id: number,
+    title: string,
+    deal_includes: string,
+    price: number,
+    other_info: string[],
+    start_date: string,
+    end_date: string,
+    is_active: number
+}
+
+export interface NewsLetterData {
+    email: string
+}
+
+export interface NewsLetterResponse {
+    email: string,
+}

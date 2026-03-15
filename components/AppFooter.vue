@@ -1,6 +1,6 @@
 <template>
+  <AppToast />
   <footer class="bg-gray-900 text-gray-300">
-    <!-- Newsletter Section -->
     <div class="border-b border-gray-800">
       <div class="container mx-auto px-4 py-12">
         <div class="max-w-2xl mx-auto text-center">
@@ -9,23 +9,31 @@
             Subscribe to receive exclusive offers, travel tips, and destination inspiration delivered weekly
           </p>
           <div class="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-            <input 
-              type="email" 
-              placeholder="Enter your email"
-              class="flex-1 px-6 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-primary"
-            />
-            <button class="px-8 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/80 transition-colors">
-              Subscribe
+            <div>
+              <input 
+                type="email" 
+                placeholder="Enter your email"
+                class="flex-1 px-6 py-3 rounded-lg bg-gray-800 border text-white focus:outline-none focus:border-primary"
+                v-model="form.email"
+                :class="error ? 'border-red-500' : 'border-gray-700'"
+              />
+            </div>
+
+            <button 
+              @click="submit"
+              class="px-8 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/80 transition-colors flex items-center justify-center gap-2"
+              :disabled="loading"
+            >
+              <svg v-if="loading" class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              {{ loading ? 'Subscribing...' : 'Subscribe' }}
             </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Main Footer -->
     <div class="container mx-auto sm:px-24 px-4 py-12">
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-        <!-- Company Info -->
         <div>
           <div class="text-2xl font-bold text-white mb-4">
             <NuxtLink
@@ -46,7 +54,6 @@
           </p>
         </div>
 
-        <!-- Quick Links -->
         <div>
           <h4 class="text-white font-semibold mb-4">Quick Links</h4>
           <ul class="space-y-2">
@@ -58,7 +65,6 @@
           </ul>
         </div>
 
-        <!-- Dubai Office -->
         <div>
           <h4 class="text-white font-semibold mb-4">Dubai Office</h4>
           <ul class="space-y-3 text-sm text-gray-400">
@@ -84,7 +90,6 @@
           </ul>
         </div>
 
-        <!-- Lagos Office -->
         <div>
           <h4 class="text-white font-semibold mb-4">Lagos Office</h4>
           <ul class="space-y-3 text-sm text-gray-400">
@@ -112,7 +117,6 @@
       </div>
     </div>
 
-    <!-- Bottom Bar -->
     <div class="border-t border-gray-800">
       <div class="container mx-auto sm:px-24 px-4 py-6">
         <div class="flex flex-col md:flex-row justify-between items-center gap-4">
@@ -134,7 +138,6 @@
       </div>
     </div>
 
-    <!-- WhatsApp FAB -->
     <a 
       href="https://wa.me/971543977242?text=Hi%2C%20I%20need%20help%20with%20my%20travel%20plans."
       target="_blank"
@@ -147,7 +150,13 @@
   </footer>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { ref } from 'vue';
+import { useGeneralService } from '../services/general.service';
+import { useToast } from '../composables/useToast';
+import { normaliseError } from '../utils/api';
+import AppToast from './toast/AppToast.vue';
+
 const quickLinks = [
   { name: 'Flights', path: '/travel/flights' },
   { name: 'Hotels', path: '/travel/hotels' },
@@ -156,4 +165,52 @@ const quickLinks = [
   { name: 'About Us', path: '/about-us' },
   { name: 'Contact', path: '/contact' }
 ]
+
+const form = ref({
+  email: ''
+})
+
+const error = ref('')
+const generalService = useGeneralService()
+const loading = ref(false)
+const toast = useToast()
+
+const validateForm = () => {
+  if (!form.value.email) {
+    error.value = 'Email is required'
+    return false
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(form.value.email)) {
+    error.value = 'Please enter a valid email address'
+    return false
+  }
+  
+  error.value = ''
+  return true
+}
+
+const reset = () => {
+  form.value.email = ''
+}
+
+const submit = async () => {
+
+  if (!validateForm()) return
+
+  try {
+    loading.value = true
+    await generalService.saveNewsLetter({ email: form.value.email })
+
+    toast.success('Subscribed successfully')
+    reset()
+  } catch (err) {
+    const e = normaliseError(err)
+    toast.error(e)
+  } finally {
+    loading.value = false
+  }
+
+}
 </script>

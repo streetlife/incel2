@@ -68,7 +68,6 @@ const availableServices = ref<Service[]>([
   }
 ])
 
-/* Handle service request */
 const handleServiceRequest = (service: Service) => {
   console.log('Service requested:', service)
 }
@@ -79,32 +78,26 @@ const handleServiceRequest = (service: Service) => {
     <div class="container mx-auto sm:px-24 px-4">
       <div class="bg-gradient-to-br from-[#0076ad] to-[#0076ad] rounded-3xl overflow-hidden">
 
-        <!-- Header -->
         <div class="text-center pt-12 pb-8 px-4">
           <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white">
             Book your next <span class="text-yellow-400">tour</span> with Incel Tourism
           </h2>
         </div>
 
-        <!-- Tabs -->
         <SearchTabs v-model="activeTab" :tabs="tabs">
-          <!-- Flights -->
           <template #default="{ active }">
             <div v-if="active === 'flights'">
               <FlightsForm />
             </div>
 
-            <!-- Hotels -->
             <div v-if="active === 'hotels'">
               <HotelsForm />
             </div>
 
-            <!-- Tours -->
             <div v-if="active === 'tours'">
               <ToursForm />
             </div>
 
-            <!-- Visas -->
             <div v-if="active === 'visas'">
               <VisaForm />
             </div>

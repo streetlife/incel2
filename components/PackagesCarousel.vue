@@ -17,7 +17,7 @@
     </button>
 
     <div class="relative w-full max-w-7xl mx-auto px-4">
-      <div 
+      <div
         :class="carouselHeightClass"
         class="relative w-full"
         style="perspective: 1500px"
@@ -30,17 +30,17 @@
           @click="handleCardClick(index)"
         >
           <img
-            :src="pkg.image"
-            :alt="pkg.title"
-            :class="['w-full h-full object-cover transition-transform duration-700', 
+            :src="getHeroImage(pkg)"
+            :alt="pkg.package_name"
+            :class="['w-full h-full object-cover transition-transform duration-700',
               getOffset(index) === 0 ? 'scale-100' : 'scale-105'
             ]"
           />
-          
-          <div 
+
+          <div
             :class="['absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent transition-opacity duration-300',
               getOffset(index) === 0 ? 'opacity-100' : 'opacity-70'
-            ]" 
+            ]"
           />
 
           <Transition name="fade-slide">
@@ -57,21 +57,20 @@
                 </span>
               </div>
 
-              <h3 class="text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold mb-2 md:mb-3 leading-tight tracking-tight drop-shadow-lg">
-                {{ pkg.title }}
+              <h3 class="text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold mb-2 md:mb-3 leading-tight tracking-tight drop-shadow-lg line-clamp-2">
+                {{ pkg.package_name }}
               </h3>
 
-              <div class="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-3 md:gap-4 border-t border-white/20 pt-3 md:pt-4 mt-3 md:mt-4">
-                <div>
-                  <p class="text-xs text-white/70 mb-1">Starting Price</p>
-                  <div class="text-base md:text-lg lg:text-xl font-bold text-primary">
-                    {{ format(pkg.price) }}
-                  </div>
-                </div>
-                <button 
-                  size="sm" 
-                  class="rounded-full flex items-center py-2 bg-white text-black hover:bg-primary hover:text-white border-0 font-semibold px-3 md:px-4 text-xs md:text-sm"
-                >
+              <div v-if="pkg.date_from || pkg.date_to" class="flex items-center gap-1.5 text-xs text-white/70 mb-3">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span>{{ formatDate(pkg.date_from) }}</span>
+                <span v-if="pkg.date_to"> → {{ formatDate(pkg.date_to) }}</span>
+              </div>
+
+              <div class="flex justify-end border-t border-white/20 pt-3 md:pt-4 mt-3 md:mt-4">
+                <button class="rounded-full flex items-center py-2 bg-white text-black hover:bg-primary hover:text-white border-0 font-semibold px-3 md:px-4 text-xs md:text-sm transition-colors duration-200">
                   View Details <ArrowRight class="w-3 h-3 md:w-3.5 md:h-3.5 ml-1.5" />
                 </button>
               </div>
@@ -81,16 +80,15 @@
       </div>
     </div>
 
-    <!-- Dot Indicators -->
     <div class="flex justify-center gap-2 mt-6 md:mt-8">
       <button
         v-for="(pkg, index) in packages"
         :key="index"
         @click="setActiveIndex(index)"
-        :class="['w-2 h-2 rounded-full transition-all duration-300',
-          index === activeIndex 
-            ? 'bg-primary w-6 md:w-8' 
-            : 'bg-neutral-300 hover:bg-neutral-400'
+        :class="['h-2 rounded-full transition-all duration-300',
+          index === activeIndex
+            ? 'bg-primary w-6 md:w-8'
+            : 'bg-neutral-300 hover:bg-neutral-400 w-2'
         ]"
         :aria-label="`Go to slide ${index + 1}`"
       />
@@ -102,21 +100,23 @@
 import { ref, computed, onMounted, onUnmounted, type CSSProperties } from 'vue'
 import { ArrowLeft, ArrowRight, MapPin } from 'lucide-vue-next'
 import { navigateTo } from 'nuxt/app'
-import { useCurrency } from '../composables/useCurrency';
-
-const { format } = useCurrency()
 
 interface Package {
   id: number | string
-  title: string
+  package_name: string
   location: string
-  duration?: string
-  image: string
-  price: number
-  oldPrice?: number
-  discount?: number
-  category?: string
-  highlights?: string[]
+  category: string
+  inclusions?: string
+  description?: string
+  date_from?: string
+  date_to?: string
+  status?: number
+  poster?: string
+  picture1?: string
+  picture2?: string
+  picture3?: string
+  picture4?: string
+  banner?: string
 }
 
 interface Props {
@@ -125,87 +125,57 @@ interface Props {
 
 const props = defineProps<Props>()
 
+function getHeroImage(pkg: Package): string {
+  return (
+    pkg.poster   ||
+    pkg.picture1 ||
+    pkg.picture2 ||
+    pkg.picture3 ||
+    pkg.picture4 ||
+    pkg.banner   ||
+    'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80'
+  )
+}
+
+function formatDate(dateStr?: string): string {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+}
+
 const activeIndex = ref(0)
 const windowWidth = ref(0)
 
-// Responsive breakpoints
 const isMobile = computed(() => windowWidth.value < 768)
 const isTablet = computed(() => windowWidth.value >= 768 && windowWidth.value < 1024)
-const isDesktop = computed(() => windowWidth.value >= 1024)
 
-// Responsive card dimensions
 const cardDimensions = computed(() => {
-  if (isMobile.value) {
-    return { width: 280, height: 400 }
-  } else if (isTablet.value) {
-    return { width: 380, height: 480 }
-  } else {
-    return { width: 520, height: 550 }
-  }
+  if (isMobile.value) return { width: 280, height: 400 }
+  if (isTablet.value) return { width: 380, height: 480 }
+  return { width: 520, height: 550 }
 })
 
-// Responsive offsets
 const cardOffsets = computed(() => {
-  if (isMobile.value) {
-    return {
-      adjacent: 200,  // ±1
-      far: 350,       // ±2
-      hidden: 500
-    }
-  } else if (isTablet.value) {
-    return {
-      adjacent: 300,
-      far: 480,
-      hidden: 600
-    }
-  } else {
-    return {
-      adjacent: 380,
-      far: 560,
-      hidden: 700
-    }
-  }
+  if (isMobile.value) return { adjacent: 200, far: 350, hidden: 500 }
+  if (isTablet.value) return { adjacent: 300, far: 480, hidden: 600 }
+  return { adjacent: 380, far: 560, hidden: 700 }
 })
 
-// Carousel height class
 const carouselHeightClass = computed(() => {
-  if (isMobile.value) {
-    return 'h-[400px]'
-  } else if (isTablet.value) {
-    return 'h-[480px]'
-  } else {
-    return 'h-[550px]'
-  }
+  if (isMobile.value) return 'h-[400px]'
+  if (isTablet.value) return 'h-[480px]'
+  return 'h-[550px]'
 })
 
-const updateWindowWidth = () => {
-  windowWidth.value = window.innerWidth
-}
+const updateWindowWidth = () => { windowWidth.value = window.innerWidth }
+onMounted(() => { updateWindowWidth(); window.addEventListener('resize', updateWindowWidth) })
+onUnmounted(() => { window.removeEventListener('resize', updateWindowWidth) })
 
-onMounted(() => {
-  updateWindowWidth()
-  window.addEventListener('resize', updateWindowWidth)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', updateWindowWidth)
-})
-
-const nextSlide = () => {
-  activeIndex.value = (activeIndex.value + 1) % props.packages.length
-}
-
-const prevSlide = () => {
-  activeIndex.value = (activeIndex.value - 1 + props.packages.length) % props.packages.length
-}
-
-const setActiveIndex = (index: number) => {
-  activeIndex.value = index
-}
+const nextSlide = () => { activeIndex.value = (activeIndex.value + 1) % props.packages.length }
+const prevSlide = () => { activeIndex.value = (activeIndex.value - 1 + props.packages.length) % props.packages.length }
+const setActiveIndex = (index: number) => { activeIndex.value = index }
 
 const handleCardClick = (index: number) => {
-  const offset = getOffset(index)
-  if (offset === 0) {
+  if (getOffset(index) === 0) {
     navigateTo(`/packages/${props.packages[index].id}`)
   }
 }
@@ -213,84 +183,42 @@ const handleCardClick = (index: number) => {
 const getOffset = (index: number) => {
   const total = props.packages.length
   let offset = index - activeIndex.value
-  
-  if (offset > total / 2) {
-    offset -= total
-  } else if (offset < -total / 2) {
-    offset += total
-  }
-  
+  if (offset >  total / 2) offset -= total
+  if (offset < -total / 2) offset += total
   return offset
 }
 
 const getCardTransform = (offset: number) => {
-  const offsets = cardOffsets.value
-  
-  // Center card
-  if (offset === 0) {
-    return {
-      x: 0,
-      scale: 1,
-      rotateY: 0,
-      zIndex: 50,
-      opacity: 1,
-      visibility: 'visible' as const
-    }
+  const o = cardOffsets.value
+  if (offset === 0) return { x: 0, scale: 1, rotateY: 0, zIndex: 50, opacity: 1, visibility: 'visible' as const }
+
+  if (Math.abs(offset) === 1) return {
+    x: offset * o.adjacent,
+    scale: isMobile.value ? 0.75 : 0.8,
+    rotateY: offset * (isMobile.value ? -10 : -15),
+    zIndex: 30, opacity: isMobile.value ? 0.5 : 0.7, visibility: 'visible' as const
   }
-  
-  // Adjacent cards (offset = ±1)
-  if (Math.abs(offset) === 1) {
-    return {
-      x: offset * offsets.adjacent,
-      scale: isMobile.value ? 0.75 : 0.8,
-      rotateY: offset * (isMobile.value ? -10 : -15),
-      zIndex: 30,
-      opacity: isMobile.value ? 0.5 : 0.7,
-      visibility: 'visible' as const
-    }
-  }
-  
-  // Far cards (offset = ±2) - hide on mobile
+
   if (Math.abs(offset) === 2) {
-    if (isMobile.value) {
-      return {
-        x: offset * offsets.hidden,
-        scale: 0.5,
-        rotateY: 0,
-        zIndex: 0,
-        opacity: 0,
-        visibility: 'hidden' as const
-      }
-    }
+    if (isMobile.value) return { x: offset * o.hidden, scale: 0.5, rotateY: 0, zIndex: 0, opacity: 0, visibility: 'hidden' as const }
     return {
-      x: offset * offsets.far,
+      x: offset * o.far,
       scale: isTablet.value ? 0.65 : 0.6,
       rotateY: offset * -25,
-      zIndex: 10,
-      opacity: 0.4,
-      visibility: 'visible' as const
+      zIndex: 10, opacity: 0.4, visibility: 'visible' as const
     }
   }
-  
-  // Hidden cards
-  return {
-    x: offset > 0 ? offsets.hidden : -offsets.hidden,
-    scale: 0.4,
-    rotateY: 0,
-    zIndex: 0,
-    opacity: 0,
-    visibility: 'hidden' as const
-  }
+
+  return { x: offset > 0 ? o.hidden : -o.hidden, scale: 0.4, rotateY: 0, zIndex: 0, opacity: 0, visibility: 'hidden' as const }
 }
 
 const getCardStyle = (index: number): CSSProperties => {
   const offset = getOffset(index)
   const transform = getCardTransform(offset)
-  const dimensions = cardDimensions.value
-  
+  const dim = cardDimensions.value
   return {
-    position: 'absolute' as const,
-    transformStyle: 'preserve-3d' as const,
+    position: 'absolute',
+    transformStyle: 'preserve-3d',
     transform: `translateX(${transform.x}px) scale(${transform.scale}) rotateY(${transform.rotateY}deg)`,
     opacity: transform.opacity,
     zIndex: transform.zIndex,
@@ -298,53 +226,30 @@ const getCardStyle = (index: number): CSSProperties => {
     transition: 'all 0.6s cubic-bezier(0.32, 0.72, 0, 1)',
     top: '50%',
     left: '50%',
-    width: `${dimensions.width}px`,
-    height: `${dimensions.height}px`,
-    marginLeft: `${-dimensions.width / 2}px`,
-    marginTop: `${-dimensions.height / 2}px`,
+    width: `${dim.width}px`,
+    height: `${dim.height}px`,
+    marginLeft: `${-dim.width / 2}px`,
+    marginTop: `${-dim.height / 2}px`,
   }
 }
 
 const getCardClass = (index: number) => {
   const offset = getOffset(index)
-  const isCenter = offset === 0
+  const isCenter  = offset === 0
   const isVisible = Math.abs(offset) <= 2
-  
   return [
     'rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl',
-    isCenter ? 'shadow-black/50 cursor-pointer' : 'shadow-black/20 pointer-events-none',
+    isCenter  ? 'shadow-black/50 cursor-pointer' : 'shadow-black/20 pointer-events-none',
     !isCenter && isVisible ? 'grayscale-[0.2]' : ''
   ].filter(Boolean).join(' ')
 }
 </script>
 
 <style scoped>
-.fade-slide-enter-active {
-  transition: all 0.4s ease;
-  transition-delay: 0.15s;
-}
-
-.fade-slide-leave-active {
-  transition: all 0.3s ease;
-}
-
-.fade-slide-enter-from {
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-.fade-slide-enter-to {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.fade-slide-leave-from {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.fade-slide-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
-}
+.fade-slide-enter-active { transition: all 0.4s ease; transition-delay: 0.15s; }
+.fade-slide-leave-active { transition: all 0.3s ease; }
+.fade-slide-enter-from { opacity: 0; transform: translateY(20px); }
+.fade-slide-enter-to { opacity: 1; transform: translateY(0); }
+.fade-slide-leave-from { opacity: 1; transform: translateY(0); }
+.fade-slide-leave-to { opacity: 0; transform: translateY(20px); }
 </style>

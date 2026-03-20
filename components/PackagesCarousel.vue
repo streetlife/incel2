@@ -35,6 +35,7 @@
             :class="['w-full h-full object-cover transition-transform duration-700',
               getOffset(index) === 0 ? 'scale-100' : 'scale-105'
             ]"
+            @error="onImageError"
           />
 
           <div
@@ -124,6 +125,15 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80'
+
+function onImageError(event: Event) {
+  const img = event.target as HTMLImageElement
+  if (img.src !== FALLBACK_IMAGE) {
+    img.src = FALLBACK_IMAGE
+  }
+}
 
 function getHeroImage(pkg: Package): string {
   return (

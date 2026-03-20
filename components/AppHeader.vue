@@ -423,7 +423,7 @@ const navLinks: NavLink[] = [
   {
     name: 'Services',
     dropdown: [
-      { name: 'Vacation Packages', path: '/services/vacation-packages' },
+      //{ name: 'Vacation Packages', path: '/services/vacation-packages' },
       { name: 'Travel Insurance', path: '/services/travel-insurance' },
       { name: 'Airport Transfer', path: '/services/airport-transfer' },
       { name: 'Airport Protocol', path: '/services/airport-protocol' },

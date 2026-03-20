@@ -1,5 +1,19 @@
-<script setup>
-const airlines = [
+<script setup lang="ts">
+import { computed, onMounted, nextTick } from 'vue'
+import { storeToRefs } from 'pinia'
+import { usePartnersStore } from '../stores/partners'
+
+const partnersStore = usePartnersStore()
+const { stats, airlines, platforms, isLoading } = storeToRefs(partnersStore)
+
+const statsList = computed(() => [
+  { value: stats.value?.happy_travellers ?? '10,000+', label: 'Happy Travellers' },
+  { value: stats.value?.destinations ?? '150+', label: 'Destinations' },
+  { value: stats.value?.years_of_experience ?? '12+', label: 'Years Experience' },
+  { value: stats.value?.statisfaction_rate ?? '98%', label: 'Satisfaction Rate' },
+])
+
+const fallbackAirlines = [
   { name: 'Emirates', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Emirates_logo.svg/320px-Emirates_logo.svg.png' },
   { name: 'Qatar Airways', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/9/9b/Qatar_Airways_Logo.svg/320px-Qatar_Airways_Logo.svg.png' },
   { name: 'Turkish Airlines', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Turkish_Airlines_logo_2019_compact.svg/320px-Turkish_Airlines_logo_2019_compact.svg.png' },
@@ -10,7 +24,7 @@ const airlines = [
   { name: 'Kenya Airways', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Kenya_Airways_logo.svg/320px-Kenya_Airways_logo.svg.png' },
 ]
 
-const platforms = [
+const fallbackPlatforms = [
   { name: 'Amadeus', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Amadeus_IT_Group_logo.svg/320px-Amadeus_IT_Group_logo.svg.png' },
   { name: 'Sabre', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Sabre_Corporation_Logo.svg/320px-Sabre_Corporation_Logo.svg.png' },
   { name: 'Booking.com', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Booking.com_logo.svg/320px-Booking.com_logo.svg.png' },
@@ -20,12 +34,30 @@ const platforms = [
   { name: 'Mastercard', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/320px-Mastercard-logo.svg.png' },
 ]
 
-const stats = [
-  { value: '10,000+', label: 'Happy Travellers' },
-  { value: '150+', label: 'Destinations' },
-  { value: '12+', label: 'Years Experience' },
-  { value: '98%', label: 'Satisfaction Rate' },
-]
+const displayAirlines = computed(() => airlines.value.length ? airlines.value : fallbackAirlines)
+const displayPlatforms = computed(() => platforms.value.length ? platforms.value : fallbackPlatforms)
+
+const marqueeAirlines = computed(() => new Array(6).fill(displayAirlines.value).flat())
+const marqueePlatforms = computed(() => new Array(6).fill(displayPlatforms.value).flat())
+
+onMounted(async () => {
+  await partnersStore.fetchAll()
+  await nextTick()
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('reveal-visible')
+          observer.unobserve(entry.target)
+        }
+      })
+    },
+    { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+  )
+
+  document.querySelectorAll('.reveal').forEach((el) => observer.observe(el))
+})
 </script>
 
 <template>
@@ -46,12 +78,7 @@ const stats = [
       <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mb-16 reveal">
         <div class="flex items-center gap-4 bg-white border border-gray-200 rounded-2xl px-6 py-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 w-full sm:w-auto sm:min-w-[300px]">
           <div class="w-16 h-16 rounded-xl bg-primary flex items-center justify-center shrink-0">
-            <img
-              src="https://logowik.com/content/uploads/images/542_iata.jpg"
-              alt="IATA Accredited Agent"
-              class="h-10 w-auto object-contain"
-            />
-            <span class="hidden text-white font-black text-xl tracking-tighter">IATA</span>
+            <img src="https://logowik.com/content/uploads/images/542_iata.jpg" alt="IATA Accredited Agent" class="h-10 w-auto object-contain" />
           </div>
           <div class="flex flex-col flex-1">
             <span class="text-sm font-bold text-gray-900 leading-tight">IATA Accredited</span>
@@ -69,12 +96,7 @@ const stats = [
 
         <div class="flex items-center gap-4 bg-white border border-gray-200 rounded-2xl px-6 py-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 w-full sm:w-auto sm:min-w-[300px]">
           <div class="w-16 h-16 rounded-xl bg-[#006B3F] flex items-center justify-center shrink-0">
-            <img
-              src="https://nanta.org.ng/images/icon.png"
-              alt="NANTA Member"
-              class="h-10 w-auto object-contain"
-            />
-            <span class="hidden text-white font-black text-lg tracking-tighter">NANTA</span>
+            <img src="https://nanta.org.ng/images/icon.png" alt="NANTA Member" class="h-10 w-auto object-contain" />
           </div>
           <div class="flex flex-col flex-1">
             <span class="text-sm font-bold text-gray-900 leading-tight">NANTA Member</span>
@@ -96,7 +118,7 @@ const stats = [
       <div class="overflow-hidden [mask-image:linear-gradient(to_right,transparent_0%,black_8%,black_92%,transparent_100%)] mb-6 reveal">
         <div class="flex gap-16 w-max animate-[marquee-left_30s_linear_infinite]">
           <div
-            v-for="(partner, i) in [...airlines, ...airlines]"
+            v-for="(partner, i) in [...marqueeAirlines, ...marqueeAirlines]"
             :key="`airline-${i}`"
             class="flex items-center justify-center h-10 shrink-0"
           >
@@ -116,7 +138,7 @@ const stats = [
       <div class="overflow-hidden [mask-image:linear-gradient(to_right,transparent_0%,black_8%,black_92%,transparent_100%)] reveal">
         <div class="flex gap-16 w-max animate-[marquee-right_28s_linear_infinite]">
           <div
-            v-for="(partner, i) in [...platforms, ...platforms]"
+            v-for="(partner, i) in [...marqueePlatforms, ...marqueePlatforms]"
             :key="`platform-${i}`"
             class="flex items-center justify-center h-10 shrink-0"
           >
@@ -137,7 +159,7 @@ const stats = [
     <div class="bg-gray-50 border-y border-gray-100 py-10 reveal">
       <div class="container mx-auto px-4">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          <div v-for="stat in stats" :key="stat.label" class="flex flex-col gap-1">
+          <div v-for="stat in statsList" :key="stat.label" class="flex flex-col gap-1">
             <span class="text-3xl font-extrabold text-primary leading-none">{{ stat.value }}</span>
             <span class="text-xs font-medium text-gray-500 tracking-widest uppercase">{{ stat.label }}</span>
           </div>

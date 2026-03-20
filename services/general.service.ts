@@ -1,5 +1,5 @@
 import { ApiResponse } from "../types/api"
-import { AirportProtocolData, AirportProtocolResponse, AirpotTransferData, AirpotTransferResponse, ContactUsData, ContactUsResponse, HotDealResponse, NewsLetterData, NewsLetterResponse, PackageResponse, TourGuideData, TourGuideResponse, TravelInsuranceData, TravelInsuranceResponse } from "../types/general"
+import { AboutUsResponse, AirportProtocolData, AirportProtocolResponse, AirpotTransferData, AirpotTransferResponse, ContactUsData, ContactUsResponse, HeroSectionResponse, HotDealResponse, NewsLetterData, NewsLetterResponse, PackageResponse, PartnersResponse, StatsResponse, TourGuideData, TourGuideResponse, TravelInsuranceData, TravelInsuranceResponse } from "../types/general"
 import { useApi } from "../utils/api"
 
 export function useGeneralService() {
@@ -80,6 +80,38 @@ export function useGeneralService() {
                 method: 'POST',
                 body: data,
             })
+            return res.data
+        },
+
+        async getAbout(): Promise<AboutUsResponse> {
+            const res = await $api<ApiResponse<AboutUsResponse>>('/about-us', {
+                method: 'GET'
+            })
+
+            return res.data
+        },
+
+        async getHeroSection(): Promise<HeroSectionResponse> {
+            const res = await $api<ApiResponse<HeroSectionResponse>>('/services/hero-section', {
+                method: 'GET'
+            })
+
+            return res.data
+        },
+
+        async getStats(): Promise<StatsResponse> {
+            const res = await $api<ApiResponse<StatsResponse>>('/services/stats', {
+                method: 'GET'
+            })
+
+            return res.data
+        },
+
+        async getPartners(): Promise<PartnersResponse[]> {
+            const res = await $api<ApiResponse<PartnersResponse[]>>('/services/partner', {
+                method: 'GET'
+            })
+
             return res.data
         },
     }

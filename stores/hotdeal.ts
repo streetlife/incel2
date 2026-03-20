@@ -19,9 +19,7 @@ export const useHotDealsStore = defineStore('hotDeals', () => {
     const error = ref(false)
     const fetched = ref(false)
 
-    const activeDeals = computed(() =>
-        deals.value.filter(d => d.is_active === 1)
-    )
+    const activeDeals = computed(() => deals.value)
 
     async function fetchDeals(force = false) {
         if (fetched.value && !force) return

@@ -5,9 +5,10 @@
         :src="heroImage"
         :alt="package.package_name"
         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+        @error="onImageError"
       />
       <div class="absolute top-4 left-4">
-        <span class="badge-primary">{{ package.category }}</span>
+        <span class="badge-success">{{ package.category }}</span>
       </div>
     </div>
 
@@ -84,6 +85,15 @@ const heroImage = computed(() => {
     'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80'
   )
 })
+
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80'
+
+function onImageError(event: Event) {
+  const img = event.target as HTMLImageElement
+  if (img.src !== FALLBACK_IMAGE) {
+    img.src = FALLBACK_IMAGE
+  }
+}
 
 function formatDate(dateStr: string) {
   if (!dateStr) return ''

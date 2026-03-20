@@ -152,3 +152,47 @@ export interface NewsLetterData {
 export interface NewsLetterResponse {
     email: string,
 }
+
+export interface AboutUsResponse {
+    banner_title: string,
+    banner_description: string,
+    banner_image: string,
+    company_story: ICompanyStory,
+    mission: string,
+    core_values: ICoreValues[],
+    our_promise: IOurPromise[],
+}
+
+interface ICompanyStory {
+    story: string
+    story_image: string
+}
+
+interface ICoreValues {
+    title: string
+    description: string
+}
+
+interface IOurPromise {
+    title: string
+    description: string
+}
+
+export interface HeroSectionResponse {
+    title: string,
+    description: string,
+    video_url: string,
+}
+
+export interface StatsResponse {
+    destinations: string,
+    years_of_experience: string,
+    happy_travellers: string,
+    statisfaction_rate: string
+}
+
+export interface PartnersResponse {
+    name: string,
+    logo: string,
+    type: string, // airline or partner
+}

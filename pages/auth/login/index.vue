@@ -28,7 +28,9 @@ const redirect = computed(() => (route.query.redirect as string) || '/dashboard'
 function validate() {
   errors.value = {}
   if (!email.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) errors.value.email = 'Valid email required'
-  if (password.value.length < 6) errors.value.password = 'Minimum 6 characters'
+  if (!password.value?.trim()) {
+    errors.value.password = 'Password cannot be empty'
+  }
   return Object.keys(errors.value).length === 0
 }
 

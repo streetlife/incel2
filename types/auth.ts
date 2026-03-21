@@ -44,3 +44,23 @@ export interface VerifyEmailResponse {
 export interface ResendVerificationData {
     email_address: string
 }
+
+export interface UserProfileResponse {
+    id: number,
+    usercode: string,
+    full_names: string,
+    email_address: string,
+    mobile_number: string,
+}
+
+export interface UpdateProfileData {
+    full_names: string,
+    email_address: string,
+    mobile_number: string,
+}
+
+export interface ChangePasswordData {
+    old_password: string,
+    new_password: string,
+    new_password_confirmation: string,
+}

@@ -6,7 +6,7 @@ import { LoginResponse, SignUpResponse, VerifyEmailResponse } from '../types/aut
 export interface AuthUser {
   id?: string
   full_names: string
-  email_address: string
+  email: string
   mobile_number?: string
   usercode?: string
   role?: 'CUSTOMER' | 'agent' | 'admin'
@@ -22,7 +22,7 @@ export const useAuthStore = defineStore(
     const error = ref<string>('')
     const authService = useAuthService()
 
-    const isLoggedIn = computed((): boolean => !!token.value && !!user.value)
+    const isLoggedIn = computed((): boolean => !!token.value)
     const isAgent = computed((): boolean => user.value?.role === 'agent')
     const isAdmin = computed((): boolean => user.value?.role === 'admin')
     const displayName = computed((): string =>
@@ -32,6 +32,8 @@ export const useAuthStore = defineStore(
       user.value ? `${user.value.full_names[0]}`.toUpperCase() : ''
     )
 
+    const isHydrated = ref(false)
+
     async function login(email: string, password: string): Promise<LoginResponse> {
       try {
         const response = await authService.login({
@@ -39,24 +41,30 @@ export const useAuthStore = defineStore(
           password: password,
         })
 
-        if (response) {
-          user.value = {
-            full_names: response.full_names,
-            email_address: response.email,
-            usercode: response.usercode
-          }
-          token.value = response.token
+        if (!response?.token) {
+          throw new Error('Invalid login response')
+        }
+
+        token.value = response.token
+
+        const res = await getProfile()
+
+        user.value = {
+          full_names: res.full_names,
+          email: res.email_address,
+          usercode: res.usercode,
+          mobile_number: res.mobile_number,
         }
 
         return response
       } catch (err: any) {
-        throw new Error(err)
+        throw err
       }
     }
 
     async function register(data: {
       full_names: string
-      email_address: string
+      email: string
       mobile_number: string
       password: string
       password_confirmation: string
@@ -65,7 +73,7 @@ export const useAuthStore = defineStore(
       try {
         return await authService.signUp({
           full_names: data.full_names,
-          email_address: data.email_address,
+          email_address: data.email,
           mobile_number: data.mobile_number,
           password: data.password,
           password_confirmation: data.password_confirmation
@@ -98,34 +106,77 @@ export const useAuthStore = defineStore(
       }
     }
 
-    async function updateProfile(data: Partial<AuthUser>): Promise<boolean> {
+    async function updateProfile(data: { full_names: string, email_address: string, mobile_number: string }): Promise<boolean> {
       loading.value = true
       error.value = ''
 
       try {
-        await new Promise(r => setTimeout(r, 700))
-        if (user.value) Object.assign(user.value, data)
+        const response = await authService.updateProfile(data)
+
+        if (!response.id) {
+          throw new Error('There was an error updating')
+        }
+
+        const res = await getProfile()
+
+        user.value = {
+          full_names: res.full_names,
+          email: res.email_address,
+          usercode: res.usercode,
+          mobile_number: res.mobile_number,
+        }
+
         return true
       } finally {
         loading.value = false
       }
     }
 
-    async function changePassword(_old: string, _new: string): Promise<boolean> {
+    async function changePassword(
+      data: { old_password: string, new_password: string, new_password_confirmation: string }
+    ): Promise<boolean> {
       loading.value = true
       error.value = ''
 
       try {
-        await new Promise(r => setTimeout(r, 700))
+        await authService.changePassword(data)
         return true
+      } catch (e: any) {
+        throw new Error(e)
       } finally {
         loading.value = false
       }
     }
 
-    function logout() {
-      user.value = null
-      token.value = ''
+    async function getProfile() {
+      return await authService.getProfile()
+    }
+
+    async function init() {
+      if (token.value && !user.value) {
+        try {
+          const res = await authService.getProfile()
+
+          user.value = {
+            full_names: res.full_names,
+            email: res.email_address,
+            usercode: res.usercode,
+            mobile_number: res.mobile_number,
+          }
+        } catch {
+          logout()
+        }
+      }
+    }
+
+    async function logout() {
+      try {
+        await authService.logout()
+        user.value = null
+        token.value = ''
+      } catch (e: any) {
+        throw e
+      }
     }
 
     return {
@@ -138,13 +189,16 @@ export const useAuthStore = defineStore(
       isAdmin,
       displayName,
       initials,
+      isHydrated,
       login,
       register,
       verifyEmail,
       forgotPassword,
       updateProfile,
       changePassword,
-      logout
+      logout,
+      getProfile,
+      init,
     }
   },
   {

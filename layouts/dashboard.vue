@@ -2,10 +2,15 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useToast } from '../composables/useToast'
+import { normaliseError } from '../utils/api'
+import AppToast from '../components/toast/AppToast.vue'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const toast = useToast()
+const loggingOut = ref(false)
 
 const sidebarOpen = ref(false)
 
@@ -17,7 +22,7 @@ const navItems = [
   { label: 'Tours', to: '/dashboard/bookings?type=tour', icon: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z' },
   { label: 'Visa', to: '/dashboard/bookings?type=visa', icon: 'M15 9a2 2 0 10-4 0v5a2 2 0 01-2 2h6m-6-4h4m8 0a9 9 0 11-18 0 9 9 0 0118 0z' },
   { label: 'Profile', to: '/dashboard/profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-  { label: 'Notifications', to: '/dashboard/notifications', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
+  //{ label: 'Notifications', to: '/dashboard/notifications', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
 ]
 
 const agentItems = [
@@ -33,20 +38,27 @@ const isActive = (to: string) => {
   return route.path === to
 }
 
-function doLogout() { auth.logout(); router.push('/auth/login') }
+async function doLogout() { 
+  try {
+    loggingOut.value = true
+    await auth.logout();
+
+    toast.success('Logout successful')
+    router.push('/auth/login')
+  } catch (e) {
+    const err = normaliseError(e)
+    toast.error(err)
+  }
+}
 </script>
 
 <template>
+  <AppToast />
   <div class="flex h-screen bg-slate-100 overflow-hidden">
-
-    <!-- Mobile overlay -->
     <div v-if="sidebarOpen" class="fixed inset-0 z-20 bg-black/50 lg:hidden" @click="sidebarOpen = false"></div>
 
-    <!-- Sidebar -->
     <aside class="fixed lg:static inset-y-0 left-0 z-30 flex flex-col w-64 bg-slate-900 text-white transition-transform duration-300 lg:translate-x-0"
       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
-
-      <!-- Logo -->
       <div class="px-5 py-5 border-b border-white/10">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shrink-0">
@@ -61,7 +73,6 @@ function doLogout() { auth.logout(); router.push('/auth/login') }
         </div>
       </div>
 
-      <!-- Navigation -->
       <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
         <template v-for="item in navItems" :key="item.to">
           <div v-if="item.label === 'Profile'" class="border-t border-white/10 my-3"></div>
@@ -78,7 +89,6 @@ function doLogout() { auth.logout(); router.push('/auth/login') }
           </NuxtLink>
         </template>
 
-        <!-- Agent-only items -->
         <template v-if="auth.isAgent">
           <div class="border-t border-white/10 my-3 pt-1">
             <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500 px-3 mb-2">Agent Tools</p>
@@ -97,7 +107,6 @@ function doLogout() { auth.logout(); router.push('/auth/login') }
         </template>
       </nav>
 
-      <!-- User pill -->
       <div class="px-3 py-4 border-t border-white/10">
         <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10 transition-colors">
           <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
@@ -108,9 +117,18 @@ function doLogout() { auth.logout(); router.push('/auth/login') }
             <p class="text-xs text-slate-400 truncate">{{ auth.user?.email }}</p>
           </div>
           <button
-            class="text-slate-500 hover:text-red-400 transition-colors bg-transparent border-none cursor-pointer p-0 shrink-0"
-            title="Sign out" @click="doLogout">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            class="text-slate-500 hover:text-red-400 transition-colors bg-transparent border-none cursor-pointer p-0 shrink-0 disabled:opacity-50"
+            title="Sign out"
+            :disabled="loggingOut"
+            @click="doLogout">
+
+            <svg v-if="loggingOut"
+              class="animate-spin text-red-400" width="16" height="16"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+
+            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
             </svg>
           </button>
@@ -118,10 +136,7 @@ function doLogout() { auth.logout(); router.push('/auth/login') }
       </div>
     </aside>
 
-    <!-- Main area -->
     <div class="flex-1 flex flex-col overflow-hidden">
-
-      <!-- Top bar -->
       <header class="bg-white border-b border-slate-200 px-4 md:px-6 py-3.5 flex items-center gap-4 shrink-0">
         <button class="lg:hidden p-2 rounded-lg hover:bg-slate-100 cursor-pointer bg-transparent border-none"
           @click="sidebarOpen = true">
@@ -140,17 +155,9 @@ function doLogout() { auth.logout(); router.push('/auth/login') }
             </svg>
             New Booking
           </NuxtLink>
-          <NuxtLink to="/dashboard/notifications"
-            class="relative p-2 rounded-lg hover:bg-slate-100 no-underline text-slate-600">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-            </svg>
-            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-          </NuxtLink>
         </div>
       </header>
 
-      <!-- Page content -->
       <main class="flex-1 overflow-y-auto p-4 md:p-6">
         <slot />
       </main>

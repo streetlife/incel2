@@ -1,5 +1,5 @@
 import { ApiResponse } from "../types/api"
-import { AboutUsResponse, AirportProtocolData, AirportProtocolResponse, AirpotTransferData, AirpotTransferResponse, ContactUsData, ContactUsResponse, HeroSectionResponse, HotDealResponse, NewsLetterData, NewsLetterResponse, PackageResponse, PartnersResponse, StatsResponse, TourGuideData, TourGuideResponse, TravelInsuranceData, TravelInsuranceResponse } from "../types/general"
+import { AboutUsResponse, AirportProtocolData, AirportProtocolResponse, AirpotTransferData, AirpotTransferResponse, ContactUsData, ContactUsResponse, HeroSectionResponse, HotDealResponse, NewsLetterData, NewsLetterResponse, PackageResponse, PartnersResponse, ReviewsResponse, StatsResponse, TourGuideData, TourGuideResponse, TravelInsuranceData, TravelInsuranceResponse } from "../types/general"
 import { useApi } from "../utils/api"
 
 export function useGeneralService() {
@@ -109,6 +109,14 @@ export function useGeneralService() {
 
         async getPartners(): Promise<PartnersResponse[]> {
             const res = await $api<ApiResponse<PartnersResponse[]>>('/services/partner', {
+                method: 'GET'
+            })
+
+            return res.data
+        },
+
+        async getReviews(): Promise<ReviewsResponse[]> {
+            const res = await $api<ApiResponse<ReviewsResponse[]>>('/reviews', {
                 method: 'GET'
             })
 

@@ -1,65 +1,88 @@
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
+import { computed, onMounted, nextTick } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useReviewsStore } from '../stores/reviews'
+import type { ReviewsResponse } from '../types/general'
 
-const activeVideo = ref(null)
-const openVideo = (video) => { activeVideo.value = video }
+const reviewsStore = useReviewsStore()
+const { reviews, isLoading } = storeToRefs(reviewsStore)
 
-const textReviews = [
+const avatarColors = ['#7c3aed', '#0891b2', '#059669', '#dc2626', '#d97706', '#0f766e']
+
+const getInitials = (firstName: string, lastName: string) =>
+  `${firstName?.charAt(0) ?? ''}${lastName?.charAt(0) ?? ''}`.toUpperCase()
+
+const getAvatarColor = (index: number) => avatarColors[index % avatarColors.length]
+
+const formatDate = (dateStr: string) => {
+  try {
+    return new Date(dateStr).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+  } catch { return '' }
+}
+
+const fallbackReviews = [
   {
-    name: 'Adaeze Okonkwo', initials: 'AO', avatarColor: '#7c3aed',
-    destination: 'Dubai, UAE', date: 'Feb 2025', rating: 5, featured: true, verified: true,
-    text: 'Absolutely seamless from start to finish. My visa was processed in 3 days and the hotel they recommended was incredible. Will definitely book again for my Maldives trip!',
+    first_name: 'Adaeze', last_name: 'Okonkwo', rating: '5',
+    review: 'Absolutely seamless from start to finish. My visa was processed in 3 days and the hotel they recommended was incredible. Will definitely book again!',
+    country: 'Dubai, UAE', created_at: '2025-02-01',
   },
   {
-    name: 'Emeka Chukwu', initials: 'EC', avatarColor: '#0891b2',
-    destination: 'London, UK', date: 'Jan 2025', rating: 5, featured: false, verified: true,
-    text: 'The team handled every detail of my business trip including my UK visa. Professional, prompt and very affordable. Highly recommend to anyone travelling from Nigeria.',
+    first_name: 'Emeka', last_name: 'Chukwu', rating: '5',
+    review: 'The team handled every detail of my business trip including my UK visa. Professional, prompt and very affordable. Highly recommend.',
+    country: 'London, UK', created_at: '2025-01-01',
   },
   {
-    name: 'Fatima Al-Hassan', initials: 'FA', avatarColor: '#059669',
-    destination: 'Istanbul, Turkey', date: 'Dec 2024', rating: 5, featured: false, verified: true,
-    text: 'I was nervous travelling abroad alone for the first time but the travel package was so well put together. Hotel transfers, tours, everything. Felt completely safe.',
+    first_name: 'Fatima', last_name: 'Al-Hassan', rating: '5',
+    review: 'I was nervous travelling abroad alone for the first time but the travel package was so well put together. Felt completely safe.',
+    country: 'Istanbul, Turkey', created_at: '2024-12-01',
   },
   {
-    name: 'Biodun Adeleke', initials: 'BA', avatarColor: '#dc2626',
-    destination: 'Maldives', date: 'Nov 2024', rating: 5, featured: true, verified: true,
-    text: 'Honeymoon trip to the Maldives — they exceeded every expectation. From the overwater bungalow to the private sunset cruise. Pure magic. Thank you!',
+    first_name: 'Biodun', last_name: 'Adeleke', rating: '5',
+    review: 'Honeymoon trip to the Maldives — they exceeded every expectation. From the overwater bungalow to the private sunset cruise. Pure magic.',
+    country: 'Maldives', created_at: '2024-11-01',
   },
   {
-    name: 'Ngozi Peters', initials: 'NP', avatarColor: '#d97706',
-    destination: 'Paris, France', date: 'Oct 2024', rating: 5, featured: false, verified: true,
-    text: 'Got my Schengen visa approved on first attempt. The documentation guidance was spot on. The Paris itinerary they planned was also absolutely wonderful.',
+    first_name: 'Ngozi', last_name: 'Peters', rating: '5',
+    review: 'Got my Schengen visa approved on first attempt. The documentation guidance was spot on. The Paris itinerary they planned was wonderful.',
+    country: 'Paris, France', created_at: '2024-10-01',
   },
   {
-    name: 'Tunde Williams', initials: 'TW', avatarColor: '#7c3aed',
-    destination: 'Saudi Arabia', date: 'Sep 2024', rating: 5, featured: false, verified: true,
-    text: 'Umrah package was flawlessly organised. Flights, accommodation in Makkah and Madinah, everything was handled. A deeply spiritual and stress-free experience.',
+    first_name: 'Tunde', last_name: 'Williams', rating: '5',
+    review: 'Umrah package was flawlessly organised. Flights, accommodation in Makkah and Madinah, everything handled. A deeply spiritual experience.',
+    country: 'Saudi Arabia', created_at: '2024-09-01',
   },
 ]
 
-const videoReviews = [
-  {
-    name: 'Chisom Eze', initials: 'CE', avatarColor: '#7c3aed',
-    destination: 'Dubai, UAE', duration: '1:24',
-    caption: "I couldn't believe how smooth the whole process was — from booking to landing in Dubai. Watch my full experience!",
-    embedUrl: '', // e.g. https://www.youtube.com/embed/VIDEO_ID?autoplay=1
-    thumbnail: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&q=80',
-  },
-  {
-    name: 'Olumide Bankole', initials: 'OB', avatarColor: '#0891b2',
-    destination: 'London, UK', duration: '2:05',
-    caption: 'My UK visa story — rejected twice before, approved first try with their help. This review is long overdue.',
-    embedUrl: '',
-    thumbnail: 'https://images.unsplash.com/photo-1529655683826-aba9b3e77383?w=600&q=80',
-  },
-  {
-    name: 'Amina Yusuf', initials: 'AY', avatarColor: '#059669',
-    destination: 'Istanbul, Turkey', duration: '1:48',
-    caption: "A solo female traveller's honest review of the Istanbul tour package. Safe, stunning, and so worth it.",
-    embedUrl: '',
-    thumbnail: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=600&q=80',
-  },
-]
+const displayReviews = computed<ReviewsResponse[]>(() =>
+  reviews.value.length ? reviews.value : fallbackReviews as ReviewsResponse[]
+)
+
+const averageRating = computed(() => {
+  if (!displayReviews.value.length) return 0
+  const sum = displayReviews.value.reduce((acc, r) => acc + Number(r.rating), 0)
+  return Math.round((sum / displayReviews.value.length) * 10) / 10
+})
+
+const totalReviews = computed(() => displayReviews.value.length)
+
+onMounted(async () => {
+  await reviewsStore.fetchReviews()
+  await nextTick()
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('reveal-visible')
+          observer.unobserve(entry.target)
+        }
+      })
+    },
+    { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+  )
+
+  document.querySelectorAll('.reveal').forEach((el) => observer.observe(el))
+})
 </script>
 
 <template>
@@ -76,105 +99,88 @@ const videoReviews = [
 
         <div class="inline-flex items-center gap-2 mt-6 bg-white border border-gray-200 rounded-full px-5 py-2 shadow-sm">
           <div class="flex">
-            <svg v-for="i in 5" :key="i" class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+            <svg
+              v-for="i in 5"
+              :key="i"
+              class="w-4 h-4 transition-colors duration-200"
+              :class="i <= Math.round(averageRating) ? 'text-amber-400' : 'text-gray-200'"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
             </svg>
           </div>
-          <span class="text-sm font-semibold text-gray-800">4.9 out of 5</span>
-          <span class="text-sm text-gray-400">· 1,200+ reviews</span>
+          <span class="text-sm font-semibold text-gray-800">{{ averageRating }} out of 5</span>
+          <span class="text-sm text-gray-400">· {{ totalReviews.toLocaleString() }}+ reviews</span>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 reveal">
+      <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
         <div
-          v-for="(review, i) in textReviews"
+          v-for="i in 6" :key="i"
+          class="bg-white rounded-2xl p-6 border border-gray-200 animate-pulse"
+        >
+          <div class="h-4 bg-gray-100 rounded w-1/4 mb-4"></div>
+          <div class="space-y-2 mb-6">
+            <div class="h-3 bg-gray-100 rounded w-full"></div>
+            <div class="h-3 bg-gray-100 rounded w-5/6"></div>
+            <div class="h-3 bg-gray-100 rounded w-4/6"></div>
+          </div>
+          <div class="flex items-center gap-3 pt-4 border-t border-gray-100">
+            <div class="w-10 h-10 rounded-full bg-gray-100"></div>
+            <div class="flex-1 space-y-1.5">
+              <div class="h-3 bg-gray-100 rounded w-1/2"></div>
+              <div class="h-2.5 bg-gray-100 rounded w-1/3"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 reveal">
+        <div
+          v-for="(review, i) in displayReviews"
           :key="i"
           class="flex flex-col bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-          :class="review.featured ? 'border-[1.5px] border-primary' : 'border border-gray-200'"
+          :class="i === 0 || i === 3 ? 'border-[1.5px] border-primary' : 'border border-gray-200'"
         >
           <svg class="w-8 h-8 text-primary/20 mb-4 shrink-0" fill="currentColor" viewBox="0 0 32 32">
             <path d="M10 8C5.6 8 2 11.6 2 16v8h8v-8H5.8C5.9 13.8 7.7 12 10 12V8zm14 0c-4.4 0-8 3.6-8 8v8h8v-8h-4.2c.1-2.2 1.9-4 4.2-4V8z"/>
           </svg>
 
           <div class="flex mb-3">
-            <svg v-for="s in review.rating" :key="s" class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+            <svg
+              v-for="s in Number(review.rating)"
+              :key="s"
+              class="w-4 h-4 text-amber-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
             </svg>
           </div>
 
-          <p class="text-gray-700 text-sm leading-relaxed flex-1 mb-5">"{{ review.text }}"</p>
+          <p class="text-gray-700 text-sm leading-relaxed flex-1 mb-5">"{{ review.review }}"</p>
 
           <div class="flex items-center gap-3 pt-4 border-t border-gray-100">
             <div
               class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              :style="{ background: review.avatarColor }"
+              :style="{ background: getAvatarColor(i) }"
             >
-              <span class="text-white font-bold text-sm">{{ review.initials }}</span>
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-semibold text-gray-900 truncate">{{ review.name }}</p>
-              <p class="text-xs text-gray-400 truncate">{{ review.destination }} · {{ review.date }}</p>
-            </div>
-            <span
-              v-if="review.verified"
-              class="shrink-0 text-[0.65rem] font-semibold text-green-600 bg-green-50 rounded-full px-2 py-0.5 whitespace-nowrap"
-            >
-              ✓ Verified
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div class="reveal">
-        <p class="text-center text-xs font-semibold tracking-[0.2em] uppercase text-gray-400 mb-6">
-          Video Testimonials
-        </p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div
-            v-for="(video, i) in videoReviews"
-            :key="i"
-            class="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
-            @click="openVideo(video)"
-          >
-            <div class="relative aspect-video overflow-hidden">
-              <img
-                :src="video.thumbnail"
-                :alt="`Video review by ${video.name}`"
-                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent"></div>
-              <div class="absolute inset-0 flex items-center justify-center">
-                <div class="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/60 flex items-center justify-center hover:bg-primary hover:border-primary transition-all duration-200">
-                  <svg class="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.841z"/>
-                  </svg>
-                </div>
-              </div>
-              <span class="absolute bottom-2.5 right-2.5 text-[0.72rem] font-semibold text-white bg-black/55 backdrop-blur-sm rounded px-1.5 py-0.5">
-                {{ video.duration }}
+              <span class="text-white font-bold text-sm">
+                {{ getInitials(review.first_name, review.last_name) }}
               </span>
             </div>
-
-            <div class="p-4">
-              <div class="flex items-center gap-2 mb-2">
-                <div
-                  class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  :style="{ background: video.avatarColor }"
-                >
-                  <span class="text-white font-bold text-xs">{{ video.initials }}</span>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-semibold text-gray-900 truncate">{{ video.name }}</p>
-                  <p class="text-xs text-gray-400 truncate">{{ video.destination }}</p>
-                </div>
-                <div class="flex shrink-0">
-                  <svg v-for="s in 5" :key="s" class="w-3 h-3 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                  </svg>
-                </div>
-              </div>
-              <p class="text-xs text-gray-500 leading-relaxed line-clamp-2">{{ video.caption }}</p>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-gray-900 truncate">
+                {{ review.first_name }} {{ review.last_name }}
+              </p>
+              <p class="text-xs text-gray-400 truncate">
+                {{ review.country }} · {{ formatDate(review.created_at) }}
+              </p>
             </div>
+            <span class="shrink-0 text-[0.65rem] font-semibold text-green-600 bg-green-50 rounded-full px-2 py-0.5 whitespace-nowrap">
+              ✓ Verified
+            </span>
           </div>
         </div>
       </div>
@@ -193,7 +199,8 @@ const videoReviews = [
       </div>
     </div>
 
-    <Transition
+    <!-- Video modal (unchanged) -->
+    <!-- <Transition
       enter-active-class="transition-opacity duration-200"
       leave-active-class="transition-opacity duration-200"
       enter-from-class="opacity-0"
@@ -213,7 +220,6 @@ const videoReviews = [
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
-
           <iframe
             v-if="activeVideo.embedUrl"
             :src="activeVideo.embedUrl"
@@ -222,14 +228,8 @@ const videoReviews = [
             allowfullscreen
             title="video"
           />
-          <div v-else class="w-full h-full flex flex-col items-center justify-center text-white">
-            <svg class="w-16 h-16 opacity-30 mb-4" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"/>
-            </svg>
-            <p class="text-sm opacity-60">Set <code class="opacity-80">embedUrl</code> on this video to display it here</p>
-          </div>
         </div>
       </div>
-    </Transition>
+    </Transition> -->
   </section>
 </template>

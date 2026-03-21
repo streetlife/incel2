@@ -103,12 +103,22 @@ export function useApi() {
 
       if (status === 401) {
         authStore.logout()
-        await router.push({ path: '/auth/login', query: { redirect: router.currentRoute.value.fullPath } })
-        throw new AppApiError({ message: 'Your session has expired. Please log in again.', status }, 401)
+        await router.push({ path: '/auth/login' })
+
+        const message = body.message || 'Your session has expired. Please log in again.'
+
+        throw new AppApiError({ message, status, errors: data?.errors }, 401)
       }
 
       if (status === 419) {
-        throw new AppApiError({ message: 'Security token expired. Please try again.', status }, 419)
+        throw new AppApiError(
+          {
+            message: body.message || 'Security token expired. Please try again.',
+            status,
+            errors: body.errors,
+          },
+          419
+        )
       }
 
       throw new AppApiError(body, status)

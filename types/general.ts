@@ -194,5 +194,14 @@ export interface StatsResponse {
 export interface PartnersResponse {
     name: string,
     logo: string,
-    type: string, // airline or partner
+    type: string,
+}
+
+export interface ReviewsResponse {
+    first_name: string,
+    last_name: string,
+    rating: string,
+    review: string
+    country: string
+    created_at: string
 }

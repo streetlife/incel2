@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useAuthStore } from '../../../stores/auth'
+import { useToast } from '../../../composables/useToast'
+import { normaliseError } from '../../../utils/api'
+import AppToast from '../../../components/toast/AppToast.vue'
 
 definePageMeta({
   layout: 'dashboard',
@@ -10,28 +13,33 @@ definePageMeta({
 
 const auth = useAuthStore()
 
-const activeTab = ref<'profile' | 'security' | 'preferences'>('profile')
+const activeTab = ref<'profile' | 'security'>('profile')
+const toast = useToast()
 
-// Initialise form from Pinia state — auth.user is a plain object, no .value needed
 const profile = reactive({
-  firstName: auth.user?.firstName || '',
-  lastName: auth.user?.lastName || '',
+  full_names: auth.user?.full_names || '',
   email: auth.user?.email || '',
-  phone: auth.user?.phone || '',
-  agencyName: auth.user?.agencyName || '',
+  phone: auth.user?.mobile_number || '',
 })
 
 const passwords = reactive({ current: '', newPass: '', confirm: '' })
-const profileSaved = ref(false)
-const passwordSaved = ref(false)
 const pwErrors = ref<Record<string, string>>({})
 const showCurrentPw = ref(false)
 const showNewPw = ref(false)
 
 async function saveProfile() {
-  await auth.updateProfile({ ...profile })
-  profileSaved.value = true
-  setTimeout(() => profileSaved.value = false, 3000)
+  try {
+    await auth.updateProfile({
+      full_names: profile.full_names,
+      email_address: profile.email,
+      mobile_number: profile.phone
+    })
+
+    toast.success('Updated successfully')
+  } catch (e) {
+    const err = normaliseError(e)
+    toast.error(err)
+  }
 }
 
 async function savePassword() {
@@ -40,10 +48,22 @@ async function savePassword() {
   if (passwords.newPass.length < 8) pwErrors.value.newPass = 'Min. 8 characters'
   if (passwords.newPass !== passwords.confirm) pwErrors.value.confirm = 'Passwords do not match'
   if (Object.keys(pwErrors.value).length > 0) return
-  await auth.changePassword(passwords.current, passwords.newPass)
-  passwordSaved.value = true
-  passwords.current = passwords.newPass = passwords.confirm = ''
-  setTimeout(() => passwordSaved.value = false, 3000)
+
+
+  try {
+    await auth.changePassword({
+      old_password: passwords.current,
+      new_password: passwords.newPass,
+      new_password_confirmation: passwords.confirm
+    })
+
+    passwords.current = passwords.newPass = passwords.confirm = ''
+
+    toast.success('Password updated successfully')
+  } catch (e) {
+    const err = normaliseError(e)
+    toast.error(err)
+  }
 }
 
 const fieldCls = (k?: string) =>
@@ -52,10 +72,9 @@ const fieldCls = (k?: string) =>
 </script>
 
 <template>
+  <AppToast />
   <div class="space-y-5">
     <h1 class="text-2xl font-bold text-slate-900">Profile & Settings</h1>
-
-    <!-- Avatar strip -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-5 flex items-center gap-5">
       <div class="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-2xl font-bold text-slate-900 shrink-0">
         {{ auth.initials }}
@@ -73,12 +92,10 @@ const fieldCls = (k?: string) =>
       </button>
     </div>
 
-    <!-- Tabs -->
     <div class="flex gap-1 bg-slate-100 rounded-xl p-1">
       <button v-for="t in [
           { key: 'profile', label: 'Personal Info'},
           { key: 'security', label: 'Password'},
-          { key: 'preferences', label: 'Preferences'},
         ]" :key="t.key"
         class="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer border-none"
         :class="activeTab === t.key ? 'bg-white text-slate-900 shadow' : 'text-slate-500 hover:text-slate-700 bg-transparent'"
@@ -89,31 +106,18 @@ const fieldCls = (k?: string) =>
 
     <!-- ── Personal Info ──────────────────────────────────────────────────── -->
     <div v-if="activeTab === 'profile'" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
-      <div v-if="profileSaved" class="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
-        <p class="text-sm text-green-700 font-medium">Profile saved successfully.</p>
-      </div>
-
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label for="firstName" class="text-xs font-semibold text-slate-600 mb-1.5 block">First Name</label>
-          <input id="firstName" v-model="profile.firstName" type="text" :class="fieldCls()" />
-        </div>
-        <div>
-          <label for="lastName" class="text-xs font-semibold text-slate-600 mb-1.5 block">Last Name</label>
-          <input id="lastName" v-model="profile.lastName" type="text" :class="fieldCls()" />
-        </div>
         <div class="sm:col-span-2">
+          <label for="fullName" class="text-xs font-semibold text-slate-600 mb-1.5 block">Full Name</label>
+          <input id="fullName" v-model="profile.full_names" type="text" :class="fieldCls()" />
+        </div>
+        <div>
           <label for="email" class="text-xs font-semibold text-slate-600 mb-1.5 block">Email</label>
           <input id="email" v-model="profile.email" type="email" :class="fieldCls()" />
         </div>
-        <div class="sm:col-span-2">
+        <div>
           <label for="phone" class="text-xs font-semibold text-slate-600 mb-1.5 block">Phone Number</label>
           <input id="phone" v-model="profile.phone" type="tel" :class="fieldCls()" />
-        </div>
-        <div v-if="auth.user?.role === 'agent'" class="sm:col-span-2">
-          <label for="agencyName" class="text-xs font-semibold text-slate-600 mb-1.5 block">Agency Name</label>
-          <input id="agencyName" v-model="profile.agencyName" type="text" :class="fieldCls()" />
         </div>
       </div>
 
@@ -125,13 +129,7 @@ const fieldCls = (k?: string) =>
       </button>
     </div>
 
-    <!-- ── Password ───────────────────────────────────────────────────────── -->
     <div v-if="activeTab === 'security'" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
-      <div v-if="passwordSaved" class="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
-        <p class="text-sm text-green-700 font-medium">Password updated successfully.</p>
-      </div>
-
       <div>
         <label for="current" class="text-xs font-semibold text-slate-600 mb-1.5 block">Current Password</label>
         <div class="relative">
@@ -172,46 +170,6 @@ const fieldCls = (k?: string) =>
         :disabled="auth.loading" @click="savePassword">
         <svg v-if="auth.loading" class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
         Update Password
-      </button>
-    </div>
-
-    <!-- ── Preferences ────────────────────────────────────────────────────── -->
-    <div v-if="activeTab === 'preferences'" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
-      <div>
-        <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Email Notifications</p>
-        <div class="space-y-0">
-          <div v-for="pref in [
-              { label: 'Booking confirmations', sub: 'Invoice & voucher on every booking', checked: true},
-              { label: 'Booking status updates', sub: 'When a booking is confirmed or cancelled', checked: true},
-              { label: 'Promotional offers', sub: 'Deals and discounts relevant to you', checked: false},
-              { label: 'Price drop alerts', sub: 'When prices drop for saved routes', checked: false},
-            ]" :key="pref.label"
-            class="flex items-start justify-between gap-4 py-3.5 border-b border-slate-100 last:border-0">
-            <div>
-              <p class="text-sm font-medium text-slate-800">{{ pref.label }}</p>
-              <p class="text-xs text-slate-500 mt-0.5">{{ pref.sub }}</p>
-            </div>
-            <label :for="pref.label" class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
-              <input :id="pref.label" type="checkbox" :checked="pref.checked" class="sr-only peer" />
-              <div class="w-10 h-6 bg-slate-200 rounded-full peer peer-checked:bg-primary transition-colors"></div>
-              <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4"></div>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Display Currency</p>
-        <select class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white">
-          <option>Nigerian Naira (₦ NGN)</option>
-          <option>US Dollar ($ USD)</option>
-          <option>British Pound (£ GBP)</option>
-          <option>Euro (€ EUR)</option>
-        </select>
-      </div>
-
-      <button class="px-6 py-3 bg-primary hover:opacity-90 text-slate-900 font-bold text-sm rounded-xl border-none cursor-pointer">
-        Save Preferences
       </button>
     </div>
   </div>

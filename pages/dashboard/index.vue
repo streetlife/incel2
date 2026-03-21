@@ -33,7 +33,6 @@ const quickLinks = [
   { label: 'Apply for Visa', to: '/travel/visas', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0121 8v11a2 2 0 01-2 2z', bg: 'bg-rose-600' },
 ]
 
-// GET /api/bookings?limit=5&sort=recent
 const recentBookings = [
   { id: 'BK001', type: 'flight', ref: 'FLT-XQA42B', route: 'Lagos → London', date: '15 Mar 2025', status: 'confirmed', amount: '₦285,000' },
   { id: 'BK002', type: 'hotel', ref: 'HTL-Y8PQ11', route: 'Grand Hyatt, Dubai', date: '20 Feb 2025', status: 'confirmed', amount: '₦142,500' },
@@ -57,8 +56,6 @@ const typeIcon: Record<string, string> = {
 
 <template>
   <div class="space-y-6">
-
-    <!-- Greeting -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
         <h1 class="text-2xl font-bold text-slate-900">
@@ -68,7 +65,6 @@ const typeIcon: Record<string, string> = {
       </div>
     </div>
 
-    <!-- Stats -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <div v-for="s in stats" :key="s.label" class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" :class="s.color">
@@ -81,7 +77,6 @@ const typeIcon: Record<string, string> = {
       </div>
     </div>
 
-    <!-- Quick book -->
     <div>
       <h2 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Quick Book</h2>
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -98,7 +93,6 @@ const typeIcon: Record<string, string> = {
       </div>
     </div>
 
-    <!-- Recent bookings -->
     <div>
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-xs font-bold uppercase tracking-widest text-slate-500">Recent Bookings</h2>

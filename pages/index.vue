@@ -10,6 +10,8 @@
       <WhyChooseUs />
       <WhatsAppContact />
     </main>
+
+    <FlashDealPopup />
   </div>
 </template>
 
@@ -24,6 +26,7 @@ import WhyChooseUs from '../components/WhyChooseUs.vue'
 import WhatsAppContact from '../components/WhatsAppContact.vue'
 import TrustedPartners from '../components/TrustedPartners.vue'
 import CustomerReviews from '../components/CustomerReviews.vue'
+import FlashDealPopup from '../components/FlashDealPopup.vue'
 
 const { revealElements } = useScrollReveal()
 

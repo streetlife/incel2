@@ -1,8 +1,8 @@
 export const useScrollReveal = () => {
   const revealElements = () => {
-    if (process.client) {
+    if (import.meta.client) {
       const reveals = document.querySelectorAll('.reveal')
-      
+
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
@@ -14,13 +14,13 @@ export const useScrollReveal = () => {
         threshold: 0.1,
         rootMargin: '0px 0px -100px 0px'
       })
-      
+
       reveals.forEach(reveal => {
         observer.observe(reveal)
       })
     }
   }
-  
+
   return {
     revealElements
   }

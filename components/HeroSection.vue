@@ -32,7 +32,6 @@
       <h1 class="text-[3.5rem] sm:text-6xl md:text-7xl lg:text-[8rem] font-bold text-white tracking-tighter leading-[0.9] mix-blend-overlay opacity-90">
         {{ heroData?.title ?? 'DISCOVER' }}
         <br />
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-neutral-200 to-neutral-500">THE WORLD</span>
       </h1>
       <p class="text-base sm:text-lg md:text-xl text-white/70 max-w-xs sm:max-w-xl mx-auto font-light leading-relaxed mt-6 mb-10 animate-slide-up animation-delay-400">
         {{ heroData?.description ?? 'Visas, tours & curated packages at the best value' }}

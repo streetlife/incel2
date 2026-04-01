@@ -1,11 +1,9 @@
 <template>
   <div class="relative">
-    <!-- Label -->
     <label v-if="label" :for="id" class="block text-sm font-medium text-gray-700 mb-2">
       {{ label }}
     </label>
 
-    <!-- Trigger button -->
     <button
       :id="id"
       ref="triggerRef"
@@ -28,7 +26,6 @@
       </svg>
     </button>
 
-    <!-- Teleported dropdown -->
     <Teleport to="body">
       <div v-if="open" class="fixed inset-0 z-40" @click="open = false" />
 
@@ -38,7 +35,6 @@
         :style="dropdownStyle"
         class="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
       >
-        <!-- Rooms counter row -->
         <div class="flex items-center justify-between px-4 py-3.5 border-b border-gray-100">
           <div>
             <div class="font-medium text-gray-900">Rooms</div>
@@ -65,14 +61,12 @@
           </div>
         </div>
 
-        <!-- Per-room guest selectors -->
-        <div class="max-h-[420px] overflow-y-auto">
+        <div class="max-h-[480px] overflow-y-auto">
           <div
-            v-for="(roomGuests, i) in rooms"
+            v-for="(room, i) in rooms"
             :key="i"
             class="border-b border-gray-100 last:border-0"
           >
-            <!-- Room header -->
             <div class="flex items-center gap-2 px-4 pt-3.5 pb-2">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2">
                 <path d="M3 22V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14"/>
@@ -80,47 +74,95 @@
                 <rect x="9" y="15" width="6" height="7" rx="1"/>
                 <path d="M5 8V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/>
               </svg>
-              <span class="text-sm font-semibold text-gray-700">Room {{ i + 1 }} – Travellers</span>
+              <span class="text-sm font-semibold text-gray-700">Room {{ i + 1 }}</span>
             </div>
 
-            <!-- Reuse existing PassengerSelect counters inline -->
             <div class="px-4 pb-3.5 space-y-3">
-              <div
-                v-for="category in hotelCategories"
-                :key="category.key"
-                class="flex items-center justify-between"
-              >
+              <div class="flex items-center justify-between">
                 <div>
-                  <div class="text-sm font-medium text-gray-900">{{ category.label }}</div>
-                  <div v-if="category.description" class="text-xs text-gray-500">{{ category.description }}</div>
+                  <div class="text-sm font-medium text-gray-900">Adults</div>
+                  <div class="text-xs text-gray-500">18 years and above</div>
                 </div>
                 <div class="flex items-center gap-3">
                   <button
                     type="button"
-                    :disabled="!canDecrement(i, category.key, category.min ?? 0)"
+                    :disabled="(room.adults ?? 1) <= 1"
                     class="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    @click="decrement(i, category.key, category.min ?? 0)"
+                    @click="decrementAdults(i)"
                   >
                     <span class="text-sm font-semibold leading-none">−</span>
                   </button>
-                  <span class="w-4 text-center text-sm font-medium text-gray-900">
-                    {{ roomGuests[category.key] ?? category.min ?? 0 }}
-                  </span>
+                  <span class="w-4 text-center text-sm font-medium text-gray-900">{{ room.adults ?? 1 }}</span>
                   <button
                     type="button"
-                    :disabled="!canIncrement(i, category.key)"
+                    :disabled="roomTotal(i) >= maxGuestsPerRoom"
                     class="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    @click="increment(i, category.key)"
+                    @click="incrementAdults(i)"
                   >
                     <span class="text-sm font-semibold leading-none">+</span>
                   </button>
                 </div>
               </div>
+
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-sm font-medium text-gray-900">Children</div>
+                  <div class="text-xs text-gray-500">0 to 17 years</div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <button
+                    type="button"
+                    :disabled="(room.children ?? 0) <= 0"
+                    class="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    @click="decrementChildren(i)"
+                  >
+                    <span class="text-sm font-semibold leading-none">−</span>
+                  </button>
+                  <span class="w-4 text-center text-sm font-medium text-gray-900">{{ room.children ?? 0 }}</span>
+                  <button
+                    type="button"
+                    :disabled="roomTotal(i) >= maxGuestsPerRoom"
+                    class="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    @click="incrementChildren(i)"
+                  >
+                    <span class="text-sm font-semibold leading-none">+</span>
+                  </button>
+                </div>
+              </div>
+
+              <Transition name="fade">
+                <div v-if="(room.children ?? 0) > 0" class="space-y-2 pt-1">
+                  <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Child age{{ (room.children ?? 0) > 1 ? 's' : '' }} at check-in
+                  </p>
+                  <div
+                    v-for="(_, ci) in Array((room.children ?? 0))"
+                    :key="ci"
+                    class="flex items-center justify-between gap-3"
+                  >
+                    <span class="text-xs text-gray-600 whitespace-nowrap">
+                      Child {{ ci + 1 }}
+                    </span>
+                    <select
+                      :value="room.childAges?.[ci] ?? 2"
+                      class="flex-1 text-sm border border-gray-200 rounded-md px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                      @change="setChildAge(i, ci, Number(($event.target as HTMLSelectElement).value))"
+                    >
+                      <option
+                        v-for="age in CHILD_AGES"
+                        :key="age.value"
+                        :value="age.value"
+                      >
+                        {{ age.label }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </Transition>
             </div>
           </div>
         </div>
 
-        <!-- Done -->
         <div class="px-4 py-3 border-t border-gray-100">
           <button
             type="button"
@@ -138,9 +180,14 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, useAttrs } from 'vue'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+interface RoomState {
+  adults: number
+  children: number
+  childAges: number[]
+}
+
 interface GuestsAndRoomsValue {
-  rooms: Record<string, number>[] // one entry per room: { adults, children, infants }
+  rooms: RoomState[]
 }
 
 interface Props {
@@ -152,16 +199,16 @@ interface Props {
   maxGuestsPerRoom?: number
 }
 
-// ── Hotel guest categories (mirrors your PassengerSelect hotel mode) ──────────
-const hotelCategories = [
-  { key: 'adults',   label: 'Adults',   description: '12 years+',   min: 1, singular: 'Adult',  plural: 'Adults'   },
-  { key: 'children', label: 'Children', description: '2 to 12 years', min: 0, singular: 'Child',  plural: 'Children' },
-  { key: 'infants',  label: 'Infants',  description: '0 to 2 years',  min: 0, singular: 'Infant', plural: 'Infants'  },
+const CHILD_AGES = [
+  { value: 0, label: 'Under 1 year' },
+  ...Array.from({ length: 17 }, (_, i) => ({
+    value: i + 1,
+    label: `${i + 1} year${i + 1 > 1 ? 's' : ''}`,
+  })),
 ]
 
-const defaultRoom = (): Record<string, number> => ({ adults: 1, children: 0, infants: 0 })
+const defaultRoom = (): RoomState => ({ adults: 1, children: 0, childAges: [] })
 
-// ── Props & emits ─────────────────────────────────────────────────────────────
 const props = withDefaults(defineProps<Props>(), {
   label: '',
   id: () => `guests-rooms-${Math.random().toString(36).slice(2)}`,
@@ -173,31 +220,33 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{ 'update:modelValue': [value: GuestsAndRoomsValue] }>()
 const attrs = useAttrs()
 
-// ── State ─────────────────────────────────────────────────────────────────────
 const open = ref(false)
-const triggerRef  = ref<HTMLElement>()
+const triggerRef = ref<HTMLElement>()
 const dropdownRef = ref<HTMLElement>()
 const dropdownStyle = ref<Record<string, string>>({})
 
-// Initialise from modelValue or start with 1 room
-const rooms = ref<Record<string, number>[]>(
+function normaliseRoom(r: Partial<RoomState>): RoomState {
+  const children = r.children ?? 0
+  const ages = (r.childAges ?? []).slice(0, children)
+
+  while (ages.length < children) ages.push(2)
+  return { adults: r.adults ?? 1, children, childAges: ages }
+}
+
+const rooms = ref<RoomState[]>(
   props.modelValue?.rooms?.length
-    ? props.modelValue.rooms.map(r => ({ ...r }))
-    : [defaultRoom()]
+    ? props.modelValue.rooms.map(normaliseRoom)
+    : [defaultRoom()],
 )
 
 const roomCount = computed(() => rooms.value.length)
 
-// ── Display text ──────────────────────────────────────────────────────────────
 const displayText = computed(() => {
-  const totalGuests = rooms.value.reduce((sum, r) => {
-    return sum + Object.values(r).reduce((s, n) => s + n, 0)
-  }, 0)
+  const guests = rooms.value.reduce((sum, r) => sum + r.adults + r.children, 0)
   const r = roomCount.value
-  return `${totalGuests} Guest${totalGuests === 1 ? '' : 's'}, ${r} Room${r === 1 ? '' : 's'}`
+  return `${guests} Guest${guests === 1 ? '' : 's'}, ${r} Room${r === 1 ? '' : 's'}`
 })
 
-// ── Room management ───────────────────────────────────────────────────────────
 function addRoom() {
   if (roomCount.value >= props.maxRooms) return
   rooms.value.push(defaultRoom())
@@ -210,54 +259,70 @@ function removeRoom() {
   emitUpdate()
 }
 
-// ── Per-room counter helpers ──────────────────────────────────────────────────
 function roomTotal(i: number): number {
-  return Object.values(rooms.value[i]).reduce((s, n) => s + n, 0)
+  return rooms.value[i].adults + rooms.value[i].children
 }
 
-function canIncrement(i: number, key: string): boolean {
-  if (roomTotal(i) >= props.maxGuestsPerRoom) return false
-  // Infants cannot exceed adults
-  if (key === 'infants') return (rooms.value[i].infants ?? 0) < (rooms.value[i].adults ?? 0)
-  return true
-}
-
-function canDecrement(i: number, key: string, min: number): boolean {
-  return (rooms.value[i][key] ?? 0) > min
-}
-
-function increment(i: number, key: string) {
-  if (!canIncrement(i, key)) return
-  rooms.value[i][key] = (rooms.value[i][key] ?? 0) + 1
+function incrementAdults(i: number) {
+  if (roomTotal(i) >= props.maxGuestsPerRoom) return
+  rooms.value[i].adults++
   emitUpdate()
 }
 
-function decrement(i: number, key: string, min: number) {
-  if (!canDecrement(i, key, min)) return
-  rooms.value[i][key] = (rooms.value[i][key] ?? 0) - 1
-  // Keep infants ≤ adults
-  if (key === 'adults') {
-    rooms.value[i].infants = Math.min(rooms.value[i].infants ?? 0, rooms.value[i].adults ?? 0)
-  }
+function decrementAdults(i: number) {
+  if (rooms.value[i].adults <= 1) return
+  rooms.value[i].adults--
+  emitUpdate()
+}
+
+function incrementChildren(i: number) {
+  if (roomTotal(i) >= props.maxGuestsPerRoom) return
+  rooms.value[i].children++
+  rooms.value[i].childAges.push(2)
+  emitUpdate()
+}
+
+function decrementChildren(i: number) {
+  if (rooms.value[i].children <= 0) return
+  rooms.value[i].children--
+  rooms.value[i].childAges.pop()
+  emitUpdate()
+}
+
+function setChildAge(roomIndex: number, childIndex: number, age: number) {
+  rooms.value[roomIndex].childAges[childIndex] = age
   emitUpdate()
 }
 
 function emitUpdate() {
-  emit('update:modelValue', { rooms: rooms.value.map(r => ({ ...r })) })
+  emit('update:modelValue', {
+    rooms: rooms.value.map(r => ({
+      adults: r.adults,
+      children: r.children,
+      childAges: [...r.childAges],
+    })),
+  })
 }
 
-// ── Dropdown positioning (same logic as your PassengerSelect) ─────────────────
+const hasError = computed(() => {
+  const c = attrs.class
+  if (!c) return false
+  if (typeof c === 'string') return c.includes('border-red-500')
+  if (Array.isArray(c)) return c.some(x => typeof x === 'string' && x.includes('border-red-500'))
+  return false
+})
+
 const calculatePosition = () => {
   if (!triggerRef.value) return
   const rect = triggerRef.value.getBoundingClientRect()
-  const dropdownH = 480
+  const dropdownH = 520
   const padding = 8
   const spaceBelow = window.innerHeight - rect.bottom
   const openAbove = spaceBelow < dropdownH && rect.top > spaceBelow
 
   dropdownStyle.value = {
     width: `${rect.width}px`,
-    left:  `${rect.left}px`,
+    left: `${rect.left}px`,
     top: openAbove
       ? `${rect.top - dropdownH - padding}px`
       : `${rect.bottom + padding}px`,
@@ -272,26 +337,33 @@ const toggleDropdown = async () => {
 
 const updatePosition = () => { if (open.value) calculatePosition() }
 
-// ── Error state (mirrors your PassengerSelect hasError) ───────────────────────
-const hasError = computed(() => {
-  const c = attrs.class
-  if (!c) return false
-  if (typeof c === 'string') return c.includes('border-red-500')
-  if (Array.isArray(c)) return c.some(x => typeof x === 'string' && x.includes('border-red-500'))
-  return false
-})
-
-// ── Sync external modelValue changes ─────────────────────────────────────────
-watch(() => props.modelValue, (v) => {
-  if (v?.rooms) rooms.value = v.rooms.map(r => ({ ...r }))
-}, { deep: true })
+watch(
+  () => props.modelValue,
+  (v) => {
+    if (v?.rooms) rooms.value = v.rooms.map(normaliseRoom)
+  },
+  { deep: true },
+)
 
 onMounted(() => {
   window.addEventListener('scroll', updatePosition, true)
   window.addEventListener('resize', updatePosition)
 })
+
 onUnmounted(() => {
   window.removeEventListener('scroll', updatePosition, true)
   window.removeEventListener('resize', updatePosition)
 })
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+</style>

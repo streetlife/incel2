@@ -1,19 +1,18 @@
 export interface RoomConfig {
-    adults: number;
-    children: number;
-    infants: number;
-    childAges?: number[]; // API requires child ages; collect these in your form if possible
+    adults: number
+    children: number
+    childAges: number[] // one age per child (0–17); length must equal children
 }
 
 export interface HotelSearchParams {
-    country: string;
-    city: string; // city name (will be mapped to city code)
-    nationality: string; // nationality name (will be mapped to ISO code)
-    checkInStart: string; // "YYYY-MM-DD"
-    checkInEnd: string; // "YYYY-MM-DD"
-    rooms: RoomConfig[];
-    totalGuests: number;
-    totalRooms: number;
+    country: string
+    city: string
+    nationality: string
+    checkInStart: string // "YYYY-MM-DD"
+    checkInEnd: string   // "YYYY-MM-DD"
+    rooms: RoomConfig[]
+    totalGuests: number
+    totalRooms: number
 }
 
 export interface HotelResult {

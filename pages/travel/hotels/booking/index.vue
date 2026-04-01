@@ -68,7 +68,7 @@ const showSidebar = computed(() => step.value < 5)
           {{ step === 1 ? 'Back to results' : 'Back' }}
         </button>
         <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Complete Your Booking</h1>
-        <p class="text-slate-500 text-sm mt-1">{{ state.hotel?.name }} · {{ state.searchParams.city }}</p>
+        <p class="text-slate-500 text-sm mt-1">{{ state.hotel?.hotel_name }} · {{ state.searchParams.country }}</p>
       </div>
 
       <!-- Stepper -->
@@ -108,10 +108,10 @@ const showSidebar = computed(() => step.value < 5)
             leave-from-class="opacity-100 translate-x-0"
             leave-to-class="opacity-0 -translate-x-4"
           >
-            <HotelRoomSelect         v-if="step === 1" @next="goNext" />
-            <HotelGuestForm          v-else-if="step === 2" @next="goNext" @back="goBack" />
-            <HotelBookingReview      v-else-if="step === 3" @next="goNext" @back="goBack" />
-            <HotelPaymentForm        v-else-if="step === 4" @back="goBack" />
+            <HotelRoomSelect v-if="step === 1" @next="goNext" />
+            <HotelGuestForm v-else-if="step === 2" @next="goNext" @back="goBack" />
+            <HotelBookingReview v-else-if="step === 3" @next="goNext" @back="goBack" />
+            <HotelPaymentForm v-else-if="step === 4" @back="goBack" />
             <HotelBookingConfirmation v-else-if="step === 5" />
           </Transition>
         </div>

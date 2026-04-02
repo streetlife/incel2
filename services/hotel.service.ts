@@ -2,6 +2,7 @@ import { useRuntimeConfig } from 'nuxt/app'
 import type {
     HotelCountryCodeResponse,
     HotelCountryResponse,
+    HotelDetailResponse,
     HotelSearchParams,
     HotelSearchResponse,
 } from '../types/hotel'
@@ -27,6 +28,14 @@ export function useHotelService() {
 
         async getHotelCountryCode(code: string): Promise<HotelCountryCodeResponse[]> {
             return $api<HotelCountryCodeResponse[]>(`/hotels/cities/${code}`, { method: 'GET' })
+        },
+
+        async getHotelById(sessionCode: string, hotelId: string): Promise<HotelDetailResponse> {
+            const res = await $api<HotelDetailResponse>(`/hotels/${sessionCode}/${hotelId}`, {
+                method: 'GET'
+            })
+
+            return res
         },
     }
 }

@@ -142,7 +142,7 @@ function viewHotelDetails(hotel: any) {
       },
     }),
   )
-  router.push({ path: '/travel/hotels/booking', query: { hotelId: hotel.hotel_id, step: '1' } })
+  router.push({ path: '/travel/hotels/booking', query: { hotelId: hotel.hotel_id, step: '1', sessionCode: store.sessionCode } })
 }
 
 const handleHotelSearch = (data: HotelSearchParams) => performSearch(data)

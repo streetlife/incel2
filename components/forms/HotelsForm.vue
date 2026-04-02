@@ -200,20 +200,6 @@ const submit = async () => {
 
   <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
     <div>
-      <label for="country" class="block text-sm font-medium text-gray-700 mb-2">Country</label>
-      <select
-        id="country"
-        v-model="form.country"
-        :disabled="loadingCountries"
-        :class="['input', { 'border-red-500 focus:ring-red-500': errors.country }]"
-      >
-        <option value="">{{ loadingCountries ? 'Loading countries...' : 'Select Country' }}</option>
-        <option v-for="n in countries" :key="n.code" :value="n.code">{{ n.name }}</option>
-      </select>
-      <p v-if="errors.country" class="mt-1 text-xs text-red-600">{{ errors.country }}</p>
-    </div>
-
-    <div>
       <label for="nationality" class="block text-sm font-medium text-gray-700 mb-2">Nationality</label>
       <select
         id="nationality"
@@ -225,6 +211,20 @@ const submit = async () => {
         <option v-for="n in countries" :key="n.code" :value="n.code">{{ n.name }}</option>
       </select>
       <p v-if="errors.nationality" class="mt-1 text-xs text-red-600">{{ errors.nationality }}</p>
+    </div>
+    
+    <div>
+      <label for="country" class="block text-sm font-medium text-gray-700 mb-2">Country</label>
+      <select
+        id="country"
+        v-model="form.country"
+        :disabled="loadingCountries"
+        :class="['input', { 'border-red-500 focus:ring-red-500': errors.country }]"
+      >
+        <option value="">{{ loadingCountries ? 'Loading countries...' : 'Select Country' }}</option>
+        <option v-for="n in countries" :key="n.code" :value="n.code">{{ n.name }}</option>
+      </select>
+      <p v-if="errors.country" class="mt-1 text-xs text-red-600">{{ errors.country }}</p>
     </div>
 
     <div>

@@ -1,12 +1,15 @@
-<!-- Step 0: Room selection — Rezlive room options for the chosen hotel -->
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useHotelBookingStore } from '../../composables/useHotelBookingStore'
+import { useRoute } from 'vue-router';
+import { useCurrency } from '../../composables/useCurrency';
 
 const emit = defineEmits<(e: 'next') => void>()
-const { state, nights, priceBreakdown, fmtNgn, fetchRooms, selectRoom } = useHotelBookingStore()
+const route = useRoute()
 
-onMounted(fetchRooms)
+const { state, nights, fetchRooms, selectRoom } = useHotelBookingStore()
+const { format } = useCurrency()
+
 
 function choose(room: any) {
   selectRoom(room)
@@ -19,28 +22,41 @@ const boardColors: Record<string, string> = {
   'Half Board': 'bg-blue-50 text-blue-700',
   'Full Board': 'bg-green-50 text-green-700',
 }
+
+function retryFetch() {
+  const sessionCode = route.query.sessionCode as string
+  const hotelId = route.query.hotelId as string
+
+  if (sessionCode && hotelId) {
+    fetchRooms(sessionCode, hotelId)
+  }
+}
+
+onMounted(() => {
+  const sessionCode = route.query.sessionCode as string
+  const hotelId = route.query.hotelId as string
+
+  if (sessionCode && hotelId) {
+    fetchRooms(sessionCode, hotelId)
+  }
+})
 </script>
 
 <template>
   <div class="space-y-4">
-
-    <!-- Loading -->
     <div v-if="state.roomsLoading" class="flex flex-col items-center py-20 gap-4">
       <div class="w-12 h-12 border-4 border-slate-200 border-t-primary rounded-full animate-spin"></div>
       <p class="text-slate-600 font-medium text-sm">Checking room availability…</p>
     </div>
 
-    <!-- Error -->
     <div v-else-if="state.roomsError" class="flex flex-col items-center py-16 gap-3 text-center">
-      <span class="text-4xl">😞</span>
+      <span class="text-9xl"><SearchX :size="40" /></span>
       <p class="font-semibold text-slate-800">Couldn't load rooms</p>
-      <p class="text-sm text-slate-500">{{ state.roomsError }}</p>
-      <button class="mt-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold border-none cursor-pointer" @click="fetchRooms">
+      <button class="mt-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold border-none cursor-pointer" @click="retryFetch">
         Try Again
       </button>
     </div>
 
-    <!-- Room cards -->
     <template v-else>
       <p class="text-xs text-slate-500">
         {{ state.availableRooms.length }} room option{{ state.availableRooms.length !== 1 ? 's' : '' }} available ·
@@ -55,8 +71,6 @@ const boardColors: Record<string, string> = {
       >
         <div class="p-5">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-
-            <!-- Room info -->
             <div class="flex-1 min-w-0">
               <div class="flex flex-wrap items-center gap-2 mb-2">
                 <h3 class="text-base font-bold text-slate-900">{{ room.roomName }}</h3>
@@ -65,7 +79,6 @@ const boardColors: Record<string, string> = {
                 </span>
               </div>
 
-              <!-- Amenities -->
               <div class="flex flex-wrap gap-1.5 mb-3">
                 <span
                   v-for="a in room.amenities" :key="a"
@@ -76,7 +89,6 @@ const boardColors: Record<string, string> = {
                 </span>
               </div>
 
-              <!-- Cancellation -->
               <div class="flex items-center gap-1.5">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
                   :stroke="room.cancellationPolicy.includes('Non-refundable') ? '#ef4444' : '#16a34a'"
@@ -92,11 +104,10 @@ const boardColors: Record<string, string> = {
               </div>
             </div>
 
-            <!-- Price + CTA -->
             <div class="sm:text-right sm:min-w-[160px] shrink-0">
               <p class="text-xs text-slate-400 mb-0.5">{{ state.searchParams.totalRooms }} room{{ state.searchParams.totalRooms > 1 ? 's' : '' }} × {{ nights }} nights</p>
               <p class="text-2xl font-bold text-slate-900">
-                {{ fmtNgn(room.totalPrice * state.searchParams.totalRooms * state.ngnRate) }}
+                {{ format(room.totalPrice * state.searchParams.totalRooms) }}
               </p>
               <p class="text-xs text-slate-400 mb-3">excl. taxes</p>
               <button

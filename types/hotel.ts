@@ -62,3 +62,32 @@ export interface HotelCountryCodeResponse {
     name: string
     code: string
 }
+
+export interface HotelDetailResponse {
+    hotel_info: IHotelInfo
+    rooms: IHotelRooms[]
+}
+
+interface IHotelInfo {
+    Id: string,
+    Name: string,
+    Rating: number,
+    ThumbImages: string
+    Price: number,
+    Hotelwiseroomcount: number,
+}
+
+interface IHotelRooms {
+    Type: string,
+    BookingKey: string,
+    Adults: string,
+    Children: string,
+    ChildrenAges: string,
+    TotalRooms: string,
+    TotalRate: string,
+    RoomDescription: string
+    CancellationPolicy: {
+        Refundable: string
+    },
+    TermsAndConditions: []
+}

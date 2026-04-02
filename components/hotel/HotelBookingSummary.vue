@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useCurrency } from '../../composables/useCurrency';
 import { useHotelBookingStore } from '../../composables/useHotelBookingStore'
 
-const { state, nights, priceBreakdown, fmtNgn } = useHotelBookingStore()
+const { state, nights, priceBreakdown } = useHotelBookingStore()
+const { format } = useCurrency()
 
 const fmtDate = (d: string) =>
   d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
@@ -9,23 +11,20 @@ const fmtDate = (d: string) =>
 
 <template>
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden sticky top-6">
-
-    <!-- Hotel image + name -->
     <div class="relative h-36 bg-slate-200 overflow-hidden">
       <img
-        v-if="state.hotel?.image"
-        :src="state.hotel.image"
-        :alt="state.hotel.name"
+        v-if="state.hotel?.thumbnail"
+        :src="state.hotel.thumbnail"
+        :alt="state.hotel.hotel_name"
         class="w-full h-full object-cover"
       />
       <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
       <div class="absolute bottom-3 left-4 right-4">
-        <p class="text-white font-bold text-base leading-tight">{{ state.hotel?.name }}</p>
+        <p class="text-white font-bold text-base leading-tight">{{ state.hotel?.hotel_name }}</p>
         <p class="text-white/70 text-xs mt-0.5">{{ state.searchParams.city }}</p>
       </div>
     </div>
 
-    <!-- Stay details -->
     <div class="px-5 py-4 border-b border-slate-100 space-y-2.5">
       <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Stay Details</p>
 
@@ -71,26 +70,25 @@ const fmtDate = (d: string) =>
       </div>
     </div>
 
-    <!-- Price breakdown -->
     <div v-if="state.selectedRoom" class="px-5 py-4 space-y-2.5">
       <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Price Breakdown</p>
 
       <div class="flex justify-between text-sm text-slate-600">
-        <span>{{ fmtNgn(state.selectedRoom.pricePerNight * state.ngnRate) }}/night × {{ nights }} night{{ nights !== 1 ? 's' : '' }} × {{ state.searchParams.totalRooms }} room{{ state.searchParams.totalRooms !== 1 ? 's' : '' }}</span>
+        <span>{{ format(state.selectedRoom.pricePerNight) }}/night × {{ nights }} night{{ nights !== 1 ? 's' : '' }} × {{ state.searchParams.totalRooms }} room{{ state.searchParams.totalRooms !== 1 ? 's' : '' }}</span>
       </div>
       <div class="flex justify-between text-sm text-slate-600">
         <span>Subtotal</span>
-        <span>{{ fmtNgn(priceBreakdown.baseNgn) }}</span>
+        <span>{{ format(priceBreakdown.baseNgn) }}</span>
       </div>
       <div class="flex justify-between text-sm text-slate-600">
         <span>Taxes & fees (7.5%)</span>
-        <span>{{ fmtNgn(priceBreakdown.tax) }}</span>
+        <span>{{ format(priceBreakdown.tax) }}</span>
       </div>
 
       <div class="border-t border-dashed border-slate-200 pt-3 flex justify-between items-baseline">
         <span class="font-bold text-slate-900">Total</span>
         <div class="text-right">
-          <p class="text-xl font-bold text-slate-900">{{ fmtNgn(priceBreakdown.total) }}</p>
+          <p class="text-xl font-bold text-slate-900">{{ format(priceBreakdown.total) }}</p>
           <p class="text-xs text-slate-400">incl. VAT</p>
         </div>
       </div>

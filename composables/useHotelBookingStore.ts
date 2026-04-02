@@ -1,4 +1,5 @@
 import { reactive, computed } from 'vue'
+import { useHotelService } from '../services/hotel.service'
 
 export interface GuestDetail {
   title: string
@@ -96,7 +97,6 @@ const state = reactive<HotelBookingState>({
   errorMessage: '',
 })
 
-// ── Computed pricing ──────────────────────────────────────────────────────────
 const nights = computed(() => {
   const { checkInStart, checkInEnd } = state.searchParams
   if (!checkInStart || !checkInEnd) return 1
@@ -108,16 +108,12 @@ const nights = computed(() => {
 
 const priceBreakdown = computed(() => {
   const base = (state.selectedRoom?.totalPrice ?? 0) * state.searchParams.totalRooms
-  const baseNgn = Math.round(base * state.ngnRate)
+  const baseNgn = Math.round(base)
   const tax = Math.round(baseNgn * state.taxRate)
   const total = baseNgn + tax
   return { baseUsd: base, baseNgn, tax, total }
 })
 
-const fmtNgn = (amount: number) =>
-  `₦${Math.round(amount).toLocaleString('en-NG')}`
-
-// ── Actions ───────────────────────────────────────────────────────────────────
 function setHotel(hotel: any, searchParams: any) {
   state.hotel = hotel
   state.searchParams = { ...searchParams }
@@ -126,39 +122,69 @@ function setHotel(hotel: any, searchParams: any) {
   state.status = 'idle'
 }
 
-// Replace with real Rezlive availability API call:
-// POST https://api.rezlive.com/hotel/availability
-// Headers: { Authorization: 'Bearer <token>' }
-// Body: { hotelId, checkIn, checkOut, rooms, nationality }
-async function fetchRooms() {
+async function fetchRooms(sessionCode: string, hotelId: string) {
+  const { getHotelById } = useHotelService()
+
   state.roomsLoading = true
   state.roomsError = ''
 
-  await new Promise(r => setTimeout(r, 1400))
+  try {
+    const res = await getHotelById(sessionCode, hotelId)
+    const data = res
+    const rooms = data?.rooms || []
 
-  const mockBoards = ['Room Only', 'Bed & Breakfast', 'Half Board', 'Full Board']
-  const mockPolicies = [
-    'Free cancellation until 24h before check-in',
-    'Non-refundable',
-    'Free cancellation until 48h before check-in',
-  ]
+    state.availableRooms = rooms.map((room: any) => {
+      const rates = room.TotalRate.split('|').map(Number)
+      const totalPrice = rates.reduce((sum: number, r: number) => sum + r, 0)
 
-  state.availableRooms = Array.from({ length: 6 }, (_, i) => ({
-    rezliveRoomId: `RZ-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-    roomName: ['Standard Room', 'Deluxe Room', 'Superior Suite', 'Executive Suite', 'Junior Suite', 'Presidential Suite'][i] ?? 'Standard Room',
-    boardType: mockBoards[i % mockBoards.length],
-    pricePerNight: 80 + i * 35,
-    totalPrice: (80 + i * 35) * nights.value,
-    cancellationPolicy: mockPolicies[i % mockPolicies.length],
-    amenities: ['Free WiFi', 'Air conditioning', 'Flat-screen TV', 'Mini bar', 'City view', 'King bed'].slice(0, 3 + (i % 3)),
-  }))
+      return {
+        rezliveRoomId: room.BookingKey,
+        roomName: room.Type.split('|')[0],
 
-  state.roomsLoading = false
+        boardType: extractBoardType(room.RoomDescription),
+
+        pricePerNight: totalPrice / nights.value,
+        totalPrice,
+
+        cancellationPolicy:
+          room.CancellationPolicy?.Refundable === 'No'
+            ? 'Non-refundable'
+            : `Free cancellation until ${room.CancellationPolicy?.TillDate ?? ''}`,
+
+        amenities: extractAmenities(room.RoomDescription),
+      }
+    })
+  } catch (e: any) {
+    state.roomsError = e?.message || 'Failed to load rooms'
+  } finally {
+    state.roomsLoading = false
+  }
+}
+
+function extractBoardType(desc: string): string {
+  if (!desc) return 'Room Only'
+
+  if (desc.toLowerCase().includes('breakfast')) return 'Bed & Breakfast'
+  if (desc.toLowerCase().includes('half')) return 'Half Board'
+  if (desc.toLowerCase().includes('full')) return 'Full Board'
+
+  return 'Room Only'
+}
+
+function extractAmenities(desc: string): string[] {
+  if (!desc) return []
+
+  return desc
+    .split('-')
+    .slice(1)
+    .join('-')
+    .split(',')
+    .map((a: string) => a.trim())
+    .filter(Boolean)
 }
 
 function selectRoom(room: SelectedRoom) {
   state.selectedRoom = room
-  // Seed guest slots — one lead guest per room
   state.guests = Array.from({ length: state.searchParams.totalRooms }, (_, i) => ({
     title: '',
     firstName: '',
@@ -173,9 +199,6 @@ function generateInvoice() {
   state.invoiceDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-// Replace with real Rezlive booking API:
-// POST https://api.rezlive.com/hotel/book
-// Body: { rezliveRoomId, guests, contactEmail, checkIn, checkOut, paymentReference }
 async function confirmBooking(): Promise<boolean> {
   state.status = 'loading'
   await new Promise(r => setTimeout(r, 2000))
@@ -200,7 +223,7 @@ function reset() {
 
 export function useHotelBookingStore() {
   return {
-    state, nights, priceBreakdown, fmtNgn,
+    state, nights, priceBreakdown,
     setHotel, fetchRooms, selectRoom,
     generateInvoice, confirmBooking, reset,
   }

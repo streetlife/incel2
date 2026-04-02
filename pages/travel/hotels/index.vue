@@ -11,7 +11,7 @@ import { useHotelSearchStore } from '../../../stores/hotel'
 const route = useRoute()
 const router = useRouter()
 const { searchHotel } = useHotelService()
-const store = useHotelSearchStore()
+const store  = useHotelSearchStore()
 const { format } = useCurrency()
 
 const ITEMS_PER_PAGE = 25
@@ -30,7 +30,7 @@ const popularDestinations = [
   { city: 'London', image: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800', price: 'From $150/night' },
   { city: 'Paris', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800', price: 'From $160/night' },
   { city: 'New York', image: 'https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=800', price: 'From $200/night' },
-  { city: 'Istanbul', image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800', price: 'From $90/night' },
+  { city: 'Istanbul', image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800', price: 'From $90/night'  },
   { city: 'Cape Town', image: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=800', price: 'From $80/night' },
 ]
 
@@ -51,7 +51,7 @@ function buildRoomsFromQuery(): RoomConfig[] {
   const roomCount = Number.parseInt(route.query.rooms as string) || 1
   return Array.from({ length: roomCount }, (_, i) => {
     const children = Number.parseInt(route.query[`r${i}_children`] as string) || 0
-    const rawAges = route.query[`r${i}_child_ages`] as string | undefined
+    const rawAges  = route.query[`r${i}_child_ages`] as string | undefined
     const childAges = rawAges
       ? rawAges.split(',').map(Number).filter(n => !Number.isNaN(n)).slice(0, children)
       : new Array(children).fill(2)
@@ -136,13 +136,16 @@ function viewHotelDetails(hotel: any) {
         checkInStart: store.searchMeta?.arrival_date || (route.query.checkInStart as string),
         checkInEnd: store.searchMeta?.departure_date || (route.query.checkInEnd as string),
         rooms: store.lastParams?.rooms ?? buildRoomsFromQuery(),
-        totalGuests: store.searchMeta?.adults || 1,
-        totalRooms: store.searchMeta?.rooms  || 1,
+        totalGuests: (store.searchMeta?.adults ?? 0) + (store.searchMeta?.children ?? 0) || store.lastParams?.totalGuests || 1,
+        totalRooms: store.searchMeta?.rooms || 1,
         currency: store.searchMeta?.currency || 'USD',
       },
     }),
   )
-  router.push({ path: '/travel/hotels/booking', query: { hotelId: hotel.hotel_id, step: '1', sessionCode: store.sessionCode } })
+  router.push({
+    path: '/travel/hotels/booking',
+    query: { hotelId: hotel.hotel_id, step: '1', sessionCode: store.sessionCode },
+  })
 }
 
 const handleHotelSearch = (data: HotelSearchParams) => performSearch(data)
@@ -161,26 +164,6 @@ watch(
 )
 
 onMounted(() => {
-  
-  if (store.hasSearched && store.lastParams && !route.query.city) {
-    const p = store.lastParams
-    const q: Record<string, string> = {
-      country: p.country,
-      city: p.city,
-      nationality: p.nationality,
-      checkInStart: p.checkInStart,
-      checkInEnd: p.checkInEnd,
-      rooms: String(p.totalRooms),
-    }
- 
-    p.rooms.forEach((r, i) => {
-      q[`r${i}_adults`] = String(r.adults ?? 1)
-      q[`r${i}_children`] = String(r.children ?? 0)
-    })
- 
-    router.replace({ query: q })
-  }
-
   if (store.hasSearched) showSearchForm.value = false
 
   const observer = new IntersectionObserver(

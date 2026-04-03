@@ -1,10 +1,15 @@
 import { useRuntimeConfig } from 'nuxt/app'
 import type {
+    CreateBookingData,
+    FlutterwavePaymentData,
+    FlutterwavePaymentResponse,
     HotelCountryCodeResponse,
     HotelCountryResponse,
     HotelDetailResponse,
     HotelSearchParams,
     HotelSearchResponse,
+    PaystackPaymentData,
+    PaystackPaymentResponse,
 } from '../types/hotel'
 import { useApi } from '../utils/api'
 
@@ -14,11 +19,17 @@ export function useHotelService() {
 
     return {
         async searchHotel(params: HotelSearchParams): Promise<HotelSearchResponse> {
+            const apiKey = config.public.hotel
+
+            if (!isString(apiKey)) {
+                throw new Error('Hotel API key must be a string')
+            }
+
             const payload = buildPayload(params)
             return $api<HotelSearchResponse>('/hotels/search', {
                 method: 'POST',
                 body: payload,
-                headers: { 'x-api-key': config.public.hotel },
+                headers: { 'x-api-key': apiKey },
             })
         },
 
@@ -37,13 +48,38 @@ export function useHotelService() {
 
             return res
         },
+
+        async createBooking(params: CreateBookingData): Promise<HotelSearchResponse> {
+            return $api<HotelSearchResponse>('/hotels/create-booking', {
+                method: 'POST',
+                body: params,
+            })
+        },
+
+        async paystackPayment(params: PaystackPaymentData): Promise<PaystackPaymentResponse> {
+            return $api<PaystackPaymentResponse>('/paystack/payment/initialize', {
+                method: 'POST',
+                body: params,
+            })
+        },
+
+        async flutterwavePayment(params: FlutterwavePaymentData): Promise<FlutterwavePaymentResponse> {
+            return $api<FlutterwavePaymentResponse>('/flutterwave/payment/initialize', {
+                method: 'POST',
+                body: params,
+            })
+        },
     }
+}
+
+function isString(value: unknown): value is string {
+    return typeof value === 'string'
 }
 
 function buildPayload(params: HotelSearchParams): Record<string, unknown> {
     if (!params.city) {
         throw new Error(
-            `City "${params.city}" is not mapped. Add it to CITY_LOOKUP in useHotelService.ts.`,
+            `City "${params.city}" is not found.`,
         )
     }
 

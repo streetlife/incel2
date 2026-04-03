@@ -65,9 +65,13 @@ function buildRoomsFromQuery(): RoomConfig[] {
   })
 }
 
+const isSearchView = computed(() => store.hasSearched || isLoading.value)
+
 const performSearch = async (params?: HotelSearchParams) => {
   isLoading.value = true
   searchError.value = ''
+
+  store.hasSearched = true
 
   const sp: HotelSearchParams = params ?? {
     country: (route.query.country as string) || '',
@@ -159,7 +163,12 @@ const toggleSearchForm = () => { showSearchForm.value = !showSearchForm.value }
 
 watch(
   () => route.query,
-  (q) => { if (q.city) performSearch() },
+  (q) => {
+    if (q.city) {
+      isLoading.value = true
+      performSearch()
+    }
+  },
   { immediate: true },
 )
 
@@ -227,7 +236,7 @@ onMounted(() => {
       </div>
     </section>
 
-    <section v-if="store.hasSearched" id="search-results" class="py-10 px-4 md:px-6 min-h-[60vh]">
+    <section v-if="isSearchView" id="search-results" class="py-10 px-4 md:px-6 min-h-[60vh]">
       <div class="max-w-6xl mx-auto">
         <div v-if="searchError" class="mb-8 flex items-start gap-3 p-5 bg-red-50 border border-red-200 rounded-xl">
           <span class="text-red-500 text-xl mt-0.5 flex-shrink-0">⚠</span>
@@ -380,7 +389,7 @@ onMounted(() => {
                   </span>
                 </div>
                 <button
-                  class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary hover:bg-teal-800 text-white text-sm font-semibold transition-all duration-150 hover:-translate-y-px border-none cursor-pointer shadow-sm"
+                  class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary hover:bg-primary/60 text-white text-sm font-semibold transition-all duration-150 hover:-translate-y-px border-none cursor-pointer shadow-sm"
                   @click.stop="viewHotelDetails(hotel)"
                 >
                   View Details

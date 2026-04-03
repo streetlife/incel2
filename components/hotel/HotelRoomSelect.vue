@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useHotelBookingStore } from '../../composables/useHotelBookingStore'
+import { useHotelBookingStore } from '../../stores/useHotelBookingStore'
 import { useRoute } from 'vue-router';
 import { useCurrency } from '../../composables/useCurrency';
 
 const emit = defineEmits<(e: 'next') => void>()
 const route = useRoute()
-
-const { state, nights, fetchRooms, selectRoom } = useHotelBookingStore()
+const store = useHotelBookingStore()
 const { format } = useCurrency()
 
 
 function choose(room: any) {
-  selectRoom(room)
+  store.selectRoom(room)
   emit('next')
 }
 
@@ -28,7 +27,7 @@ function retryFetch() {
   const hotelId = route.query.hotelId as string
 
   if (sessionCode && hotelId) {
-    fetchRooms(sessionCode, hotelId)
+    store.fetchRooms(sessionCode, hotelId)
   }
 }
 
@@ -37,19 +36,19 @@ onMounted(() => {
   const hotelId = route.query.hotelId as string
 
   if (sessionCode && hotelId) {
-    fetchRooms(sessionCode, hotelId)
+    store.fetchRooms(sessionCode, hotelId)
   }
 })
 </script>
 
 <template>
   <div class="space-y-4">
-    <div v-if="state.roomsLoading" class="flex flex-col items-center py-20 gap-4">
+    <div v-if="store.roomsLoading" class="flex flex-col items-center py-20 gap-4">
       <div class="w-12 h-12 border-4 border-slate-200 border-t-primary rounded-full animate-spin"></div>
       <p class="text-slate-600 font-medium text-sm">Checking room availability…</p>
     </div>
 
-    <div v-else-if="state.roomsError" class="flex flex-col items-center py-16 gap-3 text-center">
+    <div v-else-if="store.roomsError" class="flex flex-col items-center py-16 gap-3 text-center">
       <span class="text-9xl"><SearchX :size="40" /></span>
       <p class="font-semibold text-slate-800">Couldn't load rooms</p>
       <button class="mt-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold border-none cursor-pointer" @click="retryFetch">
@@ -59,13 +58,13 @@ onMounted(() => {
 
     <template v-else>
       <p class="text-xs text-slate-500">
-        {{ state.availableRooms.length }} room option{{ state.availableRooms.length !== 1 ? 's' : '' }} available ·
-        {{ state.searchParams.totalRooms }} room{{ state.searchParams.totalRooms !== 1 ? 's' : '' }} needed ·
-        {{ nights }} night{{ nights !== 1 ? 's' : '' }}
+        {{ store.availableRooms.length }} room option{{ store.availableRooms.length !== 1 ? 's' : '' }} available ·
+        {{ store.searchParams.totalRooms }} room{{ store.searchParams.totalRooms !== 1 ? 's' : '' }} needed ·
+        {{ store.nights }} night{{ store.nights !== 1 ? 's' : '' }}
       </p>
 
       <div
-        v-for="room in state.availableRooms"
+        v-for="room in store.availableRooms"
         :key="room.rezliveRoomId"
         class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all overflow-hidden"
       >
@@ -105,9 +104,9 @@ onMounted(() => {
             </div>
 
             <div class="sm:text-right sm:min-w-[160px] shrink-0">
-              <p class="text-xs text-slate-400 mb-0.5">{{ state.searchParams.totalRooms }} room{{ state.searchParams.totalRooms > 1 ? 's' : '' }} × {{ nights }} nights</p>
+              <p class="text-xs text-slate-400 mb-0.5">{{ store.searchParams.totalRooms }} room{{ store.searchParams.totalRooms > 1 ? 's' : '' }} × {{ store.nights }} store.nights</p>
               <p class="text-2xl font-bold text-slate-900">
-                {{ format(room.totalPrice * state.searchParams.totalRooms) }}
+                {{ format(room.totalPrice * store.searchParams.totalRooms) }}
               </p>
               <p class="text-xs text-slate-400 mb-3">excl. taxes</p>
               <button

@@ -1,10 +1,13 @@
-<!-- Step 2: Guest details -->
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useHotelBookingStore } from '../../composables/useHotelBookingStore'
+import { useHotelBookingStore } from '../../stores/useHotelBookingStore'
+import { useToast } from '../../composables/useToast'
+import AppToast from '../toast/AppToast.vue';
+import { useAuthStore } from '../../stores/auth';
+import { normaliseError } from '../../utils/api';
 
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
-const { state } = useHotelBookingStore()
+const store = useHotelBookingStore()
 
 const TITLES = ['Mr', 'Mrs', 'Ms', 'Dr', 'Prof']
 
@@ -13,25 +16,32 @@ const loginEmail = ref('')
 const loginPass = ref('')
 const loginLoading = ref(false)
 const loginError = ref('')
+const toast = useToast()
+const auth = useAuthStore()
+const showLoginPanel = ref(false)
 
 async function handleLogin() {
   loginLoading.value = true
   loginError.value = ''
-  await new Promise(r => setTimeout(r, 800))
-  if (loginPass.value.length >= 6) {
-    state.isLoggedIn = true
-    state.accountName = loginEmail.value
-    if (state.guests[0]) state.guests[0].email = loginEmail.value
-    showLogin.value = false
-  } else {
-    loginError.value = 'Invalid credentials.'
+
+  try {
+    const res = await auth.login(loginEmail.value, loginPass.value)
+    if (res === null) return
+    
+    toast.success("Login successful")
+    showLoginPanel.value = false
+  } catch (err) {
+    loginLoading.value = false
+    loginError.value = normaliseError(err)
+
+    toast.error(loginError.value)
   }
   loginLoading.value = false
 }
 
 function handleLogout() {
-  state.isLoggedIn = false
-  state.accountName = ''
+  store.isLoggedIn = false
+  store.accountName = ''
   loginEmail.value = ''
   loginPass.value = ''
 }
@@ -40,25 +50,24 @@ const guestLabels = computed(() => {
   let adultCount = 0
   let childCount = 0
 
-  return state.guests.map((g) => {
+  return store.guests.map((g) => {
     if (g.type === 'adult') {
       adultCount++
       return `Adult ${adultCount}`
-    } else {
-      childCount++
-
-      let ageLabel = ''
-
-      if (g.age !== undefined) {
-        if (g.age === 0) {
-          ageLabel = ' (Under 1)'
-        } else {
-          ageLabel = ` (Age ${g.age})`
-        }
-      }
-
-      return `Child ${childCount}${ageLabel}`
     }
+
+    childCount++
+
+    let ageLabel = ''
+    if (g.age !== undefined) {
+      if (g.age === 0) {
+        ageLabel = ' (Under 1)'
+      } else {
+        ageLabel = ` (Age ${g.age})`
+      }
+    }
+
+    return `Child ${childCount}${ageLabel}`
   })
 })
 
@@ -75,8 +84,7 @@ const fieldClass = (key: string) =>
 
 function validate(): boolean {
   errors.value = {}
-
-  state.guests.forEach((g, i) => {
+  store.guests.forEach((g, i) => {
     const p = `g${i}`
     if (!g.title) errors.value[`${p}_title`] = 'Required'
     if (!g.firstName.trim()) errors.value[`${p}_first`] = 'Required'
@@ -88,24 +96,32 @@ function validate(): boolean {
         errors.value[`${p}_phone`] = 'Valid phone required'
     }
   })
-
-  if (Object.keys(errors.value).length === 0) {
-    state.contactEmail = state.guests[0]?.email ?? ''
-    state.contactPhone = state.guests[0]?.phone ?? ''
-  }
-
   return Object.keys(errors.value).length === 0
 }
 
-function submit() {
-  if (validate()) emit('next')
+const isSubmitting = computed(() => store.status === 'submitting')
+
+async function submit() {
+  if (!validate()) {
+    document.querySelector('.border-red-300')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return
+  }
+
+  const ok = await store.submitGuests()
+
+  if (ok) {
+    toast.success('Guest information created successfully')
+    emit('next')
+  }
 }
 </script>
 
 <template>
+  <AppToast />
   <div class="space-y-6">
     <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-      <div v-if="!state.isLoggedIn" class="flex items-start justify-between gap-4">
+      <div v-if="!store.isLoggedIn" class="flex items-start justify-between gap-4">
         <div>
           <p class="text-sm font-semibold text-black">Already have an account?</p>
           <p class="text-xs text-primary mt-0.5">Log in to auto-fill your details and view past bookings.</p>
@@ -121,9 +137,9 @@ function submit() {
       <div v-else class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
-            {{ state.accountName.slice(0, 1).toUpperCase() }}
+            {{ store.accountName.slice(0, 1).toUpperCase() }}
           </div>
-          <p class="text-sm font-semibold text-primary">Logged in as {{ state.accountName }}</p>
+          <p class="text-sm font-semibold text-primary">Logged in as {{ store.accountName }}</p>
         </div>
         <button
           class="text-xs text-primary underline cursor-pointer bg-transparent border-none"
@@ -138,7 +154,7 @@ function submit() {
         enter-from-class="opacity-0 -translate-y-2"
         enter-to-class="opacity-100 translate-y-0"
       >
-        <div v-if="showLogin && !state.isLoggedIn" class="mt-4 pt-4 border-t border-blue-200 space-y-3">
+        <div v-if="showLogin && !store.isLoggedIn" class="mt-4 pt-4 border-t border-blue-200 space-y-3">
           <input
             v-model="loginEmail" type="email" placeholder="Email address"
             class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-blue-200 bg-white outline-none focus:border-blue-500"
@@ -160,7 +176,7 @@ function submit() {
     </div>
 
     <div
-      v-for="(guest, i) in state.guests"
+      v-for="(guest, i) in store.guests"
       :key="i"
       class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
     >
@@ -176,7 +192,10 @@ function submit() {
         </div>
         <span class="text-sm font-semibold text-slate-800">
           {{ guestLabels[i] }}
-          <span v-if="isPrimary(i)" class="ml-1.5 text-[11px] font-normal text-primary bg-teal-50 px-2 py-0.5 rounded-full">
+          <span
+            v-if="isPrimary(i)"
+            class="ml-1.5 text-[11px] font-normal text-primary bg-teal-50 px-2 py-0.5 rounded-full"
+          >
             Primary contact
           </span>
         </span>
@@ -201,7 +220,7 @@ function submit() {
             First Name <span class="text-red-400">*</span>
           </label>
           <input
-            v-model="guest.firstName" type="text" placeholder="As on ID"
+            v-model="guest.firstName" type="text" placeholder="Ex. John"
             :class="fieldClass(`g${i}_first`)"
           />
           <p v-if="errors[`g${i}_first`]" class="text-xs text-red-500 mt-1">{{ errors[`g${i}_first`] }}</p>
@@ -212,7 +231,7 @@ function submit() {
             Last Name <span class="text-red-400">*</span>
           </label>
           <input
-            v-model="guest.lastName" type="text" placeholder="As on ID"
+            v-model="guest.lastName" type="text" placeholder="Ex. Doe"
             :class="fieldClass(`g${i}_last`)"
           />
           <p v-if="errors[`g${i}_last`]" class="text-xs text-red-500 mt-1">{{ errors[`g${i}_last`] }}</p>
@@ -249,22 +268,51 @@ function submit() {
       </div>
     </div>
 
+    <Transition
+      enter-active-class="transition-all duration-200"
+      enter-from-class="opacity-0 -translate-y-1"
+      enter-to-class="opacity-100 translate-y-0"
+    >
+      <div
+        v-if="store.status === 'error' && store.errorMessage"
+        class="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl"
+      >
+        <span class="text-red-500 text-lg leading-none mt-0.5 flex-shrink-0">⚠</span>
+        <div>
+          <p class="text-sm font-semibold text-red-700">Booking failed</p>
+          <p class="text-xs text-red-600 mt-0.5">{{ store.errorMessage }}</p>
+        </div>
+      </div>
+    </Transition>
+
     <div class="flex gap-3">
       <button
-        class="flex-1 h-12 border-2 border-slate-200 text-slate-700 font-semibold rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer bg-white"
+        class="flex-1 h-12 border-2 border-slate-200 text-slate-700 font-semibold rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer bg-white disabled:opacity-50"
+        :disabled="isSubmitting"
         @click="emit('back')"
       >
         ← Back
       </button>
       <button
-        class="flex-[2] h-12 bg-primary hover:opacity-90 text-white font-bold rounded-2xl transition-all border-none cursor-pointer shadow-lg flex items-center justify-center gap-2"
+        class="flex-[2] h-12 bg-primary hover:opacity-90 text-white font-bold rounded-2xl transition-all border-none cursor-pointer shadow-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+        :disabled="isSubmitting"
         @click="submit"
       >
-        Continue to Review
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
+        <template v-if="isSubmitting">
+          <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          Confirming booking…
+        </template>
+        <template v-else>
+          Continue to Review
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </template>
       </button>
     </div>
+
   </div>
 </template>

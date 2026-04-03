@@ -91,3 +91,48 @@ interface IHotelRooms {
     },
     TermsAndConditions: []
 }
+
+export interface CreateBookingData {
+    session_code: string
+    hotel_id: string
+    country_code: string
+    city_code: string
+    arrival_date: string
+    departure_date: string
+    rooms_type: string
+    rooms_key: string
+    rooms_adults: string
+    rooms_children: string
+    room_rates: string
+    travellers: ITraveller[]
+}
+
+interface ITraveller {
+    title: string
+    first_name: string
+    last_name: string
+}
+
+export interface PaystackPaymentData {
+    amount: string
+    invoice_code: string
+    customer_name: string
+    customer_email: string
+    callback_url: string
+}
+
+export interface PaystackPaymentResponse {
+    payment_link: string
+}
+
+export interface FlutterwavePaymentData {
+    amount: string
+    invoice_code: string
+    customer_name: string
+    customer_email: string
+    callback_url: string
+}
+
+export interface FlutterwavePaymentResponse {
+    payment_link: string
+}

@@ -220,7 +220,7 @@ async function submit() {
             First Name <span class="text-red-400">*</span>
           </label>
           <input
-            v-model="guest.firstName" type="text" placeholder="Ex. John"
+            v-model="guest.firstName" type="text" placeholder="Eg. John"
             :class="fieldClass(`g${i}_first`)"
           />
           <p v-if="errors[`g${i}_first`]" class="text-xs text-red-500 mt-1">{{ errors[`g${i}_first`] }}</p>
@@ -231,7 +231,7 @@ async function submit() {
             Last Name <span class="text-red-400">*</span>
           </label>
           <input
-            v-model="guest.lastName" type="text" placeholder="Ex. Doe"
+            v-model="guest.lastName" type="text" placeholder="Eg. Doe"
             :class="fieldClass(`g${i}_last`)"
           />
           <p v-if="errors[`g${i}_last`]" class="text-xs text-red-500 mt-1">{{ errors[`g${i}_last`] }}</p>

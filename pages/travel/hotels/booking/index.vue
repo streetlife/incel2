@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHotelBookingStore } from '../../../../stores/useHotelBookingStore'
 import HotelBookingSummary from '../../../../components/hotel/HotelBookingSummary.vue'
@@ -19,23 +19,16 @@ const STEPS = [
   { id: 4, label: 'Payment'},
 ]
 
-watch(
-  () => store.step,
-  (s) => {
-    router.replace({
-      query: { ...route.query, step: String(s) }
-    })
-  }
-)
-
 function goNext() {
   store.step = Math.min(store.step + 1, 5)
+  router.replace({ query: { ...route.query, step: String(store.step) } })
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 function goBack() {
   if (store.step === 1) { router.push('/travel/hotels'); return }
   store.step = Math.max(store.step - 1, 1)
+  router.replace({ query: { ...route.query, step: String(store.step) } })
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -43,7 +36,7 @@ const showSidebar = computed(() => store.step < 5)
 
 onMounted(() => {
   const raw = sessionStorage.getItem('selectedHotel')
-  if (raw) {
+  if (raw && !store.hotel) {
     try {
       const { hotel, searchParams, sessionCode } = JSON.parse(raw)
       store.setHotel(hotel, searchParams, sessionCode)

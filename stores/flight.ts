@@ -103,6 +103,7 @@ export const useFlightStore = defineStore(
         const flightService = useFlightService()
         const hasSearched = ref(false)
         const showSearchForm = ref(true)
+        const airportProtocol = ref<null | 'local' | 'international'>(null)
 
         async function confirmBooking(): Promise<boolean> {
             status.value = 'loading'
@@ -138,12 +139,20 @@ export const useFlightStore = defineStore(
             }
         }
 
+        const airportProtocolPrice = computed(() => {
+            if (airportProtocol.value === 'local') return 7.34
+            if (airportProtocol.value === 'international') return 14.68
+            return 0
+        })
+
         const priceBreakdown = computed(() => {
             const base = basePrice.value * passengerCount.value
             const tax = Math.round(base * 0.075)
             const discount = Math.round(base * discountRate.value)
-            const total = base + tax - discount
-            return { base, tax, discount, total }
+            const addon = airportProtocolPrice.value
+            const total = base + tax - discount + addon
+
+            return { base, tax, discount, addon, total }
         })
 
         const totalPassengers = computed(
@@ -263,6 +272,7 @@ export const useFlightStore = defineStore(
             ticketNumbers.value = []
             status.value = 'idle'
             errorMessage.value = ''
+            airportProtocol.value = null
         }
 
         function resetAll() {
@@ -326,6 +336,8 @@ export const useFlightStore = defineStore(
             bookCode,
             hasSearched,
             showSearchForm,
+            airportProtocol,
+            airportProtocolPrice,
             setFlight,
             setSessionCode,
             setNameEmail,

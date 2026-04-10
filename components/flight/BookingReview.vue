@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useFlightStore } from '../../stores/flight'
 import { useCurrency } from '../../composables/useCurrency'
 import AppToast from '../toast/AppToast.vue'
+import { watch } from 'vue';
 
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
 
@@ -20,6 +21,8 @@ const {
   invoiceNumber,
   invoiceDate,
   priceBreakdown,
+  airportProtocol,
+  airportProtocolPrice,
 } = storeToRefs(flightStore)
 
 const { format, currentConfig } = useCurrency()
@@ -39,6 +42,25 @@ const CARRIERS: Record<string, string> = {
 }
 const cabinLabel = (c: string) =>
   c.replace('_', ' ').toLowerCase().replace(/\b\w/g, (l: string) => l.toUpperCase())
+
+
+watch(
+  () => offer.value,
+  () => {
+    if (!offer.value) return
+
+    const from = offer.value.itineraries[0].segments[0].departure.iataCode
+    const to = offer.value.itineraries[0].segments.at(-1).arrival.iataCode
+
+    // crude logic — adjust based on your API
+    const isInternational = !from.startsWith('LOS') && !to.startsWith('LOS')
+
+    if (!airportProtocol.value) {
+      airportProtocol.value = isInternational ? 'international' : 'local'
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -101,6 +123,34 @@ const cabinLabel = (c: string) =>
       </div>
 
       <div class="px-6 py-4 space-y-2">
+        <div class="px-6 py-4 border-b border-slate-100">
+          <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
+            Add-ons
+          </p>
+
+          <div class="space-y-2">
+            <label class="flex items-center justify-between cursor-pointer">
+              <div>
+                <p class="text-sm font-medium text-slate-800">Airport Protocol (Local)</p>
+                <p class="text-xs text-slate-400">Fast-track airport assistance</p>
+              </div>
+              <input type="radio" value="local" v-model="airportProtocol" />
+            </label>
+
+            <label class="flex items-center justify-between cursor-pointer">
+              <div>
+                <p class="text-sm font-medium text-slate-800">Airport Protocol (International)</p>
+                <p class="text-xs text-slate-400">Premium airport assistance</p>
+              </div>
+              <input type="radio" value="international" v-model="airportProtocol" />
+            </label>
+
+            <label class="flex items-center justify-between cursor-pointer">
+              <span class="text-sm text-slate-500">No Add-on</span>
+              <input type="radio" :value="null" v-model="airportProtocol" />
+            </label>
+          </div>
+        </div>
         <div class="flex justify-between text-sm text-slate-600">
           <span>Subtotal</span><span>{{ format(priceBreakdown.base) }}</span>
         </div>
@@ -110,6 +160,15 @@ const cabinLabel = (c: string) =>
         <div v-if="priceBreakdown.discount > 0" class="flex justify-between text-sm text-green-600">
           <span>B2B Discount ({{ (discountRate * 100).toFixed(0) }}%)</span>
           <span>−{{ format(priceBreakdown.discount) }}</span>
+        </div>
+        <div
+          v-if="airportProtocolPrice > 0"
+          class="flex justify-between text-sm text-slate-600"
+        >
+          <span>Airport Protocol <span class="text-xs text-slate-400">
+            ({{ airportProtocol === 'local' ? 'Local' : 'International' }})
+          </span></span>
+          <span>{{ format(airportProtocolPrice) }}</span>
         </div>
         <div class="flex justify-between items-center pt-3 border-t border-slate-200 font-bold">
           <span class="text-slate-900">Total Due</span>

@@ -5,9 +5,6 @@ import FlightResult from '../../../components/flight/FlightResult.vue'
 import { useFlights } from '../../../composables/useFlights'
 import { onMounted, nextTick } from 'vue'
 import AppToast from '../../../components/toast/AppToast.vue'
-import { useRoute } from 'nuxt/app'
-
-const route = useRoute()
 
 const {
   results,

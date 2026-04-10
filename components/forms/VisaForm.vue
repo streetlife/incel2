@@ -169,6 +169,15 @@ async function submit() {
       </button>
     </div>
   </div>
+
+  <div class="lg:col-span-4 mt-4">
+    <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-lg p-4">
+      <strong>Disclaimer:</strong>
+      Payment made is strictly for visa assistance and processing services. 
+      Visa approval is not guaranteed and is solely at the discretion of the respective embassy or consulate. 
+      We are not responsible for visa rejections.
+    </div>
+  </div>
 </template>
 
 <style scoped>

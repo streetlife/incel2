@@ -50,7 +50,7 @@
             </NuxtLink>
           </div>
           <p class="text-gray-400 text-sm mb-4">
-            UAE-licensed Destination Management Company serving travelers across Sub-Saharan Africa with expert visa assistance and unforgettable experiences.
+            Incel Tourism LLC is a leading Destination Management Company with a strong presence in Lagos, Nigeria, serving the dynamic Sub-Saharan African market. As a licensed Inbound Tour Operator in the UAE, we also specialize in offering comprehensive travel solutions for leisure visitors, corporate clients, and business travellers respectively.
           </p>
         </div>
 

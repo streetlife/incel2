@@ -3,7 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useFlightStore } from '../../stores/flight'
 import { useCurrency } from '../../composables/useCurrency'
 import AppToast from '../toast/AppToast.vue'
-import { watch } from 'vue';
+import { watch, ref } from 'vue';
 
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
 
@@ -23,9 +23,12 @@ const {
   priceBreakdown,
   airportProtocol,
   airportProtocolPrice,
+  travelerPricings,
 } = storeToRefs(flightStore)
 
 const { format, currentConfig } = useCurrency()
+
+const showBreakdown = ref(false)
 
 const parseDur = (iso: string) => {
   const h = Number.parseInt(iso.match(/(\d+)H/)?.[1] ?? '0')
@@ -151,23 +154,49 @@ watch(
             </label>
           </div>
         </div>
+
+        <div class="border border-slate-100 rounded-xl overflow-hidden mb-2">
+          <button
+            class="w-full flex items-center justify-between px-4 py-3 bg-slate-50 text-sm font-medium text-slate-700 cursor-pointer border-none"
+            @click="showBreakdown = !showBreakdown"
+          >
+            <span>Passenger price breakdown</span>
+            <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': showBreakdown }"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          <div v-if="showBreakdown" class="divide-y divide-slate-100">
+            <div v-for="tp in travelerPricings" :key="tp.travelerId"
+              class="px-4 py-3 flex items-center justify-between text-sm">
+              <div>
+                <p class="font-medium text-slate-800 capitalize">
+                  {{ tp.travelerType.replace('HELD_', '') }}
+                </p>
+                <p class="text-xs text-slate-400">
+                  Base {{ format(Number(tp.price.base)) }} + Tax {{ format(Number(tp.price.total) - Number(tp.price.base)) }}
+                </p>
+              </div>
+              <p class="font-semibold text-slate-800">{{ format(Number(tp.price.total)) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Totals -->
         <div class="flex justify-between text-sm text-slate-600">
-          <span>Subtotal</span><span>{{ format(priceBreakdown.base) }}</span>
+          <span>Fare ({{ passengerCount }} passenger{{ passengerCount > 1 ? 's' : '' }})</span>
+          <span>{{ format(priceBreakdown.base) }}</span>
         </div>
         <div class="flex justify-between text-sm text-slate-600">
-          <span>VAT (7.5%)</span><span>{{ format(priceBreakdown.tax) }}</span>
+          <span>Taxes & fees</span>
+          <span>{{ format(priceBreakdown.tax) }}</span>
         </div>
         <div v-if="priceBreakdown.discount > 0" class="flex justify-between text-sm text-green-600">
           <span>B2B Discount ({{ (discountRate * 100).toFixed(0) }}%)</span>
           <span>−{{ format(priceBreakdown.discount) }}</span>
         </div>
-        <div
-          v-if="airportProtocolPrice > 0"
-          class="flex justify-between text-sm text-slate-600"
-        >
-          <span>Airport Protocol <span class="text-xs text-slate-400">
-            ({{ airportProtocol === 'local' ? 'Local' : 'International' }})
-          </span></span>
+        <div v-if="airportProtocolPrice > 0" class="flex justify-between text-sm text-slate-600">
+          <span>Airport Protocol ({{ airportProtocol === 'local' ? 'Local' : 'International' }})</span>
           <span>{{ format(airportProtocolPrice) }}</span>
         </div>
         <div class="flex justify-between items-center pt-3 border-t border-slate-200 font-bold">

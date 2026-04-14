@@ -74,7 +74,7 @@ const handleServiceRequest = (service: Service) => {
 </script>
 
 <template>
-  <section class="relative -mt-24 z-20 pb-8">
+  <section class="relative -mt-44 z-20 pb-8">
     <div class="container mx-auto sm:px-24 px-4">
       <div class="bg-gradient-to-br from-[#0076ad] to-[#0076ad] rounded-3xl overflow-hidden">
 

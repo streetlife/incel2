@@ -104,6 +104,7 @@ export const useFlightStore = defineStore(
         const hasSearched = ref(false)
         const showSearchForm = ref(true)
         const airportProtocol = ref<null | 'local' | 'international'>(null)
+        const travelerPricings = ref<any[]>([])
 
         async function confirmBooking(): Promise<boolean> {
             status.value = 'loading'
@@ -146,12 +147,11 @@ export const useFlightStore = defineStore(
         })
 
         const priceBreakdown = computed(() => {
-            const base = basePrice.value * passengerCount.value
-            const tax = Math.round(base * 0.075)
+            const base = basePrice.value
+            const tax = taxAmount.value
             const discount = Math.round(base * discountRate.value)
             const addon = airportProtocolPrice.value
             const total = base + tax - discount + addon
-
             return { base, tax, discount, addon, total }
         })
 
@@ -190,9 +190,10 @@ export const useFlightStore = defineStore(
         function selectOffer(raw: any, passengerTypes: Array<'ADULT' | 'CHILD' | 'INFANT'>) {
             offer.value = raw
             passengerCount.value = passengerTypes.length
-            basePrice.value = Number.parseFloat(raw.price.total)
-            cabinClass.value =
-                raw.travelerPricings?.[0]?.fareDetailsBySegment?.[0]?.cabin ?? 'ECONOMY'
+            basePrice.value = Number.parseFloat(raw.price.base)
+            taxAmount.value = Number.parseFloat(raw.price.total) - Number.parseFloat(raw.price.base)
+            cabinClass.value = raw.travelerPricings?.[0]?.fareDetailsBySegment?.[0]?.cabin ?? 'ECONOMY'
+            travelerPricings.value = raw.travelerPricings ?? []
             currency.value = raw.price.currency ?? 'USD'
 
             passengers.value = passengerTypes.map((type, i) => ({
@@ -338,6 +339,7 @@ export const useFlightStore = defineStore(
             showSearchForm,
             airportProtocol,
             airportProtocolPrice,
+            travelerPricings,
             setFlight,
             setSessionCode,
             setNameEmail,
@@ -388,6 +390,7 @@ export const useFlightStore = defineStore(
                 'cachedMeta',
                 'lastSearchKey',
                 'bookCode',
+                'travelerPricings',
             ],
         },
     },

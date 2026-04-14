@@ -117,7 +117,6 @@ watch(segs, async (segments) => {
         </div>
         <div class="text-right">
           <div class="text-base font-bold text-slate-900">{{ format(Number(flight.price.total)) }}</div>
-          <div class="text-xs text-slate-400">per person</div>
           <div v-if="bags" class="text-xs text-amber-600 mt-0.5">+{{ format(Number(bags.amount)) }} bags</div>
         </div>
       </div>
@@ -244,7 +243,6 @@ watch(segs, async (segments) => {
 
       <div class="flex flex-col items-end gap-1 min-w-[148px]">
         <div class="text-xl font-bold text-slate-900 leading-tight">{{ format(Number(flight.price.total)) }}</div>
-        <div class="text-xs text-slate-400">per person</div>
         <div v-if="bags" class="text-xs text-amber-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded">+{{ format(Number(bags.amount)) }} bags</div>
         <button class="flex-1 flex items-center justify-center gap-2 mt-1 w-full px-5 py-2.5 bg-primary hover:opacity-90 active:scale-95 text-white text-sm font-semibold rounded-xl transition-all duration-150 cursor-pointer border-none"
           :disabled="bookingLoadingId === flight.id"

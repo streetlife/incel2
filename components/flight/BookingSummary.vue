@@ -19,7 +19,7 @@ const {
 } = storeToRefs(flightStore)
 
 const { format } = useCurrency()
-const showBreakdown = ref(false)
+const showBreakdown = ref(true)
 
 const seg = computed(() => offer.value?.itineraries[0].segments[0])
 const itin = computed(() => offer.value?.itineraries[0])

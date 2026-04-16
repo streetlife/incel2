@@ -28,7 +28,7 @@ const {
 
 const { format, currentConfig } = useCurrency()
 
-const showBreakdown = ref(false)
+const showBreakdown = ref(true)
 
 const parseDur = (iso: string) => {
   const h = Number.parseInt(iso.match(/(\d+)H/)?.[1] ?? '0')

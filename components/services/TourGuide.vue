@@ -211,7 +211,7 @@ const inputClass = (hasError: boolean) => [
     >
       <div class="absolute inset-0 bg-black/50"></div>
       <div class="relative z-10 max-w-7xl mx-auto text-center">
-        <h1 class="text-4xl md:text-5xl font-bold mb-4 text-white">Professional Tour Guides</h1>
+        <h1 class="text-4xl md:text-5xl font-bold mb-4 text-white">Professional Car Hires</h1>
         <p class="text-xl text-gray-100">Expert local guides for unforgettable experiences</p>
       </div>
     </section>
@@ -219,7 +219,7 @@ const inputClass = (hasError: boolean) => [
     <section class="py-16 px-6 bg-gray-50">
       <div class="max-w-3xl mx-auto">
         <div class="bg-white rounded-xl shadow-lg p-8">
-          <h2 class="text-2xl font-bold text-gray-900 mb-8">Request a Tour Guide</h2>
+          <h2 class="text-2xl font-bold text-gray-900 mb-8">Request for Car Hire</h2>
 
           <form @submit.prevent="submit" class="space-y-8">
             <fieldset>

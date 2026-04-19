@@ -30,6 +30,11 @@ const { format, currentConfig } = useCurrency()
 
 const showBreakdown = ref(true)
 
+const PROTOCOL_PRICES = {
+  local: 7.45,
+  international: 14.89,
+} as const
+
 const parseDur = (iso: string) => {
   const h = Number.parseInt(iso.match(/(\d+)H/)?.[1] ?? '0')
   const m = Number.parseInt(iso.match(/(\d+)M/)?.[1] ?? '0')
@@ -137,7 +142,10 @@ watch(
                 <p class="text-sm font-medium text-slate-800">Airport Protocol (Local)</p>
                 <p class="text-xs text-slate-400">Fast-track airport assistance</p>
               </div>
-              <input type="radio" value="local" v-model="airportProtocol" />
+              <div class="flex items-center gap-3">
+                <span class="text-sm font-semibold text-slate-600">{{ format(PROTOCOL_PRICES.local) }}</span>
+                <input type="radio" value="local" v-model="airportProtocol" />
+              </div>
             </label>
 
             <label class="flex items-center justify-between cursor-pointer">
@@ -145,12 +153,18 @@ watch(
                 <p class="text-sm font-medium text-slate-800">Airport Protocol (International)</p>
                 <p class="text-xs text-slate-400">Premium airport assistance</p>
               </div>
-              <input type="radio" value="international" v-model="airportProtocol" />
+              <div class="flex items-center gap-3">
+                <span class="text-sm font-semibold text-slate-600">{{ format(PROTOCOL_PRICES.international) }}</span>
+                <input type="radio" value="international" v-model="airportProtocol" />
+              </div>
             </label>
 
             <label class="flex items-center justify-between cursor-pointer">
               <span class="text-sm text-slate-500">No Add-on</span>
-              <input type="radio" :value="null" v-model="airportProtocol" />
+              <div class="flex items-center gap-3">
+                <span class="text-sm text-slate-400">—</span>
+                <input type="radio" :value="null" v-model="airportProtocol" />
+              </div>
             </label>
           </div>
         </div>

@@ -427,7 +427,7 @@ const navLinks: NavLink[] = [
       { name: 'Travel Insurance', path: '/services/travel-insurance' },
       { name: 'Airport Transfer', path: '/services/airport-transfer' },
       { name: 'Airport Protocol', path: '/services/airport-protocol' },
-      { name: 'Tour Guide', path: '/services/tour-guide' },
+      { name: 'Car Hire', path: '/services/car-hire' },
     ],
   },
   { name: 'Contact', path: '/contact' },
@@ -439,7 +439,7 @@ const isMainPage = computed(() => {
     '/travel/hotels', '/travel/tours', '/travel/visas', '/visa',
     '/services/vacation-packages', '/services/travel-insurance',
     '/services/airport-transfer', '/services/airport-protocol',
-    '/services/tour-guide', '/privacy-policy', '/faq', '/terms', '/deals',
+    '/services/car-hire', '/privacy-policy', '/faq', '/terms', '/deals',
   ]
   return mainPages.includes(route.path) || route.path.startsWith('/deals/')
 })

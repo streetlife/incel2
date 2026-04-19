@@ -141,8 +141,8 @@ export const useFlightStore = defineStore(
         }
 
         const airportProtocolPrice = computed(() => {
-            if (airportProtocol.value === 'local') return 7.34
-            if (airportProtocol.value === 'international') return 14.68
+            if (airportProtocol.value === 'local') return 7.45
+            if (airportProtocol.value === 'international') return 14.89
             return 0
         })
 

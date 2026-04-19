@@ -19,7 +19,7 @@ const componentMap: Record<string, any> = {
   'travel-insurance': TravelInsurance,
   'airport-transfer': AirportTransfer,
   'airport-protocol': AirportProtocol,
-  'tour-guide': TourGuide,
+  'car-hire': TourGuide,
   'cruises': Cruises
 }
 

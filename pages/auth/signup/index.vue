@@ -63,7 +63,7 @@ async function submit() {
   try {
     const response = await authStore.register({
       full_names: form.value.full_name,
-      email_address: form.value.email,
+      email: form.value.email,
       mobile_number: form.value.phone,
       password: form.value.password,
       password_confirmation: form.value.confirmPassword
@@ -92,6 +92,8 @@ const pwStrength = computed(() => {
 })
 const pwLabel = computed(() => ['', 'Weak', 'Fair', 'Good', 'Strong'][pwStrength.value])
 const pwColor = computed(() => ['', 'bg-red-400', 'bg-amber-400', 'bg-blue-500', 'bg-green-500'][pwStrength.value])
+
+const agreedToTerms = ref(false)
 </script>
 
 <template>
@@ -177,17 +179,25 @@ const pwColor = computed(() => ['', 'bg-red-400', 'bg-amber-400', 'bg-blue-500',
               <p v-if="errors.confirmPassword" class="text-xs text-red-500 mt-1">{{ errors.confirmPassword }}</p>
             </div>
 
-            <p class="text-xs text-slate-400 leading-relaxed">
-              By creating an account you agree to our
-              <a href="#" class="text-primary hover:underline">Terms of Service</a> and
-              <a href="#" class="text-primary hover:underline">Privacy Policy</a>.
-            </p>
+            <div class="flex items-start gap-3">
+              <input
+                id="terms"
+                v-model="agreedToTerms"
+                type="checkbox"
+                class="mt-0.5 w-4 h-4 accent-primary cursor-pointer shrink-0"
+              />
+              <label for="terms" class="text-xs text-slate-400 leading-relaxed cursor-pointer">
+                By creating an account you agree to our
+                <a href="#" class="text-primary hover:underline">Terms of Service</a> and
+                <a href="#" class="text-primary hover:underline">Privacy Policy</a>.
+              </label>
+            </div>
 
             <div class="flex gap-3">
               <button class="flex-1 h-12 border-2 border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 cursor-pointer bg-white" @click="step = 1">← Back</button>
               <button
                 class="flex-[2] h-12 bg-primary hover:opacity-90 active:scale-95 text-slate-900 font-bold rounded-xl transition-all border-none cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
-                :disabled="loading" @click="submit">
+                :disabled="loading || !agreedToTerms" @click="submit">
                 <svg v-if="loading" class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
                 {{ loading ? 'Creating account…' : 'Create Account' }}
               </button>

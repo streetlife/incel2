@@ -5,21 +5,21 @@ import { useCurrency } from '../../composables/useCurrency'
 
 const store = useVisaStore()
 
-const price = computed(() => {
-  const amount = Number(store.selectedVisa?.price)
-  return amount === 0 ? 100 : amount
-})
+// const price = computed(() => {
+//   const amount = Number(store.selectedVisa?.price)
+//   return amount === 0 ? 100 : amount
+// })
 
-const pricing = computed(() => {
-  const count = store.personCount
-  const subtotal = price.value * count
-  const serviceFee = Math.round(subtotal * 0.05)
-  const tax = Math.round(subtotal * 0.075)
-  const total = subtotal + serviceFee + tax
-  return { count, subtotal, serviceFee, tax, total }
-})
+// const pricing = computed(() => {
+//   const count = store.personCount
+//   const subtotal = price.value * count
+//   const serviceFee = Math.round(subtotal * 0.05)
+//   const tax = Math.round(subtotal * 0.075)
+//   const total = subtotal + serviceFee + tax
+//   return { count, subtotal, serviceFee, tax, total }
+// })
 
-const { format } = useCurrency()
+// const { format } = useCurrency()
 
 const requiredDocs = computed(() => store.getDocuments(0).filter(d => d.required))
 
@@ -103,7 +103,7 @@ const nationalityName = computed(() => toTitleCase(resolveCountryName(store.sele
           </div>
         </div>
 
-        <div class="border-t border-slate-100 pt-4">
+        <!-- <div class="border-t border-slate-100 pt-4">
           <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Price Breakdown</p>
           <div class="space-y-2">
             <div class="flex justify-between text-sm">
@@ -125,7 +125,7 @@ const nationalityName = computed(() => toTitleCase(resolveCountryName(store.sele
               <span class="font-bold text-slate-900 text-lg">{{ format(pricing.total, 'AED') }}</span>
             </div>
           </div>
-        </div>
+        </div> -->
 
         <div class="border-t border-slate-100 pt-4">
           <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Required Documents</p>
@@ -154,10 +154,17 @@ const nationalityName = computed(() => toTitleCase(resolveCountryName(store.sele
           </div>
         </div>
 
-        <div class="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+        <!-- <div class="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
           <p class="text-xs text-primary leading-relaxed">
             <span class="font-semibold">Visa delivery:</span> Once approved, your visa will be emailed to
             <span class="font-semibold">{{ leadEmail || 'your email address' }}</span>.
+          </p>
+        </div> -->
+
+        <div class="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+          <p class="text-xs text-primary leading-relaxed">
+            <span class="font-semibold">No payment required.</span> Submit your enquiry and our visa team will contact
+            <span class="font-semibold">{{ leadEmail || 'you' }}</span> within 1–2 business days.
           </p>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useVisaStore } from '../../../../stores/visa'
 import VisaApplicationForm from '../../../../components/visa/VisaApplicationForm.vue'
 import VisaBookingReview from '../../../../components/visa/VisaBookingReview.vue'
-import VisaPaymentForm from '../../../../components/visa/VisaPaymentForm.vue'
+// import VisaPaymentForm from '../../../../components/visa/VisaPaymentForm.vue'
 import VisaBookingSummary from '../../../../components/visa/VisaBookingSummary.vue'
 
 const router = useRouter()
@@ -44,7 +44,7 @@ function hydrateStoreFromUrl() {
 const steps = [
   { n: 1, label: 'Application' },
   { n: 2, label: 'Review' },
-  { n: 3, label: 'Payment' },
+  { n: 3, label: 'Submitted' },
 ]
 
 function goBack() {
@@ -60,6 +60,11 @@ function goBack() {
 async function goToStep(n: number) {
   await nextTick()
   step.value = n
+}
+
+const reset = () => {
+  store.resetAll()
+  router.push('/travel/visas')
 }
 
 watch(
@@ -134,7 +139,26 @@ watch(
             <div :key="step">
               <VisaApplicationForm v-if="step === 1" @next="goToStep(2)" />
               <VisaBookingReview v-else-if="step === 2" @next="goToStep(3)" @back="goToStep(1)" />
-              <VisaPaymentForm v-else-if="step === 3" @back="goToStep(2)" />
+              <div v-else-if="step === 3" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center space-y-4">
+                <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5">
+                    <polyline points="20,6 9,17 4,12"/>
+                  </svg>
+                </div>
+                <h2 class="text-xl font-bold text-slate-900">Enquiry Submitted!</h2>
+                <p class="text-sm text-slate-500 max-w-sm mx-auto">
+                  Thank you. Our visa team will review your documents and reach out to
+                  <span class="font-semibold text-slate-700">{{ store.applicants[0]?.email }}</span>
+                  within 1–2 business days.
+                </p>
+
+                <button
+                  class="inline-flex items-center gap-2 mt-2 px-6 py-3 bg-primary text-white font-bold text-sm rounded-xl cursor-pointer hover:opacity-90 transition-all"
+                  @click="reset()">
+                  Back to Visa Search
+                </button>
+              </div>
+              <!-- <VisaPaymentForm v-else-if="step === 3" @back="goToStep(2)" /> -->
             </div>
           </Transition>
         </div>

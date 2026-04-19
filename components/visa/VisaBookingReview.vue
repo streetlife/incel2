@@ -7,19 +7,19 @@ import AppToast from '../toast/AppToast.vue';
 const emit = defineEmits<{ next: []; back: [] }>()
 const store = useVisaStore()
 
-const price = computed(() => {
-  const amount = Number(store.selectedVisa?.price)
-  return amount === 0 ? 100 : amount
-})
+// const price = computed(() => {
+//   const amount = Number(store.selectedVisa?.price)
+//   return amount === 0 ? 100 : amount
+// })
 
-const pricing = computed(() => {
-  const count = store.personCount
-  const subtotal = price.value * count
-  const serviceFee = Math.round(subtotal * 0.05)
-  const tax = Math.round(subtotal * 0.075)
-  const total = subtotal + serviceFee + tax
-  return { count, subtotal, serviceFee, tax, total }
-})
+// const pricing = computed(() => {
+//   const count = store.personCount
+//   const subtotal = price.value * count
+//   const serviceFee = Math.round(subtotal * 0.05)
+//   const tax = Math.round(subtotal * 0.075)
+//   const total = subtotal + serviceFee + tax
+//   return { count, subtotal, serviceFee, tax, total }
+// })
 
 const { format } = useCurrency()
 
@@ -75,7 +75,7 @@ function resolveCountryName(codeOrValue: string | undefined): string {
   <AppToast />
   <div class="space-y-5">
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div class="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <!-- <div class="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Proforma Invoice</p>
           <h2 class="text-xl font-bold text-slate-900 mt-0.5">TravelCo Visa Services</h2>
@@ -95,6 +95,28 @@ function resolveCountryName(codeOrValue: string | undefined): string {
         <p class="font-semibold text-slate-900">
           {{ leadApplicant.firstName }} {{ leadApplicant.lastName }}
         </p>
+        <p class="text-sm text-slate-500">{{ leadApplicant.email || '—' }}</p>
+        <p class="text-sm text-slate-500">{{ leadApplicant.phone || '—' }}</p>
+      </div> -->
+
+      <div class="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Visa Enquiry</p>
+          <h2 class="text-xl font-bold text-slate-900 mt-0.5">TravelCo Visa Enquiries</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Our team will review and contact you shortly</p>
+        </div>
+        <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <p class="text-xs font-semibold text-amber-800">No payment required at this stage</p>
+        </div>
+      </div>
+
+      <!-- Contact -->
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-100">
+        <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Lead Applicant</p>
+        <p class="font-semibold text-slate-900">{{ leadApplicant.firstName }} {{ leadApplicant.lastName }}</p>
         <p class="text-sm text-slate-500">{{ leadApplicant.email || '—' }}</p>
         <p class="text-sm text-slate-500">{{ leadApplicant.phone || '—' }}</p>
       </div>
@@ -160,7 +182,7 @@ function resolveCountryName(codeOrValue: string | undefined): string {
         </div>
       </div>
 
-      <div class="px-6 py-5 border-b border-slate-100">
+      <!-- <div class="px-6 py-5 border-b border-slate-100">
         <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Price Breakdown</p>
         <div class="space-y-2.5">
           <div class="flex justify-between text-sm">
@@ -183,7 +205,7 @@ function resolveCountryName(codeOrValue: string | undefined): string {
             <span class="font-bold text-slate-900 text-xl">{{ format(pricing.total, 'AED') }}</span>
           </div>
         </div>
-      </div>
+      </div> -->
 
       <div class="px-6 py-5 border-b border-slate-100">
         <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Documents Attached</p>
@@ -219,7 +241,7 @@ function resolveCountryName(codeOrValue: string | undefined): string {
       <button
         class="flex items-center gap-2 px-6 py-3 bg-primary hover:opacity-90 active:scale-95 text-slate-900 font-bold text-sm rounded-xl border-none cursor-pointer transition-all"
         @click="proceed">
-        Proceed to Payment →
+        Submit Enquiry →
       </button>
     </div>
   </div>

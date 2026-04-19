@@ -348,6 +348,35 @@ watch(segs, async (segments) => {
             {{ fare.includedCabinBags.quantity ?? fare.includedCabinBags.weight + 'kg' }} carry-on included
           </div>
         </div>
+
+        <!-- Price Breakdown -->
+        <div class="mt-4 pt-4 border-t border-dashed border-slate-200">
+          <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
+            Price Breakdown
+          </p>
+          <div class="bg-white border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
+            <div
+              v-for="tp in flight.travelerPricings"
+              :key="tp.travelerId"
+              class="px-4 py-3 flex items-center justify-between text-sm"
+            >
+              <div>
+                <p class="font-medium text-slate-800 capitalize">
+                  {{ tp.travelerType.replace('HELD_', '').toLowerCase() }}
+                </p>
+                <p class="text-xs text-slate-400">
+                  Base {{ format(Number(tp.price.base)) }} + Tax
+                  {{ format(Number(tp.price.total) - Number(tp.price.base)) }}
+                </p>
+              </div>
+              <p class="font-semibold text-slate-800">{{ format(Number(tp.price.total)) }}</p>
+            </div>
+          </div>
+          <div class="flex justify-between items-center mt-3 px-1">
+            <span class="text-sm text-slate-500">Total</span>
+            <span class="text-base font-bold text-slate-900">{{ format(Number(flight.price.total)) }}</span>
+          </div>
+        </div>
       </div>
     </Transition>
   </article>

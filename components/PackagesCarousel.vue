@@ -70,9 +70,16 @@
                 <span v-if="pkg.date_to"> → {{ formatDate(pkg.date_to) }}</span>
               </div>
 
-              <div class="flex justify-end border-t border-white/20 pt-3 md:pt-4 mt-3 md:mt-4">
-                <button class="rounded-full flex items-center py-2 bg-white text-black hover:bg-primary hover:text-white border-0 font-semibold px-3 md:px-4 text-xs md:text-sm transition-colors duration-200">
-                  View Details <ArrowRight class="w-3 h-3 md:w-3.5 md:h-3.5 ml-1.5" />
+              <!-- Updated CTA — triggers builder instead of navigating -->
+              <div class="flex items-center justify-between border-t border-white/20 pt-3 md:pt-4 mt-3 md:mt-4 gap-3">
+                <p class="text-white/70 text-[11px] leading-tight max-w-[55%]">
+                  Design your experience from this destination
+                </p>
+                <button
+                  @click.stop="emit('design', pkg)"
+                  class="shrink-0 rounded-full flex items-center py-2 bg-white text-black hover:bg-primary hover:text-white border-0 font-semibold px-3 md:px-4 text-xs md:text-sm transition-colors duration-200"
+                >
+                  Design Mine <ArrowRight class="w-3 h-3 md:w-3.5 md:h-3.5 ml-1.5" />
                 </button>
               </div>
             </div>
@@ -100,7 +107,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, type CSSProperties } from 'vue'
 import { ArrowLeft, ArrowRight, MapPin } from 'lucide-vue-next'
-import { navigateTo } from 'nuxt/app'
 
 interface Package {
   id: number | string
@@ -125,26 +131,20 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+  
+const emit = defineEmits<{
+  (e: 'design', pkg: Package): void
+}>()
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80'
 
 function onImageError(event: Event) {
   const img = event.target as HTMLImageElement
-  if (img.src !== FALLBACK_IMAGE) {
-    img.src = FALLBACK_IMAGE
-  }
+  if (img.src !== FALLBACK_IMAGE) img.src = FALLBACK_IMAGE
 }
 
 function getHeroImage(pkg: Package): string {
-  return (
-    pkg.poster   ||
-    pkg.picture1 ||
-    pkg.picture2 ||
-    pkg.picture3 ||
-    pkg.picture4 ||
-    pkg.banner   ||
-    'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80'
-  )
+  return pkg.poster || pkg.picture1 || pkg.picture2 || pkg.picture3 || pkg.picture4 || pkg.banner || FALLBACK_IMAGE
 }
 
 function formatDate(dateStr?: string): string {
@@ -184,9 +184,12 @@ const nextSlide = () => { activeIndex.value = (activeIndex.value + 1) % props.pa
 const prevSlide = () => { activeIndex.value = (activeIndex.value - 1 + props.packages.length) % props.packages.length }
 const setActiveIndex = (index: number) => { activeIndex.value = index }
 
+// Clicking a non-active card brings it to focus; clicking the active card opens builder
 const handleCardClick = (index: number) => {
   if (getOffset(index) === 0) {
-    navigateTo(`/packages/${props.packages[index].id}`)
+    emit('design', props.packages[index])
+  } else {
+    setActiveIndex(index)
   }
 }
 
@@ -249,7 +252,7 @@ const getCardClass = (index: number) => {
   const isVisible = Math.abs(offset) <= 2
   return [
     'rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl',
-    isCenter  ? 'shadow-black/50 cursor-pointer' : 'shadow-black/20 pointer-events-none',
+    isCenter  ? 'shadow-black/50 cursor-pointer' : 'shadow-black/20 cursor-pointer',
     !isCenter && isVisible ? 'grayscale-[0.2]' : ''
   ].filter(Boolean).join(' ')
 }

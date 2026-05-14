@@ -1,5 +1,5 @@
 import { ApiResponse } from "../types/api"
-import { AboutUsResponse, AirportProtocolData, AirportProtocolResponse, AirpotTransferData, AirpotTransferResponse, ContactUsData, ContactUsResponse, HeroSectionResponse, HotDealResponse, NewsLetterData, NewsLetterResponse, PackageResponse, PartnersResponse, ReviewsResponse, StatsResponse, TourGuideData, TourGuideResponse, TravelInsuranceData, TravelInsuranceResponse } from "../types/general"
+import { AboutUsResponse, AirportProtocolData, AirportProtocolResponse, AirpotTransferData, AirpotTransferResponse, ContactUsData, ContactUsResponse, GenerateInvoiceData, GenerateInvoiceResponse, HeroSectionResponse, HotDealResponse, NewsLetterData, NewsLetterResponse, PackageResponse, PartnersResponse, ReviewsResponse, StatsResponse, TourGuideData, TourGuideResponse, TravelInsuranceData, TravelInsuranceResponse } from "../types/general"
 import { useApi } from "../utils/api"
 
 export function useGeneralService() {
@@ -121,6 +121,14 @@ export function useGeneralService() {
             })
 
             return res.data
+        },
+
+        async generateInvoice(data: GenerateInvoiceData): Promise<GenerateInvoiceResponse> {
+            const res = await $api<GenerateInvoiceResponse>('/invoice/generate', {
+                method: 'POST',
+                body: data,
+            })
+            return res
         },
     }
 

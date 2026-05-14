@@ -1,8 +1,10 @@
 <!-- Sticky sidebar: tour snapshot + live pricing -->
 <script setup lang="ts">
 import { useTourBookingStore } from '../../composables/useTourBookingStore'
+import { useCurrency } from '../../composables/useCurrency'
 
-const { state, priceBreakdown, fmtNgn } = useTourBookingStore()
+const { state, priceBreakdown } = useTourBookingStore()
+const { format } = useCurrency()
 
 const fmtDate = (d: string) =>
   d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
@@ -66,26 +68,26 @@ const fmtDate = (d: string) =>
       <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Price Breakdown</p>
 
       <div v-if="state.adults > 0" class="flex justify-between text-sm text-slate-600">
-        <span>{{ fmtNgn(state.selectedPackage.priceAdult * state.ngnRate) }} × {{ state.adults }} adult{{ state.adults > 1 ? 's' : '' }}</span>
-        <span>{{ fmtNgn(priceBreakdown.adultTotal) }}</span>
+        <span>{{ format(state.selectedPackage.priceAdult) }} × {{ state.adults }} adult{{ state.adults > 1 ? 's' : '' }}</span>
+        <span>{{ format(priceBreakdown.adultTotal) }}</span>
       </div>
       <div v-if="state.children > 0" class="flex justify-between text-sm text-slate-600">
-        <span>{{ fmtNgn(state.selectedPackage.priceChild * state.ngnRate) }} × {{ state.children }} child{{ state.children > 1 ? 'ren' : '' }}</span>
-        <span>{{ fmtNgn(priceBreakdown.childTotal) }}</span>
+        <span>{{ format(state.selectedPackage.priceChild) }} × {{ state.children }} child{{ state.children > 1 ? 'ren' : '' }}</span>
+        <span>{{ format(priceBreakdown.childTotal) }}</span>
       </div>
       <div v-if="state.infants > 0" class="flex justify-between text-sm text-slate-600">
-        <span>{{ state.selectedPackage.priceInfant === 0 ? 'Infant (free)' : `${fmtNgn(state.selectedPackage.priceInfant * state.ngnRate)} × ${state.infants}` }}</span>
-        <span>{{ state.selectedPackage.priceInfant === 0 ? '₦0' : fmtNgn(priceBreakdown.infantTotal) }}</span>
+        <span>{{ state.selectedPackage.priceInfant === 0 ? 'Infant (free)' : `${format(state.selectedPackage.priceInfant)} × ${state.infants}` }}</span>
+        <span>{{ state.selectedPackage.priceInfant === 0 ? '₦0' : format(priceBreakdown.infantTotal) }}</span>
       </div>
       <div class="flex justify-between text-sm text-slate-600">
         <span>Taxes & fees (7.5%)</span>
-        <span>{{ fmtNgn(priceBreakdown.tax) }}</span>
+        <span>{{ format(priceBreakdown.tax) }}</span>
       </div>
 
       <div class="border-t border-dashed border-slate-200 pt-3 flex justify-between items-baseline">
         <span class="font-bold text-slate-900">Total</span>
         <div class="text-right">
-          <p class="text-xl font-bold text-slate-900">{{ fmtNgn(priceBreakdown.total) }}</p>
+          <p class="text-xl font-bold text-slate-900">{{ format(priceBreakdown.total) }}</p>
           <p class="text-xs text-slate-400">incl. VAT</p>
         </div>
       </div>

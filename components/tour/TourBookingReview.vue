@@ -1,9 +1,13 @@
 <!-- Step 3: Review + proforma invoice -->
 <script setup lang="ts">
 import { useTourBookingStore } from '../../composables/useTourBookingStore'
+import { useCurrency } from '../../composables/useCurrency'
 
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
-const { state, priceBreakdown, totalParticipants, fmtNgn, generateInvoice } = useTourBookingStore()
+const { state, priceBreakdown, totalParticipants, generateInvoice } = useTourBookingStore()
+const currency = useCurrency()
+const { format } = currency
+
 
 const fmtDate = (d: string) =>
   d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
@@ -16,24 +20,6 @@ function proceed() { generateInvoice(); emit('next') }
 
     <!-- Proforma invoice -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-
-      <!-- Header -->
-      <div class="flex items-start justify-between px-6 py-5 border-b border-slate-100">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            </div>
-            <span class="text-lg font-bold text-slate-900">TravelCo</span>
-          </div>
-          <p class="text-xs text-slate-400">VAT Reg: NG-123456789</p>
-        </div>
-        <div class="text-right">
-          <p class="text-xs text-slate-400 mb-0.5">PROFORMA INVOICE</p>
-          <p class="text-sm font-bold text-slate-700">{{ state.invoiceNumber || 'INV-PREVIEW' }}</p>
-          <p class="text-xs text-slate-400 mt-1">{{ state.invoiceDate || new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) }}</p>
-        </div>
-      </div>
 
       <!-- Billed to -->
       <div class="px-6 py-4 bg-slate-50 border-b border-slate-100">
@@ -53,32 +39,32 @@ function proceed() { generateInvoice(); emit('next') }
             <p class="text-xs text-slate-500">{{ state.searchParams.city }} · {{ fmtDate(state.searchParams.date) }} · Departs {{ state.selectedPackage?.departureTime }}</p>
             <p class="text-xs text-slate-400 mt-1">{{ totalParticipants }} participant{{ totalParticipants !== 1 ? 's' : '' }}</p>
           </div>
-          <p class="text-sm font-semibold text-slate-800 shrink-0">{{ fmtNgn(priceBreakdown.subtotalNgn) }}</p>
+          <p class="text-sm font-semibold text-slate-800 shrink-0">{{ format(priceBreakdown.subtotalNgn) }}</p>
         </div>
       </div>
 
       <!-- Pricing breakdown -->
       <div class="px-6 py-4 space-y-2">
         <div v-if="state.adults > 0" class="flex justify-between text-sm text-slate-600">
-          <span>{{ state.adults }} adult{{ state.adults > 1 ? 's' : '' }} × {{ fmtNgn(state.selectedPackage!.priceAdult * state.ngnRate) }}</span>
-          <span>{{ fmtNgn(priceBreakdown.adultTotal) }}</span>
+          <span>{{ state.adults }} adult{{ state.adults > 1 ? 's' : '' }} × {{ format(state.selectedPackage!.priceAdult * state.ngnRate) }}</span>
+          <span>{{ format(priceBreakdown.adultTotal) }}</span>
         </div>
         <div v-if="state.children > 0" class="flex justify-between text-sm text-slate-600">
-          <span>{{ state.children }} child{{ state.children > 1 ? 'ren' : '' }} × {{ fmtNgn(state.selectedPackage!.priceChild * state.ngnRate) }}</span>
-          <span>{{ fmtNgn(priceBreakdown.childTotal) }}</span>
+          <span>{{ state.children }} child{{ state.children > 1 ? 'ren' : '' }} × {{ format(state.selectedPackage!.priceChild * state.ngnRate) }}</span>
+          <span>{{ format(priceBreakdown.childTotal) }}</span>
         </div>
         <div v-if="state.infants > 0" class="flex justify-between text-sm text-slate-600">
           <span>{{ state.infants }} infant{{ state.infants > 1 ? 's' : '' }}</span>
-          <span>{{ state.selectedPackage!.priceInfant === 0 ? '₦0 (free)' : fmtNgn(priceBreakdown.infantTotal) }}</span>
+          <span>{{ state.selectedPackage!.priceInfant === 0 ? '₦0 (free)' : format(priceBreakdown.infantTotal) }}</span>
         </div>
         <div class="flex justify-between text-sm text-slate-600">
-          <span>VAT (7.5%)</span><span>{{ fmtNgn(priceBreakdown.tax) }}</span>
+          <span>VAT (7.5%)</span><span>{{ format(priceBreakdown.tax) }}</span>
         </div>
         <div class="flex justify-between items-center pt-3 border-t border-slate-200 font-bold">
           <span class="text-slate-900">Total Due</span>
-          <span class="text-xl text-slate-900">{{ fmtNgn(priceBreakdown.total) }}</span>
+          <span class="text-xl text-slate-900">{{ format(priceBreakdown.total) }}</span>
         </div>
-        <p class="text-[10px] text-slate-400 text-right">All amounts in NGN (₦)</p>
+        <p class="text-[10px] text-slate-400 text-right">All amounts in {{ currency.currentConfig.value.code }}</p>
       </div>
     </div>
 

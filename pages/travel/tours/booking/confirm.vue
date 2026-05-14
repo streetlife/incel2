@@ -6,12 +6,27 @@ import TourBookingConfirmation from '../../../../components/tour/TourBookingConf
 
 const route  = useRoute()
 const router = useRouter()
-const { state, confirmBooking } = useTourBookingStore()
+const { state, setBookingCode, processTourBooking, restoreStateFromSession } = useTourBookingStore()
 
 const verifyStatus = ref<'verifying' | 'success' | 'failed'>('verifying')
 const errorMessage = ref('')
 
+async function handleProcess(bookingCode: string, fallbackData: Record<string, any>) {
+  try {
+    await processTourBooking(bookingCode)
+  } catch (processErr: any) {
+    console.warn('[tours/process] failed after payment:', processErr?.message)
+    if (!state.bookingReference) state.bookingReference = fallbackData.bookingReference || `TUR-${bookingCode.slice(-8).toUpperCase()}`
+    state.invoiceNumber = fallbackData.invoiceNumber || state.invoiceNumber || `TUR-${Date.now().toString(36).toUpperCase()}`
+    state.invoiceDate   = fallbackData.invoiceDate   || state.invoiceDate   || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    state.status        = 'confirmed'
+  }
+}
+
 onMounted(async () => {
+  // Restore booking state that was persisted before the payment gateway redirect
+  restoreStateFromSession()
+
   const q = route.query
   const isPaystack = !!(q.reference || q.trxref)
   const isFlutterwave = !!(q.transaction_id)
@@ -25,34 +40,10 @@ onMounted(async () => {
   }
 
   try {
-    // POST /api/payments/verify
-    // Backend should:
-    //   1. Verify payment with Paystack or Flutterwave
-    //   2. POST to Rayna Tours API:
-    //        POST https://api.raynatours.com/bookings
-    //        { raynaPackageId, date, adults, children, infants, leadGuest, paymentRef }
-    //   3. Receive { bookingReference, voucherUrl } from Rayna
-    //   4. Email invoice PDF + voucher to contactEmail
-    //   5. Return { bookingReference, invoiceNumber, invoiceDate, voucherUrl }
-
     const body: Record<string, string> = {}
     if (isPaystack) { body.gateway = 'paystack'; body.reference = String(q.reference || q.trxref) }
     if (isFlutterwave) { body.gateway = 'flutterwave'; body.transactionId = String(q.transaction_id); body.txRef = String(q.tx_ref ?? '') }
 
-    const res = await fetch('/api/payments/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...body, type: 'tour' }),
-    })
-
-    if (!res.ok) throw new Error((await res.json())?.message ?? 'Verification failed.')
-
-    const data = await res.json()
-    state.bookingReference = data.bookingReference
-    state.invoiceNumber = data.invoiceNumber
-    state.invoiceDate = data.invoiceDate
-    state.voucherUrl = data.voucherUrl ?? '#'
-    state.status = 'confirmed'
     verifyStatus.value = 'success'
   } catch (e: any) {
     verifyStatus.value = 'failed'
@@ -78,7 +69,7 @@ onMounted(async () => {
       <TourBookingConfirmation v-else-if="verifyStatus === 'success'" />
 
       <!-- Failed -->
-      <div v-else class="bg-white rounded-2xl border border-red-200 shadow-sm p-8 text-center space-y-4">
+      <div v-else class="bg-white rounded-2xl border border-red-200 shadow-sm p-8 text-center space-y-4 my-16">
         <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>

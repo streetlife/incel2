@@ -4,6 +4,9 @@ import { useFlightStore } from '../../stores/flight'
 import { useCurrency } from '../../composables/useCurrency'
 import AppToast from '../toast/AppToast.vue'
 import { watch, ref } from 'vue';
+import { useGeneralService } from '../../services/general.service';
+import { useRoute } from 'vue-router';
+import { useToast } from '../../composables/useToast';
 
 const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
 
@@ -26,9 +29,13 @@ const {
   travelerPricings,
 } = storeToRefs(flightStore)
 
-const { format, currentConfig } = useCurrency()
+const { format, formatNumber, currentConfig } = useCurrency()
 
 const showBreakdown = ref(true)
+const generalService = useGeneralService()
+const route = useRoute()
+const toast = useToast()
+const loading = ref(false)
 
 const PROTOCOL_PRICES = {
   local: 7.45,
@@ -51,6 +58,36 @@ const CARRIERS: Record<string, string> = {
 const cabinLabel = (c: string) =>
   c.replace('_', ' ').toLowerCase().replace(/\b\w/g, (l: string) => l.toUpperCase())
 
+const next = async() => {
+  try {
+    loading.value = true
+    const bookingCode = flightStore.bookCode ?? getQueryString(route.query.booking_code)
+    
+    const res = await generalService.generateInvoice({
+      booking_code: bookingCode,
+      currency_base: currentConfig.value.code,
+      amount_total: formatNumber(priceBreakdown.value.total),
+      amount_paid: formatNumber(priceBreakdown.value.total),
+      module: 'flight'
+    })
+
+    if (res.invoice.status) {
+      emit('next')
+    } else {
+      toast.error(res.invoice.message)
+    }
+  } catch (e) {
+    console.log(e)
+    toast.error('An error occured while generating invoice. Try again later')
+  } finally {
+    loading.value = false
+  }
+}
+
+function getQueryString(v: unknown): string {
+  if (!v) return ''
+  return Array.isArray(v) ? String(v[0] ?? '') : String(v)
+}
 
 watch(
   () => offer.value,
@@ -76,25 +113,6 @@ watch(
     <AppToast />
 
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div class="flex items-start justify-between px-6 py-5 border-b border-slate-100">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.36 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 5.55 5.55l.97-.97a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 15.58Z"/></svg>
-            </div>
-            <span class="text-lg font-bold text-slate-900">TravelCo</span>
-          </div>
-          <p class="text-xs text-slate-400">VAT Reg: NG-123456789</p>
-        </div>
-        <div class="text-right">
-          <p class="text-xs text-slate-400 mb-0.5">PROFORMA INVOICE</p>
-          <p class="text-sm font-bold text-slate-700">{{ invoiceNumber || 'INV-PREVIEW' }}</p>
-          <p class="text-xs text-slate-400 mt-1">
-            Date: {{ invoiceDate || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }}
-          </p>
-        </div>
-      </div>
-
       <div class="px-6 py-4 bg-slate-50 border-b border-slate-100">
         <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Billed To</p>
         <p class="text-sm font-semibold text-slate-800">
@@ -131,7 +149,7 @@ watch(
       </div>
 
       <div class="px-6 py-4 space-y-2">
-        <div class="px-6 py-4 border-b border-slate-100">
+        <div class="px-0 py-4 border-b border-slate-100">
           <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
             Add-ons
           </p>
@@ -261,10 +279,11 @@ watch(
       </button>
       <button
         class="flex-[2] h-12 bg-primary hover:opacity-90 text-white font-bold rounded-2xl transition-all border-none cursor-pointer flex items-center justify-center gap-2 shadow-lg"
-        @click="emit('next')"
+        @click="next"
       >
-        Proceed to Payment
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        {{ loading ? 'Processing…' : 'Proceed to Payment' }}
+        <svg v-if="!loading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <svg v-else class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
       </button>
     </div>
   </div>

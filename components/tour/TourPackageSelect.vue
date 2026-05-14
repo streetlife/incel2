@@ -1,173 +1,199 @@
-<!-- Step 1: Choose a package + set participant counts -->
+<!-- Step 1: View tour details, set participant counts, choose a transfer option -->
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useTourBookingStore } from '../../composables/useTourBookingStore'
+import { useCurrency } from '../../composables/useCurrency'
 
 const emit = defineEmits<(e: 'next') => void>()
-const { state, priceBreakdown, fmtNgn, fetchPackages, selectPackage, updateCounts } = useTourBookingStore()
-
-// Local counts — committed to store when user clicks "Select"
+const { state, fetchPackages, selectPackage, updateCounts, createBookingRecords } = useTourBookingStore()
+const currency = useCurrency()
 const adults = ref(state.adults)
 const children = ref(state.children)
 const infants = ref(state.infants)
 
-const selectedId = ref<string | null>(null)
 const countError = ref('')
+const proceeding = ref(false)
 
-onMounted(fetchPackages)
+onMounted(() => {
+  currency.fetchRates()
+  // Fetch pricing silently in background — auto-selects default transfer option
+  fetchPackages()
+})
 
-watch([adults, children, infants], () => { countError.value = '' })
+watch([adults, children, infants], ([a, c, i]) => {
+  countError.value = ''
+  // Keep store in sync so TourBookingSummary updates live
+  updateCounts(a, c, i)
+})
 
-function choose(pkg: any) {
-  if (adults.value < 1) { countError.value = 'At least 1 adult is required.'; return }
-  if (infants.value > adults.value) { countError.value = 'Infants cannot exceed number of adults.'; return }
-  const total = adults.value + children.value + infants.value
-  if (total > pkg.availableSpots) { countError.value = `Only ${pkg.availableSpots} spots available.`; return }
-  updateCounts(adults.value, children.value, infants.value)
-  selectPackage(pkg)
-  emit('next')
+/** Strip HTML tags */
+function stripHtml(html: string): string {
+  return html?.replace(/<[^>]*>/g, '').trim() || ''
 }
 
-const inc = (r: any, max = 20) => { if (r.value < max) r.value++ }
-const dec = (r: any, min = 0)  => { if (r.value > min) r.value-- }
+async function proceed() {
+  if (adults.value < 1) { countError.value = 'At least 1 adult is required.'; return }
 
-const boardColors: Record<string, string> = {
-  'Standard Package': 'bg-slate-100 text-slate-600',
-  'Premium Package':  'bg-amber-50 text-amber-700',
-  'VIP Package':      'bg-purple-50 text-purple-700',
-  'Shared Group Package': 'bg-blue-50 text-blue-700',
-  'Private Package':  'bg-green-50 text-green-700',
+  proceeding.value = true
+  countError.value = ''
+
+  try {
+    // Counts already synced to store via watch — just ensure package is selected
+    if (!state.selectedPackage && state.availablePackages.length > 0) {
+      selectPackage(state.availablePackages[0])
+    }
+    // Create booking records (non-blocking)
+    createBookingRecords().catch(e => console.warn('[bookings/tour]', e?.message))
+  } finally {
+    proceeding.value = false
+  }
+
+  emit('next')
 }
 </script>
 
 <template>
   <div class="space-y-5">
 
+    <!-- ── Tour detail card ───────────────────────────────────────────────────── -->
+    <div v-if="state.tour" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <!-- Hero image -->
+      <div class="relative h-40 sm:h-48 bg-slate-200 overflow-hidden">
+        <img v-if="state.tour.image" :src="state.tour.image" :alt="state.tour.name"
+          class="w-full h-full object-cover" />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+        <div class="absolute bottom-4 left-5 right-5">
+          <p class="text-white font-bold text-lg leading-tight drop-shadow">{{ state.tour.name }}</p>
+          <p class="text-white/80 text-xs mt-0.5">{{ state.searchParams.city }}, {{ state.searchParams.country }}</p>
+        </div>
+      </div>
+
+      <!-- Meta row -->
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-3 border-b border-slate-100">
+        <span v-if="state.tour.duration" class="flex items-center gap-1 text-xs text-slate-600">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+          {{ state.tour.duration }}
+        </span>
+        <span v-if="state.tour.type" class="flex items-center gap-1 text-xs text-slate-600">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          {{ state.tour.type }}
+        </span>
+        <span v-if="state.tour.rating" class="flex items-center gap-1 text-xs text-slate-600">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="1"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+          {{ state.tour.rating }} · {{ state.tour.reviewCount?.toLocaleString() }} reviews
+        </span>
+        <span v-if="state.tour.cancellationPolicyName" class="flex items-center gap-1 text-xs"
+          :class="state.tour.cancellationPolicyName.includes('Non-refundable') ? 'text-red-600' : 'text-green-700'">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+            :stroke="state.tour.cancellationPolicyName.includes('Non-refundable') ? '#ef4444' : '#16a34a'"
+            stroke-width="2">
+            <path v-if="!state.tour.cancellationPolicyName.includes('Non-refundable')" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <template v-else><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></template>
+          </svg>
+          {{ state.tour.cancellationPolicyName }}
+        </span>
+      </div>
+
+      <!-- Short description -->
+      <div v-if="state.tour.tourShortDescription" class="px-5 py-3 border-b border-slate-100">
+        <p class="text-sm text-slate-600 leading-relaxed">{{ stripHtml(state.tour.tourShortDescription) }}</p>
+      </div>
+
+      <!-- Inclusions / Exclusions -->
+      <div v-if="state.tour.tourInclusion || state.tour.tourExclusion" class="px-5 py-3 flex flex-wrap gap-6">
+        <div v-if="state.tour.tourInclusion" class="flex-1 min-w-[140px]">
+          <p class="text-xs font-semibold text-green-700 mb-1.5">Included</p>
+          <p class="text-xs text-slate-600 leading-relaxed line-clamp-4">{{ stripHtml(state.tour.tourInclusion) }}</p>
+        </div>
+        <div v-if="state.tour.tourExclusion" class="flex-1 min-w-[140px]">
+          <p class="text-xs font-semibold text-red-600 mb-1.5">Not Included</p>
+          <p class="text-xs text-slate-600 leading-relaxed line-clamp-4">{{ stripHtml(state.tour.tourExclusion) }}</p>
+        </div>
+      </div>
+    </div>
+
     <!-- ── Participant counter ─────────────────────────────────────────────── -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-100">
         <p class="text-sm font-semibold text-slate-800">Participants</p>
-        <p class="text-xs text-slate-400 mt-0.5">Adjust before selecting a package — pricing updates automatically</p>
+        <p class="text-xs text-slate-400 mt-0.5">Set counts before selecting a transfer option</p>
       </div>
       <div class="p-5 space-y-4">
-        <div v-for="row in [
-          { label: 'Adults', sub: '12 years+', r: adults, min: 1 },
-          { label: 'Children', sub: '2 to 12 years', r: children, min: 0 },
-          { label: 'Infants', sub: '0 to 2 years', r: infants, min: 0 },
-        ]" :key="row.label" class="flex items-center justify-between">
+
+        <!-- Adults -->
+        <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm font-medium text-slate-800">{{ row.label }}</p>
-            <p class="text-xs text-slate-500">{{ row.sub }}</p>
+            <p class="text-sm font-medium text-slate-800">Adults</p>
+            <p class="text-xs text-slate-500">12 years+</p>
           </div>
           <div class="flex items-center gap-3">
-            <button type="button" :disabled="row.r <= row.min"
+            <button type="button" :disabled="adults <= 1"
               class="w-7 h-7 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer bg-white"
-              @click="dec(row.r, row.min)">
+              @click="adults > 1 && adults--">
               <span class="text-base font-semibold leading-none">−</span>
             </button>
-            <span class="w-5 text-center text-sm font-semibold text-slate-900">{{ row.r }}</span>
-            <button type="button"
+            <span class="w-5 text-center text-sm font-semibold text-slate-900">{{ adults }}</span>
+            <button type="button" :disabled="adults >= 20"
               class="w-7 h-7 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer bg-white"
-              @click="inc(row.r)">
+              @click="adults < 20 && adults++">
               <span class="text-base font-semibold leading-none">+</span>
             </button>
           </div>
         </div>
+
+        <!-- Children -->
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-slate-800">Children</p>
+            <p class="text-xs text-slate-500">2 to 12 years</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="button" :disabled="children <= 0"
+              class="w-7 h-7 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer bg-white"
+              @click="children > 0 && children--">
+              <span class="text-base font-semibold leading-none">−</span>
+            </button>
+            <span class="w-5 text-center text-sm font-semibold text-slate-900">{{ children }}</span>
+            <button type="button" :disabled="children >= 20"
+              class="w-7 h-7 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer bg-white"
+              @click="children < 20 && children++">
+              <span class="text-base font-semibold leading-none">+</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Infants -->
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-slate-800">Infants</p>
+            <p class="text-xs text-slate-500">0 to 2 years</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="button" :disabled="infants <= 0"
+              class="w-7 h-7 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer bg-white"
+              @click="infants > 0 && infants--">
+              <span class="text-base font-semibold leading-none">−</span>
+            </button>
+            <span class="w-5 text-center text-sm font-semibold text-slate-900">{{ infants }}</span>
+            <button type="button" :disabled="infants >= 20"
+              class="w-7 h-7 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer bg-white"
+              @click="infants < 20 && infants++">
+              <span class="text-base font-semibold leading-none">+</span>
+            </button>
+          </div>
+        </div>
+
         <p v-if="countError" class="text-xs text-red-600 font-medium">{{ countError }}</p>
       </div>
     </div>
 
-    <!-- Loading -->
-    <div v-if="state.packagesLoading" class="flex flex-col items-center py-20 gap-4">
-      <div class="w-12 h-12 border-4 border-slate-200 border-t-primary rounded-full animate-spin"></div>
-      <p class="text-slate-600 font-medium text-sm">Loading packages from Rayna Tours…</p>
-    </div>
-
-    <!-- Error -->
-    <div v-else-if="state.packagesError" class="flex flex-col items-center py-16 gap-3 text-center">
-      <span class="text-4xl">😞</span>
-      <p class="font-semibold text-slate-800">Couldn't load packages</p>
-      <p class="text-sm text-slate-500">{{ state.packagesError }}</p>
-      <button class="mt-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold border-none cursor-pointer" @click="fetchPackages">Try Again</button>
-    </div>
-
-    <!-- Package cards -->
-    <template v-else>
-      <p class="text-xs text-slate-500">{{ state.availablePackages.length }} packages available for {{ state.searchParams.date || 'selected date' }}</p>
-
-      <div v-for="pkg in state.availablePackages" :key="pkg.raynaPackageId"
-        class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all overflow-hidden"
-      >
-        <div class="p-5">
-          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-
-            <!-- Package info -->
-            <div class="flex-1 min-w-0">
-              <div class="flex flex-wrap items-center gap-2 mb-2">
-                <h3 class="text-base font-bold text-slate-900">{{ pkg.name }}</h3>
-                <span class="text-xs font-semibold px-2 py-0.5 rounded-full" :class="boardColors[pkg.name] ?? 'bg-slate-100 text-slate-600'">
-                  {{ pkg.duration }}
-                </span>
-              </div>
-
-              <!-- What's included -->
-              <div class="flex flex-wrap gap-1.5 mb-3">
-                <span v-for="inc in pkg.includes" :key="inc"
-                  class="flex items-center gap-1 text-xs text-slate-500 bg-green-50 border border-green-100 px-2 py-0.5 rounded-md">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
-                  {{ inc }}
-                </span>
-              </div>
-
-              <!-- Departure + meeting point -->
-              <div class="flex flex-col gap-1 mb-3">
-                <p class="text-xs text-slate-500 flex items-center gap-1">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
-                  Departs: <strong class="text-slate-700">{{ pkg.departureTime }}</strong>
-                </p>
-                <p class="text-xs text-slate-500 flex items-center gap-1">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                  {{ pkg.meetingPoint }}
-                </p>
-              </div>
-
-              <!-- Cancellation -->
-              <div class="flex items-center gap-1.5">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                  :stroke="pkg.cancellationPolicy.includes('Non-refundable') ? '#ef4444' : '#16a34a'"
-                  stroke-width="2">
-                  <path v-if="!pkg.cancellationPolicy.includes('Non-refundable')" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                  <template v-else><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></template>
-                </svg>
-                <p class="text-xs font-medium" :class="pkg.cancellationPolicy.includes('Non-refundable') ? 'text-red-600' : 'text-green-700'">
-                  {{ pkg.cancellationPolicy }}
-                </p>
-              </div>
-            </div>
-
-            <!-- Price + CTA -->
-            <div class="sm:text-right sm:min-w-[170px] shrink-0 border-t sm:border-t-0 sm:border-l sm:pl-5 pt-4 sm:pt-0">
-              <div class="space-y-0.5 mb-3 sm:text-right">
-                <p class="text-xs text-slate-400">from</p>
-                <p class="text-2xl font-bold text-slate-900">{{ fmtNgn(pkg.priceAdult * state.ngnRate) }}</p>
-                <p class="text-xs text-slate-400">per adult · excl. taxes</p>
-                <div v-if="adults > 0 || children > 0" class="text-xs text-slate-500 mt-2 space-y-0.5 sm:text-right">
-                  <p v-if="adults > 0">{{ adults }} adult{{ adults > 1 ? 's' : '' }}: {{ fmtNgn(pkg.priceAdult * adults * state.ngnRate) }}</p>
-                  <p v-if="children > 0">{{ children }} child{{ children > 1 ? 'ren' : '' }}: {{ fmtNgn(pkg.priceChild * children * state.ngnRate) }}</p>
-                  <p v-if="infants > 0">{{ infants }} infant{{ infants > 1 ? 's' : '' }}: {{ pkg.priceInfant === 0 ? 'Free' : fmtNgn(pkg.priceInfant * infants * state.ngnRate) }}</p>
-                </div>
-              </div>
-              <p class="text-xs text-slate-400 mb-3">{{ pkg.availableSpots }} spots left</p>
-              <button
-                class="w-full px-5 py-2.5 bg-primary hover:opacity-90 active:scale-95 text-white text-sm font-bold rounded-xl border-none cursor-pointer transition-all"
-                @click="choose(pkg)"
-              >
-                Select Package
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </template>
+    <!-- Continue -->
+    <button
+      :disabled="proceeding"
+      class="w-full py-3.5 bg-primary hover:opacity-90 active:scale-95 text-white font-bold rounded-2xl border-none cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+      @click="proceed">
+      <svg v-if="proceeding" class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+      {{ proceeding ? 'Please wait…' : 'Continue' }}
+    </button>
   </div>
 </template>

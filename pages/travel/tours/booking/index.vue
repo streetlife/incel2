@@ -9,7 +9,7 @@ import TourPaymentForm from '../../../../components/tour/TourPaymentForm.vue'
 import TourBookingConfirmation from '../../../../components/tour/TourBookingConfirmation.vue'
 import TourBookingSummary from '../../../../components/tour/TourBookingSummary.vue'
 
-const route  = useRoute()
+const route = useRoute()
 const router = useRouter()
 const { state, setTour } = useTourBookingStore()
 

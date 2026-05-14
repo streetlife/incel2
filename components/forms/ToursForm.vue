@@ -3,17 +3,21 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { navigateTo, useRoute } from 'nuxt/app'
 import PassengerSelect from './PassengerSelect.vue'
 import DateInput from './DateInput.vue'
+import { useTour } from '../../composables/useTour'
 
 const route = useRoute()
 
-// Define emit
 const emit = defineEmits<{
   search: [searchData: any]
 }>()
 
+const { countries, cities, countriesLoading, citiesLoading, fetchCountries, fetchCities } = useTour()
+
 const form = ref({
-  country: '',
-  city: '',
+  countryId: 0,
+  countryName: '',
+  cityId: 0,
+  cityName: '',
   guests: { adults: 1, children: 0, infants: 0 },
   date: ''
 })
@@ -26,45 +30,15 @@ const errors = ref({
   general: ''
 })
 
-const countries = [
-  'Nigeria',
-  'Ghana',
-  'Cameroon',
-  'Togo',
-  'Congo',
-  'Burkina Faso',
-  'Benin',
-  'Mali',
-  'Chad',
-  'Guinea',
-  'Sierra Leone',
-  'Guinea-Bissau',
-  'Mauritania',
-  'Senegal',
-  'Côte d\'Ivoire',
-  'Burundi',
-  'Rwanda',
-  'Uganda',
-  'Tanzania',
-  'Zambia',
-  'Zimbabwe',
-  'Namibia',
-  'United Arab Emirates',
-  'United Kingdom',
-  'France',
-  'Turkey',
-  'South Africa',
-  'USA',
-  'Japan',
-  'Indonesia'
-]
-
-// Watch form fields and clear errors on change
-watch(() => form.value.country, () => {
+// When country changes, load cities and reset city selection
+watch(() => form.value.countryId, (id) => {
+  form.value.cityId = 0
+  form.value.cityName = ''
   if (errors.value.country) errors.value.country = ''
+  if (id) fetchCities(id)
 })
 
-watch(() => form.value.city, () => {
+watch(() => form.value.cityId, () => {
   if (errors.value.city) errors.value.city = ''
 })
 
@@ -100,7 +74,7 @@ const isValidFutureDate = (dateString: string): boolean => {
 }
 
 const validateCountry = (): boolean => {
-  if (!form.value.country) {
+  if (!form.value.countryId) {
     errors.value.country = 'Country is required'
     return false
   }
@@ -108,7 +82,7 @@ const validateCountry = (): boolean => {
 }
 
 const validateCity = (): boolean => {
-  if (!form.value.city) {
+  if (!form.value.cityId) {
     errors.value.city = 'City is required'
     return false
   }
@@ -155,30 +129,39 @@ const validateForm = (): boolean => {
 }
 
 // Prefill from query params
-const prefillFromQuery = () => {
+const prefillFromQuery = async () => {
   const query = route.query
 
   if (!query || Object.keys(query).length === 0) return
 
-  form.value.country = (query.country as string) || ''
-  form.value.city = (query.city as string) || ''
-  form.value.date = (query.date as string) || ''
+  const countryId = Number.parseInt(query.country_id as string) || 0
+  const cityId = Number.parseInt(query.city_id as string) || 0
 
+  form.value.date = (query.date as string) || ''
   form.value.guests = {
     adults: Number.parseInt(query.adults as string) || 1,
     children: Number.parseInt(query.children as string) || 0,
     infants: Number.parseInt(query.infants as string) || 0
   }
+
+  if (countryId) {
+    form.value.countryId = countryId
+    form.value.countryName = (query.country_name as string) || ''
+    await fetchCities(countryId)
+    form.value.cityId = cityId
+    form.value.cityName = (query.city_name as string) || ''
+  }
 }
 
-onMounted(() => {
-  prefillFromQuery()
+onMounted(async () => {
+  await fetchCountries()
+  await prefillFromQuery()
 })
 
 watch(
   () => route.query,
-  () => {
-    prefillFromQuery()
+  async () => {
+    await prefillFromQuery()
   },
   { deep: true }
 )
@@ -186,8 +169,10 @@ watch(
 // Build query params
 const buildQueryParams = () => {
   return {
-    country: form.value.country,
-    city: form.value.city,
+    country_id: form.value.countryId,
+    country_name: form.value.countryName,
+    city_id: form.value.cityId,
+    city_name: form.value.cityName,
     date: form.value.date,
     adults: form.value.guests.adults,
     children: form.value.guests.children,
@@ -222,10 +207,17 @@ const submit = async () => {
     return
   }
 
-  const searchData = { ...form.value }
+  const searchData = {
+    countryId: form.value.countryId,
+    countryName: form.value.countryName,
+    cityId: form.value.cityId,
+    cityName: form.value.cityName,
+    date: form.value.date,
+    guests: { ...form.value.guests },
+  }
 
   emit('search', searchData)
-  
+
   await navigateToToursPage()
 }
 </script>
@@ -237,40 +229,64 @@ const submit = async () => {
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+    <!-- Country -->
     <div>
-      <label for="country" class="block text-sm font-medium text-gray-700 mb-2">
-        Country
-      </label>
-      <select 
-        id="country"
-        v-model="form.country" 
-        :class="[
-          'w-full px-4 py-3 rounded-lg focus:border-transparent',
-          errors.country 
-            ? 'border-red-500 focus:ring-red-500 border-2' 
-            : 'border border-gray-300'
-        ]"
-      >
-        <option value="">Select Country</option>
-        <option v-for="n in countries" :key="n" :value="n">{{ n }}</option>
-      </select>
+      <label for="country" class="block text-sm font-medium text-gray-700 mb-2">Country</label>
+      <div class="relative">
+        <select
+          id="country"
+          v-model="form.countryId"
+          :disabled="countriesLoading"
+          :class="[
+            'w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-colors appearance-none',
+            errors.country
+              ? 'border-red-500 focus:ring-red-500 border-2'
+              : 'border border-gray-300 focus:ring-primary',
+            countriesLoading ? 'opacity-60 cursor-not-allowed' : ''
+          ]"
+          @change="(e) => {
+            const sel = countries.find(c => c.id === form.countryId)
+            form.countryName = sel?.name ?? ''
+          }"
+        >
+          <option :value="0">{{ countriesLoading ? 'Loading…' : 'Select Country' }}</option>
+          <option v-for="c in countries" :key="c.id" :value="c.id">{{ c.name }}</option>
+        </select>
+        <svg v-if="!countriesLoading" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        <svg v-else class="animate-spin absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+      </div>
+      <p v-if="errors.country" class="text-red-500 text-xs mt-1">{{ errors.country }}</p>
     </div>
-    
+
+    <!-- City -->
     <div>
-      <label for="city" class="block text-sm font-medium text-gray-700 mb-2">
-        City
-      </label>
-      <input 
-        id="city"
-        v-model="form.city"
-        type="text"
-        :class="[
-          'w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent',
-          errors.city 
-            ? 'border-red-500 focus:ring-red-500 border-2' 
-            : 'border border-gray-300 focus:ring-primary'
-        ]"
-      />
+      <label for="city" class="block text-sm font-medium text-gray-700 mb-2">City</label>
+      <div class="relative">
+        <select
+          id="city"
+          v-model="form.cityId"
+          :disabled="!form.countryId || citiesLoading"
+          :class="[
+            'w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-colors appearance-none',
+            errors.city
+              ? 'border-red-500 focus:ring-red-500 border-2'
+              : 'border border-gray-300 focus:ring-primary',
+            (!form.countryId || citiesLoading) ? 'opacity-60 cursor-not-allowed' : ''
+          ]"
+          @change="() => {
+            const sel = cities.find(c => Number(c.city_id) === form.cityId)
+            form.cityName = sel?.city_name ?? ''
+          }"
+        >
+          <option :value="0">
+            {{ !form.countryId ? 'Select country first' : citiesLoading ? 'Loading…' : 'Select City' }}
+          </option>
+          <option v-for="c in cities" :key="c.city_id" :value="Number(c.city_id)">{{ c.city_name }}</option>
+        </select>
+        <svg v-if="!citiesLoading" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        <svg v-else class="animate-spin absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+      </div>
+      <p v-if="errors.city" class="text-red-500 text-xs mt-1">{{ errors.city }}</p>
     </div>
 
     <div>

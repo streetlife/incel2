@@ -205,3 +205,19 @@ export interface ReviewsResponse {
     country: string
     created_at: string
 }
+
+export interface GenerateInvoiceData {
+    booking_code: string,
+    currency_base: string,
+    amount_total: string,
+    amount_paid: string,
+    module: string
+}
+
+export interface GenerateInvoiceResponse {
+    invoice: {
+        status: boolean
+        message: string
+    },
+}
+

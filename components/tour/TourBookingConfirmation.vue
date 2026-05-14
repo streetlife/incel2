@@ -2,9 +2,11 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useTourBookingStore } from '../../composables/useTourBookingStore'
+import { useCurrency } from '../../composables/useCurrency'
 
 const router = useRouter()
-const { state, priceBreakdown, totalParticipants, fmtNgn, reset } = useTourBookingStore()
+const { state, priceBreakdown, totalParticipants, reset } = useTourBookingStore()
+const { format } = useCurrency()
 
 const fmtDate = (d: string) =>
   d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
@@ -13,7 +15,7 @@ function bookAnother() { reset(); router.push('/travel/tours') }
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 my-16">
 
     <!-- Success banner -->
     <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl px-6 py-8 text-center shadow-xl shadow-green-200">
@@ -136,7 +138,7 @@ function bookAnother() { reset(); router.push('/travel/tours') }
       <div class="px-5 py-4 bg-slate-50 flex items-center justify-between">
         <div>
           <p class="text-xs text-slate-400">Total Paid</p>
-          <p class="text-xl font-bold text-slate-900">{{ fmtNgn(priceBreakdown.total) }}</p>
+          <p class="text-xl font-bold text-slate-900">{{ format(priceBreakdown.total) }}</p>
           <p class="text-xs text-slate-400">incl. VAT · {{ totalParticipants }} participant{{ totalParticipants !== 1 ? 's' : '' }}</p>
         </div>
         <div class="flex items-center gap-1.5 bg-green-100 border border-green-200 rounded-lg px-3 py-1.5">

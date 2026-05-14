@@ -214,7 +214,7 @@
     <Transition name="slide">
       <div
         v-if="mobileMenuOpen"
-        class="fixed top-0 right-0 h-full w-full sm:w-96 bg-white lg:hidden z-40 overflow-y-auto shadow-2xl"
+        class="fixed top-0 right-0 h-[100dvh] w-full sm:w-96 bg-white lg:hidden z-40 overflow-y-auto shadow-2xl"
       >
         <div class="flex items-center justify-between p-6 border-b border-gray-100">
           <h2 class="text-2xl font-bold text-gray-900">Menu</h2>
@@ -339,7 +339,7 @@
 
 <script setup lang="ts">
 import { navigateTo } from 'nuxt/app'
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useCurrency } from '../composables/useCurrency'
@@ -448,6 +448,10 @@ const toggleMobileDropdown = (name: string) => { mobileOpenDropdown.value = mobi
 const handleMobileNavigation = (path: string) => { mobileMenuOpen.value = false; navigateTo(path) }
 const handleLogout = () => { mobileMenuOpen.value = false; auth.logout(); navigateTo('/') }
 
+watch(mobileMenuOpen, (isOpen) => {
+  document.body.style.overflow = isOpen ? 'hidden' : ''
+})
+
 onMounted(async () => {
   window.addEventListener('scroll', handleScroll)
 
@@ -459,6 +463,7 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
   if (autoScrollInterval.value) clearInterval(autoScrollInterval.value)
+  document.body.style.overflow = ''
 })
 </script>
 

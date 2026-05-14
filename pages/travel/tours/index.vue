@@ -70,9 +70,21 @@ function bookTour(tour: any) {
       tourImages: tour.tourImages,
       tourReview: tour.tourReview,
       reportingTime: tour.reportingTime,
+      departurePoint: tour.departurePoint,
       startTime: tour.startTime,
       rating: tour.rating,
       reviewCount: tour.reviewCount,
+      tourLanguage: tour.tourLanguage,
+      importantInformation: tour.importantInformation,
+      itenararyDescription: tour.itenararyDescription,
+      usefulInformation: tour.usefulInformation,
+      faqDetails: tour.faqDetails,
+      termsAndConditions: tour.termsAndConditions,
+      cancellationPolicyDescription: tour.cancellationPolicyDescription,
+      childCancellationPolicyName: tour.childCancellationPolicyName,
+      childCancellationPolicyDescription: tour.childCancellationPolicyDescription,
+      howToRedeem: tour.howToRedeem,
+      googleMapUrl: tour.googleMapUrl,
     },
     searchParams: {
       city: tour.cityName,
@@ -209,6 +221,7 @@ onMounted(async () => {
                   :src="getTourImage(tour)"
                   :alt="tour.tourName"
                   class="w-full h-56 md:h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  @error="(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800' }"
                 />
                 <!-- Category badge -->
                 <span class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-xs font-semibold text-gray-800 px-2.5 py-1 rounded-full">

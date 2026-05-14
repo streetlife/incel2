@@ -6,6 +6,9 @@ import { useCurrency } from '../../composables/useCurrency'
 const { state, priceBreakdown } = useTourBookingStore()
 const { format } = useCurrency()
 
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800'
+const onImgError = (e: Event) => { (e.target as HTMLImageElement).src = DEFAULT_IMAGE }
+
 const fmtDate = (d: string) =>
   d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 </script>
@@ -15,7 +18,7 @@ const fmtDate = (d: string) =>
 
     <!-- Tour image + name -->
     <div class="relative h-36 bg-slate-200 overflow-hidden">
-      <img v-if="state.tour?.image" :src="state.tour.image" :alt="state.tour.name" class="w-full h-full object-cover" />
+      <img v-if="state.tour?.image" :src="state.tour.image" :alt="state.tour.name" class="w-full h-full object-cover" @error="onImgError" />
       <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
       <div class="absolute bottom-3 left-4 right-4">
         <p class="text-white font-bold text-base leading-tight">{{ state.tour?.name }}</p>

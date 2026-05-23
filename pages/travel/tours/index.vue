@@ -22,10 +22,37 @@ const availableTourTypes = computed(() => {           // ← NEW
   return [...new Set(types)] as string[]
 })
 
+const sortBy = ref<'default' | 'rating_desc' | 'rating_asc' | 'duration_asc' | 'duration_desc'>('default')
+
+const parseDurationMinutes = (d: string): number => {
+  if (!d) return Infinity
+  const lower = d.toLowerCase()
+  // grab first number found
+  const match = lower.match(/(\d+(?:\.\d+)?)/)
+  if (!match) return Infinity
+  const value = parseFloat(match[1])
+  return lower.includes('hour') ? value * 60 : value
+}
+
 // ── Filtered results (respects checkboxes) ────────────────────────────────────
-const filteredResults = computed(() => {              // ← NEW
-  if (selectedTourTypes.value.length === 0) return searchResults.value
-  return searchResults.value.filter((t: any) => selectedTourTypes.value.includes(t.cityTourType))
+const filteredResults = computed(() => {
+  let results = selectedTourTypes.value.length === 0
+    ? searchResults.value
+    : searchResults.value.filter((t: any) => selectedTourTypes.value.includes(t.cityTourType))
+
+  if (sortBy.value === 'rating_desc') {
+    results = [...results].sort((a: any, b: any) => (b.rating ?? 0) - (a.rating ?? 0))
+  } else if (sortBy.value === 'duration_asc') {
+    results = [...results].sort((a: any, b: any) =>
+      parseDurationMinutes(a.duration) - parseDurationMinutes(b.duration))
+  } else if (sortBy.value === 'duration_desc') {
+    results = [...results].sort((a: any, b: any) =>
+      parseDurationMinutes(b.duration) - parseDurationMinutes(a.duration))
+  } else if (sortBy.value === 'rating_asc') {
+    results = [...results].sort((a: any, b: any) => (a.rating ?? 0) - (b.rating ?? 0))
+  }
+
+  return results
 })
 
 const paginatedResults = computed(() => {
@@ -49,16 +76,26 @@ const benefits = [
   { icon: '✓', title: 'Flexible Booking', description: 'Easy modifications and cancellations on your bookings' },
 ]
 
+const lastSearchParams = ref({ countryId: 0, cityId: 0, date: '' })
+
 // ── Search ─────────────────────────────────────────────────────────────────────
 const runSearch = async (params?: any) => {
   const countryId = params?.countryId ?? (Number.parseInt(route.query.country_id as string) || 0)
-  const cityId  = params?.cityId ?? (Number.parseInt(route.query.city_id as string) || 0)
+  const cityId = params?.cityId ?? (Number.parseInt(route.query.city_id as string) || 0)
   const date = params?.date ?? ((route.query.date as string) || '')
 
   if (!countryId || !cityId || !date) return
 
+  const isSameSearch =
+    lastSearchParams.value.countryId === countryId &&
+    lastSearchParams.value.cityId === cityId &&
+    lastSearchParams.value.date === date
+
+  if (isSameSearch) return
+
+  lastSearchParams.value = { countryId, cityId, date }
   currentPage.value = 1
-  selectedTourTypes.value = []  // ← reset filters on new search
+  selectedTourTypes.value = []
   await searchTours({ country_id: countryId, city_id: cityId, date })
   setTimeout(() => document.getElementById('search-results')?.scrollIntoView({ behavior: 'smooth' }), 100)
 }
@@ -118,14 +155,14 @@ function bookTour(tour: any) {
 }
 
 // ── Filter helpers ─────────────────────────────────────────────────────────────
-const toggleTourType = (type: string) => {                    // ← NEW
+const toggleTourType = (type: string) => {
   const idx = selectedTourTypes.value.indexOf(type)
   if (idx === -1) selectedTourTypes.value.push(type)
   else selectedTourTypes.value.splice(idx, 1)
-  currentPage.value = 1  // reset to page 1 when filter changes
+  currentPage.value = 1
 }
 
-const clearTypeFilters = () => {                              // ← NEW
+const clearTypeFilters = () => {
   selectedTourTypes.value = []
   currentPage.value = 1
 }
@@ -142,9 +179,13 @@ const getTourImage = (tour: any): string => {
 const stripHtml = (html: string) => html?.replace(/<[^>]*>/g, '').trim() || ''
 
 watch(
-  () => route.query,
+  () => ({
+    country_id: route.query.country_id,
+    city_id: route.query.city_id,
+    date: route.query.date,
+  }),
   (q) => { if (q.country_id && q.city_id && q.date) runSearch() },
-  { immediate: true }
+  { immediate: true, deep: true }
 )
 
 onMounted(async () => {
@@ -161,8 +202,6 @@ onMounted(async () => {
 
 <template>
   <div class="min-h-screen">
-
-    <!-- ── Hero + Search ───────────────────────────────────────────────────── -->
     <section
       class="relative pt-36 pb-24 px-6 bg-cover bg-center bg-no-repeat transition-all duration-500"
       style="background-image: url('https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1600')"
@@ -226,6 +265,29 @@ onMounted(async () => {
             <!-- ── Filter Sidebar ──────────────────────────────────────────── -->
             <aside class="lg:w-64 shrink-0">
               <div class="bg-white rounded-2xl shadow-md p-5 sticky top-6">
+                <!-- Sort -->
+                <div class="mb-5 pb-5 border-b border-gray-100">
+                  <h3 class="font-bold text-gray-900 text-base mb-3">Sort By</h3>
+                  <div class="relative">
+                    <select
+                      v-model="sortBy"
+                      class="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg px-3 py-2.5 pr-8 cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-colors hover:border-gray-400"
+                      @change="currentPage = 1"
+                    >
+                      <option value="default">Default</option>
+                      <option value="rating_desc">Rating: High to Low</option>
+                      <option value="rating_asc">Rating: Low to High</option>
+                      <option value="duration_asc">Duration: Shortest First</option>
+                      <option value="duration_desc">Duration: Longest First</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                      <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="flex items-center justify-between mb-4">
                   <h3 class="font-bold text-gray-900 text-base">Tour Type</h3>
                   <button

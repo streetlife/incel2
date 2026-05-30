@@ -164,14 +164,15 @@ export const useHotelBookingStore = defineStore(
     }
 
     function buildBookingPayload(): CreateBookingData {
-      const roomsAdults = searchParams.value.rooms.map(r => r.adults ?? 0).join('|')
-      const roomsChildren = searchParams.value.rooms.map(r => r.children ?? 0).join('|')
+      const roomsAdults = searchParams.value.rooms.reduce((sum, r) => sum + (r.adults ?? 0), 0)
+      const roomsChildren = searchParams.value.rooms.reduce((sum, r) => sum + (r.children ?? 0), 0)
       const roomRates = selectedRoom.value?.rawRates ?? String(selectedRoom.value?.totalPrice ?? 0)
 
       return {
-        session_code: sessionCode.value,
+        session_code: sessionId.value,
         search_session_id: sessionId.value,
         hotel_id: hotel.value?.hotel_id ?? '',
+        hotel_name: hotel.value.hotel_name ?? '',
         country_code: searchParams.value.country,
         city_code: searchParams.value.city,
         arrival_date: searchParams.value.checkInStart,
@@ -185,6 +186,8 @@ export const useHotelBookingStore = defineStore(
           title: g.title,
           first_name: g.firstName,
           last_name: g.lastName,
+          type: g.type === 'adult' ? 'ADULT' : 'CHILD',
+          ...(g.type === 'child' && g.age !== undefined ? { age: g.age } : {}),
         })),
       }
     }

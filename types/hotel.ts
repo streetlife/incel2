@@ -99,12 +99,13 @@ export interface CreateBookingData {
     hotel_id: string
     country_code: string
     city_code: string
+    hotel_name: string
     arrival_date: string
     departure_date: string
     rooms_type: string
     rooms_key: string
-    rooms_adults: string
-    rooms_children: string
+    rooms_adults: number
+    rooms_children: number
     room_rates: string
     travellers: ITraveller[]
 }
@@ -113,6 +114,8 @@ interface ITraveller {
     title: string
     first_name: string
     last_name: string
+    type: 'ADULT' | 'CHILD'
+    age?: number
 }
 
 export interface PaystackPaymentData {

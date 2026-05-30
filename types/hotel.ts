@@ -48,6 +48,7 @@ export interface HotelSearchResponse {
     status: boolean;
     message: string;
     session_code: string;
+    search_session_id: string;
     search_meta: HotelSearchMeta;
     filters: HotelSearchFilters;
     hotels: HotelResult[];
@@ -94,6 +95,7 @@ interface IHotelRooms {
 
 export interface CreateBookingData {
     session_code: string
+    search_session_id: string
     hotel_id: string
     country_code: string
     city_code: string

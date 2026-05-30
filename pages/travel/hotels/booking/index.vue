@@ -38,22 +38,28 @@ onMounted(() => {
   const raw = sessionStorage.getItem('selectedHotel')
   if (raw && !store.hotel) {
     try {
-      const { hotel, searchParams, sessionCode } = JSON.parse(raw)
-      store.setHotel(hotel, searchParams, sessionCode)
+      const { hotel, searchParams, sessionCode, sessionId } = JSON.parse(raw)
+      store.setHotel(hotel, searchParams, sessionCode, sessionId)
     } catch {}
   }
- 
+
   const sessionCodeFromUrl = route.query.sessionCode as string | undefined
   if (sessionCodeFromUrl) {
     store.sessionCode = sessionCodeFromUrl
     sessionStorage.setItem('hotelSessionCode', sessionCodeFromUrl)
   }
- 
+
+  const searchSessionIdFromUrl = route.query.searchSessionId as string | undefined
+  if (searchSessionIdFromUrl) {
+    store.sessionId = searchSessionIdFromUrl
+    sessionStorage.setItem('hotelSessionId', searchSessionIdFromUrl)
+  }
+
   const stepFromUrl = Number(route.query.step)
   if (stepFromUrl >= 1 && stepFromUrl <= 5) {
     store.step = stepFromUrl
   }
- 
+
   if (!store.hotel && store.step < 5) {
     router.replace('/travel/hotels')
   }

@@ -43,6 +43,7 @@ export const useHotelBookingStore = defineStore(
   () => {
     const hotel = ref<any | null>(null)
     const sessionCode = ref<string>('')
+    const sessionId = ref<string>('')
     const searchParams = ref<BookingSearchParams>({
       country: '', city: '', checkInStart: '', checkInEnd: '',
       rooms: [], totalGuests: 1, totalRooms: 1, nationality: '', currency: 'USD',
@@ -98,7 +99,7 @@ export const useHotelBookingStore = defineStore(
       return list
     }
 
-    function setHotel(hotelData: any, params: any, code?: string) {
+    function setHotel(hotelData: any, params: any, code?: string, searchSessionId?: string) {
       const isSameHotel = hotel.value?.hotel_id && hotel.value.hotel_id === hotelData?.hotel_id
 
       hotel.value = hotelData
@@ -107,6 +108,7 @@ export const useHotelBookingStore = defineStore(
       sessionCode.value = code
         || sessionStorage.getItem('hotelSessionCode')
         || ''
+      sessionId.value = searchSessionId || sessionStorage.getItem('hotelSessionId') || ''
 
       if (!isSameHotel) {
         selectedRoom.value = null
@@ -168,6 +170,7 @@ export const useHotelBookingStore = defineStore(
 
       return {
         session_code: sessionCode.value,
+        search_session_id: sessionId.value,
         hotel_id: hotel.value?.hotel_id ?? '',
         country_code: searchParams.value.country,
         city_code: searchParams.value.city,
@@ -232,6 +235,7 @@ export const useHotelBookingStore = defineStore(
     function reset() {
       hotel.value = null
       sessionCode.value = ''
+      sessionId.value = ''
       selectedRoom.value = null
       availableRooms.value = []
       guests.value = []
@@ -253,7 +257,7 @@ export const useHotelBookingStore = defineStore(
     }
 
     return {
-      hotel, sessionCode, searchParams, selectedRoom, availableRooms,
+      hotel, sessionCode, sessionId, searchParams, selectedRoom, availableRooms,
       guests, contactEmail, contactPhone, isLoggedIn, accountName,
       invoiceNumber, invoiceDate, bookingReference, voucherUrl,
       status, errorMessage, roomsLoading, roomsError, step,
@@ -267,6 +271,7 @@ export const useHotelBookingStore = defineStore(
       pick: [
         'hotel',
         'sessionCode',
+        'sessionId',
         'searchParams',
         'selectedRoom',
         'availableRooms',

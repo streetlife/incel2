@@ -110,10 +110,12 @@ const performSearch = async (params?: HotelSearchParams) => {
       result.search_meta,
       result.filters,
       result.session_code,
+      result.search_session_id,
       sp,
     )
 
     sessionStorage.setItem('hotelSessionCode', result.session_code)
+    sessionStorage.setItem('hotelSessionId', result.search_session_id)
 
     showSearchForm.value = false
     setTimeout(
@@ -133,6 +135,7 @@ function viewHotelDetails(hotel: any) {
     JSON.stringify({
       hotel,
       sessionCode: store.sessionCode,
+      sessionId: store.sessionId,
       searchParams: {
         country: store.lastParams?.country || (route.query.country as string) || '',
         city: store.lastParams?.city || (route.query.city as string) || hotel.city,
@@ -148,7 +151,7 @@ function viewHotelDetails(hotel: any) {
   )
   router.push({
     path: '/travel/hotels/booking',
-    query: { hotelId: hotel.hotel_id, step: '1', sessionCode: store.sessionCode },
+    query: { hotelId: hotel.hotel_id, step: '1', sessionCode: store.sessionCode, sessionId: store.sessionId },
   })
 }
 

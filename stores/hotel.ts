@@ -14,6 +14,7 @@ export const useHotelSearchStore = defineStore(
         const searchMeta = ref<HotelSearchMeta | null>(null)
         const filters = ref<HotelSearchFilters | null>(null)
         const sessionCode = ref<string>('')
+        const sessionId = ref<string>('')
         const lastParams = ref<HotelSearchParams | null>(null)
         const hasSearched = ref(false)
         const currentPage = ref(1)
@@ -42,12 +43,14 @@ export const useHotelSearchStore = defineStore(
             meta: HotelSearchMeta,
             searchFilters: HotelSearchFilters,
             code: string,
+            searchSessionId: string,
             params: HotelSearchParams,
         ) {
             results.value = hotels
             searchMeta.value = meta
             filters.value = searchFilters
             sessionCode.value = code
+            sessionId.value = searchSessionId
             lastParams.value = params
             hasSearched.value = true
             currentPage.value = 1
@@ -67,6 +70,7 @@ export const useHotelSearchStore = defineStore(
             searchMeta.value = null
             filters.value = null
             sessionCode.value = ''
+            sessionId.value = ''
             lastParams.value = null
             hasSearched.value = false
             currentPage.value = 1
@@ -79,6 +83,7 @@ export const useHotelSearchStore = defineStore(
             filters,
             sessionCode,
             lastParams,
+            sessionId,
             hasSearched,
             currentPage,
             sortKey,
@@ -99,6 +104,7 @@ export const useHotelSearchStore = defineStore(
                 'filters',
                 'sessionCode',
                 'lastParams',
+                'sessionId',
                 'hasSearched',
                 'currentPage',
                 'sortKey',

@@ -177,7 +177,7 @@ export const useHotelBookingStore = defineStore(
         hotel_id: hotel.value?.hotel_id ?? '',
         hotel_name: hotel.value.hotel_name ?? '',
         country_code: searchParams.value.country,
-        city_code: searchParams.value.city,
+        city_code: searchParams.value.city.toString(),
         arrival_date: searchParams.value.checkInStart,
         departure_date: searchParams.value.checkInEnd,
         rooms_type: selectedRoom.value?.roomName ?? '',

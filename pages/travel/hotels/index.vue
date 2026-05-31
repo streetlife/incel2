@@ -261,11 +261,11 @@ onMounted(() => {
           </div>
         </div>
 
-        <template v-else-if="store.results.length > 0">
+        <template v-else-if="store.results?.length > 0">
           <div class="flex flex-wrap items-center gap-4 mb-6 px-5 py-4 bg-white rounded-xl border border-stone-200 shadow-sm">
             <div class="flex items-baseline gap-2 flex-shrink-0">
               <span class="text-3xl font-bold text-primary leading-none tabular-nums">
-                {{ store.results.length }}
+                {{ store.results?.length }}
               </span>
               <span class="text-sm text-stone-500">
                 hotels in

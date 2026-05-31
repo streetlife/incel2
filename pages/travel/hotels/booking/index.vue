@@ -36,7 +36,7 @@ const showSidebar = computed(() => store.step < 5)
 
 onMounted(() => {
   const raw = sessionStorage.getItem('selectedHotel')
-  if (raw && !store.hotel) {
+  if (raw) {
     try {
       const { hotel, searchParams, sessionCode, sessionId } = JSON.parse(raw)
       store.setHotel(hotel, searchParams, sessionCode, sessionId)

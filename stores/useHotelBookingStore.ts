@@ -100,17 +100,20 @@ export const useHotelBookingStore = defineStore(
     }
 
     function setHotel(hotelData: any, params: any, code?: string, searchSessionId?: string) {
-      const isSameHotel = hotel.value?.hotel_id && hotel.value.hotel_id === hotelData?.hotel_id
+      const isSameSearch =
+        hotel.value?.hotel_id === hotelData?.hotel_id &&
+        searchParams.value.checkInStart === params.checkInStart &&
+        searchParams.value.checkInEnd === params.checkInEnd &&
+        searchParams.value.totalRooms === params.totalRooms &&
+        searchParams.value.totalGuests === params.totalGuests
 
       hotel.value = hotelData
       searchParams.value = { ...params }
       errorMessage.value = ''
-      sessionCode.value = code
-        || sessionStorage.getItem('hotelSessionCode')
-        || ''
+      sessionCode.value = code || sessionStorage.getItem('hotelSessionCode') || ''
       sessionId.value = searchSessionId || sessionStorage.getItem('hotelSessionId') || ''
 
-      if (!isSameHotel) {
+      if (!isSameSearch) {
         selectedRoom.value = null
         availableRooms.value = []
         guests.value = []

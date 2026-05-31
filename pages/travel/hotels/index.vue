@@ -130,6 +130,10 @@ const performSearch = async (params?: HotelSearchParams) => {
 }
 
 function viewHotelDetails(hotel: any) {
+  // Signal that this is intentional fresh navigation, not a page refresh
+  sessionStorage.setItem('bookingFresh', 'true')
+
+  
   sessionStorage.setItem(
     'selectedHotel',
     JSON.stringify({

@@ -35,6 +35,15 @@ function goBack() {
 const showSidebar = computed(() => store.step < 5)
 
 onMounted(() => {
+
+  // Fresh navigation from search → wipe all stale booking state first
+  const isFresh = sessionStorage.getItem('bookingFresh') === 'true'
+  if (isFresh) {
+    sessionStorage.removeItem('bookingFresh')
+    store.reset() // clears selectedRoom, guests, step, availableRooms, status
+  }
+
+  // Always apply the latest hotel selection from sessionStorage
   const raw = sessionStorage.getItem('selectedHotel')
   if (raw) {
     try {
@@ -58,6 +67,12 @@ onMounted(() => {
   const stepFromUrl = Number(route.query.step)
   if (stepFromUrl >= 1 && stepFromUrl <= 5) {
     store.step = stepFromUrl
+  }
+
+  // Guard: persisted step > 1 but no room (removed from persistence) → back to step 1
+  if (store.step > 1 && !store.selectedRoom && store.step < 5) {
+    store.step = 1
+    router.replace({ query: { ...route.query, step: '1' } })
   }
 
   if (!store.hotel && store.step < 5) {

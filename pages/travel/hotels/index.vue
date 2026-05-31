@@ -405,8 +405,8 @@ onMounted(() => {
           </div>
 
           <Pagination
-            v-if="store.results.length > ITEMS_PER_PAGE"
-            :total-items="store.results.length"
+            v-if="store.results?.length > ITEMS_PER_PAGE"
+            :total-items="store.results?.length"
             :items-per-page="ITEMS_PER_PAGE"
             :current-page="store.currentPage"
             @page-change="handlePageChange"
@@ -414,7 +414,7 @@ onMounted(() => {
         </template>
 
         <div
-          v-if="!isLoading && !searchError && store.results.length === 0"
+          v-if="!isLoading && !searchError && store.results?.length === 0"
           class="max-w-sm mx-auto mt-20 text-center px-10 py-14 bg-white rounded-2xl border border-stone-200 shadow-sm"
         >
           <h3 class="text-2xl font-bold text-stone-800 mb-3">No Hotels Found</h3>

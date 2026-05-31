@@ -429,7 +429,7 @@ onMounted(() => {
           </button>
         </div>
 
-        <div v-else class="flex items-center justify-center">
+        <div v-else class="max-w-sm mx-auto mt-20 text-center px-10 py-14 bg-white rounded-2xl border border-stone-200 shadow-sm">
           <h3 class="text-xl font-bold text-stone-800 mb-3">An error occurred while fetching hotels.</h3>
           <p>Please try again</p>
           <button

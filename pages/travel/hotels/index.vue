@@ -428,6 +428,17 @@ onMounted(() => {
             Modify Search
           </button>
         </div>
+
+        <div v-else class="flex items-center justify-center">
+          <h3 class="text-xl font-bold text-stone-800 mb-3">An error occurred while fetching hotels.</h3>
+          <p>Please try again</p>
+          <button
+            class="px-8 py-2.5 bg-primary hover:bg-primary/10 text-white text-sm font-semibold rounded-lg transition-colors border-none cursor-pointer"
+            @click="toggleSearchForm"
+          >
+            Modify Search
+          </button>
+        </div>
       </div>
     </section>
 

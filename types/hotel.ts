@@ -104,8 +104,8 @@ export interface CreateBookingData {
     departure_date: string
     rooms_type: string
     rooms_key: string
-    rooms_adults: number
-    rooms_children: number
+    rooms_adults: number[]
+    rooms_children: number[]
     room_rates: string
     travellers: ITraveller[]
 }

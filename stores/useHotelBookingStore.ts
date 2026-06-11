@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useHotelService } from '../services/hotel.service'
 import type { CreateBookingData, RoomConfig } from '../types/hotel'
+import { toSlashDate } from '../utils/date'
 
 export interface GuestDetail {
   type: 'adult' | 'child'
@@ -167,8 +168,8 @@ export const useHotelBookingStore = defineStore(
     }
 
     function buildBookingPayload(): CreateBookingData {
-      const roomsAdults = searchParams.value.rooms.reduce((sum, r) => sum + (r.adults ?? 0), 0)
-      const roomsChildren = searchParams.value.rooms.reduce((sum, r) => sum + (r.children ?? 0), 0)
+      const roomsAdults = searchParams.value.rooms.map(r => r.adults ?? 0)
+      const roomsChildren = searchParams.value.rooms.map(r => r.children ?? 0)
       const roomRates = selectedRoom.value?.rawRates ?? String(selectedRoom.value?.totalPrice ?? 0)
 
       return {
@@ -178,8 +179,8 @@ export const useHotelBookingStore = defineStore(
         hotel_name: hotel.value.hotel_name ?? '',
         country_code: searchParams.value.country,
         city_code: searchParams.value.city.toString(),
-        arrival_date: searchParams.value.checkInStart,
-        departure_date: searchParams.value.checkInEnd,
+        arrival_date: toSlashDate(searchParams.value.checkInStart),
+        departure_date: toSlashDate(searchParams.value.checkInEnd),
         rooms_type: selectedRoom.value?.roomName ?? '',
         rooms_key: selectedRoom.value?.rezliveRoomId ?? '',
         rooms_adults: roomsAdults,

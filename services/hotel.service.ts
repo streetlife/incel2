@@ -12,6 +12,7 @@ import type {
     PaystackPaymentResponse,
 } from '../types/hotel'
 import { useApi } from '../utils/api'
+import { toSlashDate } from '../utils/date'
 
 export function useHotelService() {
     const $api = useApi()
@@ -96,8 +97,8 @@ function buildPayload(params: HotelSearchParams): Record<string, unknown> {
         search_hotel_country: params.country,
         search_hotel_city: params.city,
         search_hotel_nationality: params.nationality,
-        arrival_date: params.checkInStart,
-        departure_date: params.checkInEnd,
+        arrival_date: toSlashDate(params.checkInStart),
+        departure_date: toSlashDate(params.checkInEnd),
         room_number: params.rooms.length,
         adult_number: totalAdults,
         child_number: totalChildren,

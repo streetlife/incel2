@@ -159,7 +159,7 @@ import AppToast from './toast/AppToast.vue';
 
 const quickLinks = [
   { name: 'Flights', path: '/travel/flights' },
-  { name: 'Hotels', path: '/travel/hotels' },
+  // { name: 'Hotels', path: '/travel/hotels' },
   { name: 'Tours', path: '/travel/tours' },
   { name: 'Visa', path: '/travel/visas' },
   { name: 'About Us', path: '/about-us' },

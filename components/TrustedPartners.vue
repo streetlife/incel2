@@ -34,14 +34,31 @@ const fallbackPlatforms = [
   { name: 'Mastercard', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/320px-Mastercard-logo.svg.png' },
 ]
 
-const displayAirlines = computed(() => airlines.value ?? fallbackAirlines)
-const displayPlatforms = computed(() => platforms.value ?? fallbackPlatforms)
+// CRITICAL FIX: Use .length check, NOT ?? 
+// ?? fails because [] is truthy, so [] ?? fallback returns []
+const displayAirlines = computed(() => airlines.value.length ? airlines.value : fallbackAirlines)
+const displayPlatforms = computed(() => platforms.value.length ? platforms.value : fallbackPlatforms)
 
+// Dynamic duration: keeps speed constant regardless of item count
+// Calibrated from your original 8 items @ 80s and 7 items @ 28s
+// Capped so it never gets too slow (max 120s) or too fast (min 20s)
+const airlineDuration = computed(() => {
+  const count = displayAirlines.value.length
+  return Math.min(Math.max(count * 10, 20), 120)
+})
+
+const platformDuration = computed(() => {
+  const count = displayPlatforms.value.length
+  return Math.min(Math.max(count * 4, 15), 60)
+})
+
+// Build the duplicated track (6 copies)
 const marqueeAirlines = computed(() => new Array(6).fill(displayAirlines.value).flat())
 const marqueePlatforms = computed(() => new Array(6).fill(displayPlatforms.value).flat())
 
 onMounted(async () => {
-  await partnersStore.fetchAll()
+  // CRITICAL FIX: Force fetch to bypass stale cache
+  await partnersStore.fetchAll(true)
   await nextTick()
 
   const observer = new IntersectionObserver(
@@ -115,8 +132,12 @@ onMounted(async () => {
         <p class="text-xs font-semibold tracking-[0.2em] uppercase text-gray-400">Our Partners & Providers</p>
       </div>
 
+      <!-- Airline Marquee -->
       <div class="overflow-hidden [mask-image:linear-gradient(to_right,transparent_0%,black_8%,black_92%,transparent_100%)] mb-6 reveal">
-        <div class="flex gap-16 w-max animate-[marquee-left_80s_linear_infinite]">
+        <div
+          class="flex gap-16 w-max marquee-left"
+          :style="{ animationDuration: `${airlineDuration}s` }"
+        >
           <div
             v-for="(partner, i) in [...marqueeAirlines, ...marqueeAirlines]"
             :key="`airline-${i}`"
@@ -135,8 +156,12 @@ onMounted(async () => {
         </div>
       </div>
 
+      <!-- Platform Marquee -->
       <div class="overflow-hidden [mask-image:linear-gradient(to_right,transparent_0%,black_8%,black_92%,transparent_100%)] reveal">
-        <div class="flex gap-16 w-max animate-[marquee-right_28s_linear_infinite]">
+        <div
+          class="flex gap-16 w-max marquee-right"
+          :style="{ animationDuration: `${platformDuration}s` }"
+        >
           <div
             v-for="(partner, i) in [...marqueePlatforms, ...marqueePlatforms]"
             :key="`platform-${i}`"
@@ -168,3 +193,23 @@ onMounted(async () => {
     </div>
   </section>
 </template>
+
+<style scoped>
+@keyframes marquee-left {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marquee-right {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+.marquee-left {
+  animation: marquee-left linear infinite;
+}
+
+.marquee-right {
+  animation: marquee-right linear infinite;
+}
+</style>

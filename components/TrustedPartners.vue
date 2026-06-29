@@ -145,7 +145,7 @@ onMounted(async () => {
             <img
               :src="partner.logo"
               :alt="partner.name"
-              class="h-8 w-auto object-contain grayscale hover:grayscale-0 opacity-60 hover:opacity-100 transition-all duration-300"
+              class="h-8 w-auto object-contain opacity-60 hover:opacity-100 transition-all duration-300"
               :onerror="`this.style.display='none';this.nextElementSibling.style.display='block'`"
             />
             <span class="hidden text-xs font-bold text-gray-400 tracking-widest uppercase whitespace-nowrap">

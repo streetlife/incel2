@@ -182,6 +182,7 @@ export interface HeroSectionResponse {
     title: string,
     description: string,
     video_url: string,
+    public_id: string,
 }
 
 export interface StatsResponse {

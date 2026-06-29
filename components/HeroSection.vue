@@ -2,6 +2,7 @@
   <section class="relative h-[75vh] w-full overflow-hidden pb-5">
     <div class="absolute inset-0 w-full h-full">
       <video
+        ref="videoEl"
         autoplay
         muted
         loop
@@ -9,10 +10,7 @@
         class="absolute inset-0 w-full h-full object-cover"
         aria-describedby="dubai-video-desc"
       >
-        <source
-          :src="heroData?.video_url ?? 'https://ik.imagekit.io/7ptk19utb/istockphoto-2171202163-640_adpp_is.mp4'"
-          type="video/mp4"
-        />
+        <source :src="videoSrc" type="video/mp4" />
         <track
           kind="descriptions"
           src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920"
@@ -41,12 +39,28 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useHeroStore } from '../stores/hero'
 
 const heroStore = useHeroStore()
 const { heroData } = storeToRefs(heroStore)
+
+const videoEl = ref<HTMLVideoElement | null>(null)
+
+const DEFAULT_VIDEO_URL = 'https://ik.imagekit.io/7ptk19utb/istockphoto-2171202163-640_adpp_is.mp4'
+
+const videoSrc = computed(() => heroData.value?.video_url ?? DEFAULT_VIDEO_URL)
+
+watch(videoSrc, async () => {
+  await nextTick()
+  if (videoEl.value) {
+    videoEl.value.load()
+    videoEl.value.play().catch(() => {
+      // Browser may block autoplay until user interaction — safe to ignore here
+    })
+  }
+})
 
 onMounted(async () => {
   await heroStore.fetchHero()

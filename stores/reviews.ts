@@ -36,7 +36,7 @@ export const useReviewsStore = defineStore('reviews', () => {
         localStorage.setItem(CACHE_KEY, JSON.stringify({ data, cachedAt: Date.now() }))
     }
 
-    const fetchReviews = async (force = false) => {
+    const fetchReviews = async (force = false, retries = 1): Promise<void> => {
         if (!force && reviews.value.length) return
         if (!force && isCacheValid()) {
             reviews.value = loadFromCache() ?? []
@@ -49,6 +49,12 @@ export const useReviewsStore = defineStore('reviews', () => {
             reviews.value = data
             saveToCache(data)
         } catch (err: any) {
+            console.error('[reviews] fetch failed:', err) // unconditional, not gated by dev
+            if (retries > 0) {
+                await new Promise((r) => setTimeout(r, 1000))
+                isLoading.value = false
+                return fetchReviews(force, retries - 1)
+            }
             error.value = err?.message ?? 'Failed to load reviews'
         } finally {
             isLoading.value = false

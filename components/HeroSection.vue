@@ -48,7 +48,7 @@ const { heroData } = storeToRefs(heroStore)
 
 const videoEl = ref<HTMLVideoElement | null>(null)
 
-const DEFAULT_VIDEO_URL = 'https://ik.imagekit.io/7ptk19utb/istockphoto-2171202163-640_adpp_is.mp4'
+const DEFAULT_VIDEO_URL = 'https://res.cloudinary.com/dvnx0es3u/video/upload/v1782748184/tourism_landing_page_video_vjshv9.mp4'
 
 const videoSrc = computed(() => heroData.value?.video_url ?? DEFAULT_VIDEO_URL)
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, nextTick } from 'vue'
+import { computed, onMounted, nextTick, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useReviewsStore } from '../stores/reviews'
 import type { ReviewsResponse } from '../types/general'
@@ -136,7 +136,7 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 reveal">
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
         <div
           v-for="(review, i) in displayReviews"
           :key="i"

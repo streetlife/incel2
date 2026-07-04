@@ -117,9 +117,6 @@ const samplePackages: PackageResponse[] = [
             >Packages</span
           >
         </h2>
-        <p class="text-xl text-neutral-600 max-w-2xl mx-auto font-light">
-          Curate your own travel experience
-        </p>
       </div>
 
       <div v-if="loading" class="flex justify-center items-center h-[550px]">

@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useFlightService } from '../../services/flight.service'
-import { useFlightStore } from '../../stores/flight'
-import { useToast } from '../../composables/useToast'
-import { normaliseError } from '../../utils/api'
-import AppToast from '../toast/AppToast.vue'
-import { useAuthStore } from '../../stores/auth'
-import { useRoute } from 'vue-router'
-import PhoneInput from '../PhoneInput.vue'
-import { countryCode } from './country'
+import { ref } from "vue";
+import { storeToRefs } from "pinia";
+import { useFlightService } from "../../services/flight.service";
+import { useFlightStore } from "../../stores/flight";
+import { useToast } from "../../composables/useToast";
+import { normaliseError } from "../../utils/api";
+import AppToast from "../toast/AppToast.vue";
+import { useAuthStore } from "../../stores/auth";
+import { useRoute } from "vue-router";
+import PhoneInput from "../PhoneInput.vue";
+import { countryCode } from "./country";
 
 interface Country {
-  country: string
-  code: string
-  iso: string
+  country: string;
+  code: string;
+  iso: string;
 }
 
-const emit = defineEmits<(e: 'next') => void>()
-const flightStore = useFlightStore()
+const emit = defineEmits<(e: "next") => void>();
+const flightStore = useFlightStore();
 
 const {
   isLoggedIn,
@@ -28,113 +28,114 @@ const {
   contactEmail,
   contactPhone,
   session_code,
-} = storeToRefs(flightStore)
+} = storeToRefs(flightStore);
 
-const { applyB2BDiscount, clearDiscount, setNameEmail } = flightStore
+const { applyB2BDiscount, clearDiscount, setNameEmail } = flightStore;
 
-const showLoginPanel = ref(false)
-const loginEmail = ref('')
-const loginPassword = ref('')
-const loginLoading = ref(false)
-const loginError = ref('')
-const loading = ref(false)
-const error = ref('')
-const errors = ref<Record<string, string>>({})
-const auth = useAuthStore()
-const route = useRoute()
-const countryLoading = ref(false)
-const country = ref<Country[]>([])
+const showLoginPanel = ref(false);
+const loginEmail = ref("");
+const loginPassword = ref("");
+const loginLoading = ref(false);
+const loginError = ref("");
+const loading = ref(false);
+const error = ref("");
+const errors = ref<Record<string, string>>({});
+const auth = useAuthStore();
+const route = useRoute();
+const countryLoading = ref(false);
+const country = ref<Country[]>([]);
 
-const flightService = useFlightService()
-const toast = useToast()
+const flightService = useFlightService();
+const toast = useToast();
 
 async function handleLogin() {
-  loginLoading.value = true
-  loginError.value = ''
+  loginLoading.value = true;
+  loginError.value = "";
 
   try {
-    const res = await auth.login(loginEmail.value, loginPassword.value)
-    if (res === null) return
-    
-    toast.success("Login successful")
-    flightStore.isLoggedIn = true
-    showLoginPanel.value = false
-  } catch (err) {
-    loginLoading.value = false
-    loginError.value = normaliseError(err)
+    const res = await auth.login(loginEmail.value, loginPassword.value);
+    if (res === null) return;
 
-    toast.error(loginError.value)
+    toast.success("Login successful");
+    flightStore.isLoggedIn = true;
+    showLoginPanel.value = false;
+  } catch (err) {
+    loginLoading.value = false;
+    loginError.value = normaliseError(err);
+
+    toast.error(loginError.value);
   }
-  loginLoading.value = false
+  loginLoading.value = false;
 }
 
 function handleLogout() {
-  flightStore.isLoggedIn = false
-  clearDiscount()
-  loginEmail.value = ''
-  loginPassword.value = ''
+  flightStore.isLoggedIn = false;
+  clearDiscount();
+  loginEmail.value = "";
+  loginPassword.value = "";
 }
 
 function validate(): boolean {
-  errors.value = {}
+  errors.value = {};
 
   passengers.value.forEach((p, i) => {
-    const px = `p${i}`
-    if (!p.firstname.trim()) errors.value[`${px}_first`] = 'Required'
-    if (!p.surname.trim()) errors.value[`${px}_last`] = 'Required'
-    if (!p.birth_date) errors.value[`${px}_dob`] = 'Required'
-    if (!p.passport_issuance_date.trim()) errors.value[`${px}_ppn`] = 'Required'
-    if (!p.passport_expiry_date.trim()) errors.value[`${px}_ppx`] = 'Required'
-    if (!p.gender) errors.value[`${px}_gender`] = 'Required'
-    if (!p.passport_number) errors.value[`${px}_pass_num`] = 'Required'
-    if (!p.passport_country) errors.value[`${px}_country`] = 'Required'
-    if (!p.passport_nationality) errors.value[`${px}_nat`] = 'Required'
+    const px = `p${i}`;
+    if (!p.firstname.trim()) errors.value[`${px}_first`] = "Required";
+    if (!p.surname.trim()) errors.value[`${px}_last`] = "Required";
+    if (!p.birth_date) errors.value[`${px}_dob`] = "Required";
+    if (!p.passport_issuance_date.trim())
+      errors.value[`${px}_ppn`] = "Required";
+    if (!p.passport_expiry_date.trim()) errors.value[`${px}_ppx`] = "Required";
+    if (!p.gender) errors.value[`${px}_gender`] = "Required";
+    if (!p.passport_number) errors.value[`${px}_pass_num`] = "Required";
+    if (!p.passport_country) errors.value[`${px}_country`] = "Required";
+    if (!p.passport_nationality) errors.value[`${px}_nat`] = "Required";
     if (i === 0) {
       if (!p.emailaddress.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))
-        errors.value[`${px}_email`] = 'Valid email required'
+        errors.value[`${px}_email`] = "Valid email required";
       if (!p.phone_number.match(/^\+?[\d\s\-()]{8,}$/))
-        errors.value[`${px}_phone`] = 'Valid phone required'
+        errors.value[`${px}_phone`] = "Valid phone required";
     }
-  })
+  });
 
-  contactEmail.value = passengers.value[0]?.emailaddress ?? ''
-  contactPhone.value = passengers.value[0]?.phone_number ?? ''
+  contactEmail.value = passengers.value[0]?.emailaddress ?? "";
+  contactPhone.value = passengers.value[0]?.phone_number ?? "";
 
-  return Object.keys(errors.value).length === 0
+  return Object.keys(errors.value).length === 0;
 }
 
 async function submit() {
-  if (!validate()) return
+  if (!validate()) return;
 
-  loading.value = true
+  loading.value = true;
   try {
     await flightService.saveBooking({
       sessionCode: session_code.value,
       traveller: passengers.value,
-      bookingCode: String(route.query.booking_code)
-    })
+      bookingCode: String(route.query.booking_code),
+    });
 
-    const first = passengers.value[0]
-    setNameEmail(`${first.firstname} ${first.surname}`, first.emailaddress)
+    const first = passengers.value[0];
+    setNameEmail(`${first.firstname} ${first.surname}`, first.emailaddress);
 
-    toast.success('Saved successfully')
-    emit('next')
+    toast.success("Saved successfully");
+    emit("next");
   } catch (err) {
-    error.value = normaliseError(err)
-    toast.error(error.value)
+    error.value = normaliseError(err);
+    toast.error(error.value);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 const fieldClass = (key: string) =>
   `w-full px-3.5 py-2.5 text-sm rounded-xl border transition-colors outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50 ${
     errors.value[key]
-      ? 'border-red-300 bg-red-50 focus:border-red-400'
-      : 'border-slate-200 bg-white focus:border-primary'
-  }`
+      ? "border-red-300 bg-red-50 focus:border-red-400"
+      : "border-slate-200 bg-white focus:border-primary"
+  }`;
 
-country.value = countryCode
+country.value = countryCode;
 </script>
 
 <template>
@@ -144,38 +145,70 @@ country.value = countryCode
     <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4">
       <div v-if="!isLoggedIn" class="flex items-start justify-between gap-4">
         <div>
-          <p class="text-sm font-semibold text-primary">Are you a corporate or travel agent?</p>
-          <p class="text-xs text-primary mt-0.5">Log in to apply your B2B discount automatically.</p>
+          <p class="text-sm font-semibold text-primary">
+            Are you a corporate or travel agent?
+          </p>
+          <p class="text-xs text-primary mt-0.5">
+            Log in to apply your B2B discount automatically.
+          </p>
         </div>
         <button
           class="shrink-0 text-xs font-semibold px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/65 transition-colors border-none cursor-pointer"
           @click="showLoginPanel = !showLoginPanel"
         >
-          {{ showLoginPanel ? 'Cancel' : 'Log In' }}
+          {{ showLoginPanel ? "Cancel" : "Log In" }}
         </button>
       </div>
 
       <div v-else class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
-            {{ loginEmail.slice(0, 1).toUpperCase() || 'B' }}
+          <div
+            class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold"
+          >
+            {{ loginEmail.slice(0, 1).toUpperCase() || "B" }}
           </div>
           <div>
             <p class="text-sm font-semibold text-primary">B2B Account Active</p>
             <p class="text-xs text-green-600 font-medium">
-              {{ (discountRate * 100).toFixed(0) }}% discount applied · {{ discountCode }}
+              {{ (discountRate * 100).toFixed(0) }}% discount applied ·
+              {{ discountCode }}
             </p>
           </div>
         </div>
-        <button class="text-xs text-primary/25 underline cursor-pointer bg-transparent border-none" @click="handleLogout">
+        <button
+          class="text-xs text-primary/25 underline cursor-pointer bg-transparent border-none"
+          @click="handleLogout"
+        >
           Log out
         </button>
       </div>
 
-      <Transition enter-active-class="transition-all duration-200" enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0">
-        <div v-if="showLoginPanel && !isLoggedIn" class="mt-4 pt-4 border-t border-blue-200 space-y-3">
-          <input v-model="loginEmail" type="email" placeholder="Work email" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-blue-200 bg-white focus:border-primary/50 outline-none" />
-          <input v-model="loginPassword" type="password" placeholder="Password" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-blue-200 bg-white focus:border-primary/50 outline-none" />
+      <Transition
+        enter-active-class="transition-all duration-200"
+        enter-from-class="opacity-0 -translate-y-2"
+        enter-to-class="opacity-100 translate-y-0"
+      >
+        <div
+          v-if="showLoginPanel && !isLoggedIn"
+          class="mt-4 pt-4 border-t border-blue-200 space-y-3"
+        >
+          <label for="email" class="hidden"></label>
+          <input
+            v-model="loginEmail"
+            type="email"
+            placeholder="Work email"
+            class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-blue-200 bg-white focus:border-primary/50 outline-none"
+            id="email"
+          />
+
+          <label for="password" class="hidden"></label>
+          <input
+            v-model="loginPassword"
+            type="password"
+            placeholder="Password"
+            class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-blue-200 bg-white focus:border-primary/50 outline-none"
+            id="password"
+          />
 
           <button
             class="w-full py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/65 transition-colors border-none cursor-pointer disabled:opacity-60"
@@ -194,95 +227,236 @@ country.value = countryCode
       :key="i"
       class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
     >
-      <div class="flex items-center justify-between px-5 py-3.5 bg-slate-50 border-b border-slate-100">
+      <div
+        class="flex items-center justify-between px-5 py-3.5 bg-slate-50 border-b border-slate-100"
+      >
         <div class="flex items-center gap-2">
-          <div class="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">
+          <div
+            class="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center"
+          >
             {{ i + 1 }}
           </div>
           <span class="text-sm font-semibold text-slate-800">
-            {{ i === 0 ? 'Primary Passenger' : `Passenger ${i + 1}` }}
+            {{ i === 0 ? "Primary Passenger" : `Passenger ${i + 1}` }}
           </span>
         </div>
-        <span class="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{{ passenger.type }}</span>
+        <span
+          class="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md"
+          >{{ passenger.type }}</span
+        >
       </div>
 
       <div class="p-5">
         <div class="w-full grid grid-cols-1 sm:grid-cols-3 gap-4 pb-5">
           <div>
-            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">First Name <span class="text-red-400">*</span></label>
-            <input v-model="passenger.firstname" type="text" placeholder="As on passport" :class="fieldClass(`p${i}_first`)" />
-            <p v-if="errors[`p${i}_first`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_first`] }}</p>
+            <label
+              for="passport_first_name"
+              class="text-xs font-semibold text-slate-500 mb-1.5 block"
+              >First Name <span class="text-red-400">*</span></label
+            >
+            <input
+              v-model="passenger.firstname"
+              type="text"
+              placeholder="As on passport"
+              :class="fieldClass(`p${i}_first`)"
+              id="passport_first_name"
+            />
+            <p v-if="errors[`p${i}_first`]" class="text-xs text-red-500 mt-1">
+              {{ errors[`p${i}_first`] }}
+            </p>
           </div>
 
           <div>
-            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Last Name <span class="text-red-400">*</span></label>
-            <input v-model="passenger.surname" type="text" placeholder="As on passport" :class="fieldClass(`p${i}_last`)" />
-            <p v-if="errors[`p${i}_last`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_last`] }}</p>
+            <label
+              for="passport_last_name"
+              class="text-xs font-semibold text-slate-500 mb-1.5 block"
+              >Last Name <span class="text-red-400">*</span></label
+            >
+            <input
+              v-model="passenger.surname"
+              type="text"
+              placeholder="As on passport"
+              :class="fieldClass(`p${i}_last`)"
+              id="passport_last_name"
+            />
+            <p v-if="errors[`p${i}_last`]" class="text-xs text-red-500 mt-1">
+              {{ errors[`p${i}_last`] }}
+            </p>
           </div>
 
           <div>
-            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Date of Birth <span class="text-red-400">*</span></label>
-            <input v-model="passenger.birth_date" type="date" :max="new Date().toISOString().split('T')[0]" :class="fieldClass(`p${i}_dob`)" />
-            <p v-if="errors[`p${i}_dob`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_dob`] }}</p>
+            <label
+              for="passport_date_of_birth"
+              class="text-xs font-semibold text-slate-500 mb-1.5 block"
+              >Date of Birth <span class="text-red-400">*</span></label
+            >
+            <input
+              v-model="passenger.birth_date"
+              type="date"
+              :max="new Date().toISOString().split('T')[0]"
+              :class="fieldClass(`p${i}_dob`)"
+              id="passport_date_of_birth"
+            />
+            <p v-if="errors[`p${i}_dob`]" class="text-xs text-red-500 mt-1">
+              {{ errors[`p${i}_dob`] }}
+            </p>
           </div>
 
           <div>
-            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Number <span class="text-red-400">*</span></label>
-            <input v-model="passenger.passport_number" type="text" placeholder="As on passport" :class="fieldClass(`p${i}_pass_num`)" />
-            <p v-if="errors[`p${i}_pass_num`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_pass_num`] }}</p>
+            <label
+              for="passport_number"
+              class="text-xs font-semibold text-slate-500 mb-1.5 block"
+              >Passport Number <span class="text-red-400">*</span></label
+            >
+            <input
+              v-model="passenger.passport_number"
+              type="text"
+              placeholder="As on passport"
+              :class="fieldClass(`p${i}_pass_num`)"
+              id="passport_number"
+            />
+            <p
+              v-if="errors[`p${i}_pass_num`]"
+              class="text-xs text-red-500 mt-1"
+            >
+              {{ errors[`p${i}_pass_num`] }}
+            </p>
           </div>
 
           <div>
-            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Country <span class="text-red-400">*</span></label>
-            <select v-model="passenger.passport_country" :class="fieldClass(`p${i}_country`)" :disabled="countryLoading">
-              <option value="">{{ countryLoading ? 'Loading countries…' : 'Select country' }}</option>
-              <option v-for="n in country" :key="n.code" :value="n.iso">{{ n.country }}</option>
+            <label
+              for="passport_country"
+              class="text-xs font-semibold text-slate-500 mb-1.5 block"
+              >Passport Country <span class="text-red-400">*</span></label
+            >
+            <select
+              v-model="passenger.passport_country"
+              :class="fieldClass(`p${i}_country`)"
+              :disabled="countryLoading"
+              id="passport_country"
+            >
+              <option value="">
+                {{ countryLoading ? "Loading countries…" : "Select country" }}
+              </option>
+              <option v-for="n in country" :key="n.code" :value="n.iso">
+                {{ n.country }}
+              </option>
             </select>
-            <p v-if="errors[`p${i}_country`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_country`] }}</p>
+            <p v-if="errors[`p${i}_country`]" class="text-xs text-red-500 mt-1">
+              {{ errors[`p${i}_country`] }}
+            </p>
           </div>
 
           <div>
-            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Nationality <span class="text-red-400">*</span></label>
-            <select v-model="passenger.passport_nationality" :class="fieldClass(`p${i}_nat`)" :disabled="countryLoading">
-              <option value="">{{ countryLoading ? 'Loading countries…' : 'Select nationality' }}</option>
-              <option v-for="n in country" :key="n.code" :value="n.iso">{{ n.country }}</option>
+            <label
+              for="passport_nationality"
+              class="text-xs font-semibold text-slate-500 mb-1.5 block"
+              >Passport Nationality <span class="text-red-400">*</span></label
+            >
+            <select
+              v-model="passenger.passport_nationality"
+              :class="fieldClass(`p${i}_nat`)"
+              :disabled="countryLoading"
+              id="passport_nationality"
+            >
+              <option value="">
+                {{
+                  countryLoading ? "Loading countries…" : "Select nationality"
+                }}
+              </option>
+              <option v-for="n in country" :key="n.code" :value="n.iso">
+                {{ n.country }}
+              </option>
             </select>
-            <p v-if="errors[`p${i}_nat`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_nat`] }}</p>
+            <p v-if="errors[`p${i}_nat`]" class="text-xs text-red-500 mt-1">
+              {{ errors[`p${i}_nat`] }}
+            </p>
           </div>
 
           <div>
-            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Issuance Date <span class="text-red-400">*</span></label>
-            <input v-model="passenger.passport_issuance_date" type="date" :class="fieldClass(`p${i}_ppn`)" />
-            <p v-if="errors[`p${i}_ppn`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_ppn`] }}</p>
+            <label
+              for="passport_issuance_date"
+              class="text-xs font-semibold text-slate-500 mb-1.5 block"
+              >Passport Issuance Date <span class="text-red-400">*</span></label
+            >
+            <input
+              v-model="passenger.passport_issuance_date"
+              type="date"
+              :class="fieldClass(`p${i}_ppn`)"
+              id="passport_issuance_date"
+            />
+            <p v-if="errors[`p${i}_ppn`]" class="text-xs text-red-500 mt-1">
+              {{ errors[`p${i}_ppn`] }}
+            </p>
           </div>
 
           <div>
-            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Passport Expiry Date <span class="text-red-400">*</span></label>
-            <input v-model="passenger.passport_expiry_date" type="date" :min="new Date().toISOString().split('T')[0]" :class="fieldClass(`p${i}_ppx`)" />
-            <p v-if="errors[`p${i}_ppx`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_ppx`] }}</p>
+            <label
+              for="passport_expiry_date"
+              class="text-xs font-semibold text-slate-500 mb-1.5 block"
+              >Passport Expiry Date <span class="text-red-400">*</span></label
+            >
+            <input
+              v-model="passenger.passport_expiry_date"
+              type="date"
+              :min="new Date().toISOString().split('T')[0]"
+              :class="fieldClass(`p${i}_ppx`)"
+              id="passport_expiry_date"
+            />
+            <p v-if="errors[`p${i}_ppx`]" class="text-xs text-red-500 mt-1">
+              {{ errors[`p${i}_ppx`] }}
+            </p>
           </div>
 
           <div>
-            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Gender <span class="text-red-400">*</span></label>
-            <select v-model="passenger.gender" :class="fieldClass(`p${i}_gender`)">
+            <label
+              for="passport_gender"
+              class="text-xs font-semibold text-slate-500 mb-1.5 block"
+              >Gender <span class="text-red-400">*</span></label
+            >
+            <select
+              v-model="passenger.gender"
+              :class="fieldClass(`p${i}_gender`)"
+              id="passport_gender"
+            >
               <option value="">Select</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
             </select>
-            <p v-if="errors[`p${i}_gender`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_gender`] }}</p>
+            <p v-if="errors[`p${i}_gender`]" class="text-xs text-red-500 mt-1">
+              {{ errors[`p${i}_gender`] }}
+            </p>
           </div>
         </div>
 
         <template v-if="i === 0">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="sm:col-span-2 border-t border-slate-100 pt-4 mt-1">
-              <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Contact Details</p>
+              <p
+                class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3"
+              >
+                Contact Details
+              </p>
             </div>
             <div>
-              <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">Email Address <span class="text-red-400">*</span></label>
-              <input v-model="passenger.emailaddress" type="email" placeholder="ticket@example.com" :class="fieldClass(`p${i}_email`)" />
-              <p class="text-[10px] text-slate-400 mt-1">Invoice & ticket will be sent here</p>
-              <p v-if="errors[`p${i}_email`]" class="text-xs text-red-500 mt-1">{{ errors[`p${i}_email`] }}</p>
+              <label
+                for="contact_email_address"
+                class="text-xs font-semibold text-slate-500 mb-1.5 block"
+                >Email Address <span class="text-red-400">*</span></label
+              >
+              <input
+                v-model="passenger.emailaddress"
+                type="email"
+                placeholder="ticket@example.com"
+                :class="fieldClass(`p${i}_email`)"
+                id="contact_email_address"
+              />
+              <p class="text-[10px] text-slate-400 mt-1">
+                Invoice & ticket will be sent here
+              </p>
+              <p v-if="errors[`p${i}_email`]" class="text-xs text-red-500 mt-1">
+                {{ errors[`p${i}_email`] }}
+              </p>
             </div>
             <div>
               <PhoneInput
@@ -291,10 +465,12 @@ country.value = countryCode
                 default-country="NG"
                 important
                 :error="errors[`p${i}_phone`]"
-                @change="({ full, dialCode }) => {
-                  passenger.phone_number = full
-                  passenger.dialling_code = dialCode.replace('+', '')
-                }"
+                @change="
+                  ({ full, dialCode }) => {
+                    passenger.phone_number = full;
+                    passenger.dialling_code = dialCode.replace('+', '');
+                  }
+                "
               />
             </div>
           </div>
@@ -307,9 +483,30 @@ country.value = countryCode
       :disabled="loading"
       @click="submit"
     >
-      {{ loading ? 'Processing…' : 'Continue to Review' }}
-      <svg v-if="!loading" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      <svg v-else class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+      {{ loading ? "Processing…" : "Continue to Review" }}
+      <svg
+        v-if="!loading"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+      >
+        <path d="M5 12h14M12 5l7 7-7 7" />
+      </svg>
+      <svg
+        v-else
+        class="animate-spin"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+      >
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      </svg>
     </button>
   </div>
 </template>

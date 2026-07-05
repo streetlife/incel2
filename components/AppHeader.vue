@@ -110,7 +110,7 @@
           }"
         >
           <img
-            src="https://ik.imagekit.io/7ptk19utb/incel_tourism_logo_wide.png"
+            src="https://ik.imagekit.io/7ptk19utb/COLOURED%20HOLIDAYS%20LOGO%20(1).png?updatedAt=1783258642384"
             class="w-auto h-12 object-contain"
             alt="Incel Tourism Logo"
           />

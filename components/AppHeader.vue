@@ -109,11 +109,7 @@
             'opacity-0 pointer-events-none': mobileMenuOpen,
           }"
         >
-          <img
-            src="https://ik.imagekit.io/7ptk19utb/COLOURED%20HOLIDAYS%20LOGO%20(1).png?updatedAt=1783258642384"
-            class="w-auto h-12 object-contain"
-            alt="Incel Tourism Logo"
-          />
+          <Logo />
         </NuxtLink>
 
         <div class="hidden lg:flex justify-center items-center space-x-8">
@@ -606,6 +602,7 @@ import { useRoute } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { useCurrency } from "../composables/useCurrency";
 import { useHotDealsStore } from "../stores/hotdeal";
+import Logo from "./Logo.vue";
 
 const route = useRoute();
 const auth = useAuthStore();

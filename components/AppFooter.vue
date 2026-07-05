@@ -13,12 +13,14 @@
           </p>
           <div class="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
             <div>
+              <label for="email" class="text-white hidden">Email</label>
               <input
                 type="email"
                 placeholder="Enter your email"
                 class="flex-1 px-6 py-3 rounded-lg bg-gray-800 border text-white focus:outline-none focus:border-primary"
                 v-model="form.email"
                 :class="error ? 'border-red-500' : 'border-gray-700'"
+                id="email"
               />
             </div>
 

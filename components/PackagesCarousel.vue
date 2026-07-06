@@ -1,137 +1,7 @@
-<template>
-  <div class="relative w-full py-8 md:py-12 overflow-hidden">
-    <button
-      @click="prevSlide"
-      class="absolute left-2 md:left-4 lg:left-12 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-14 md:h-14 rounded-full bg-white/90 backdrop-blur-md border border-neutral-200 text-neutral-900 flex items-center justify-center shadow-xl hover:scale-110 hover:bg-white transition-all cursor-pointer"
-      aria-label="Previous slide"
-    >
-      <ArrowLeft class="w-4 h-4 md:w-6 md:h-6" />
-    </button>
-
-    <button
-      @click="nextSlide"
-      class="absolute right-2 md:right-4 lg:right-12 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-14 md:h-14 rounded-full bg-white/90 backdrop-blur-md border border-neutral-200 text-neutral-900 flex items-center justify-center shadow-xl hover:scale-110 hover:bg-white transition-all cursor-pointer"
-      aria-label="Next slide"
-    >
-      <ArrowRight class="w-4 h-4 md:w-6 md:h-6" />
-    </button>
-
-    <div class="relative w-full max-w-7xl mx-auto px-4">
-      <div
-        :class="carouselHeightClass"
-        class="relative w-full"
-        style="perspective: 1500px"
-      >
-        <div
-          v-for="(pkg, index) in packages"
-          :key="pkg.id"
-          :style="getCardStyle(index)"
-          :class="getCardClass(index)"
-          @click="handleCardClick(index)"
-        >
-          <img
-            :src="getHeroImage(pkg)"
-            :alt="pkg.package_name"
-            :class="[
-              'w-full h-full object-cover transition-transform duration-700',
-              getOffset(index) === 0 ? 'scale-100' : 'scale-105',
-            ]"
-            @error="onImageError"
-          />
-
-          <div
-            :class="[
-              'absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent transition-opacity duration-300',
-              getOffset(index) === 0 ? 'opacity-100' : 'opacity-70',
-            ]"
-          />
-
-          <Transition name="fade-slide">
-            <div
-              v-show="getOffset(index) === 0"
-              class="absolute bottom-0 left-0 right-0 p-4 md:p-5 lg:p-6 text-white"
-            >
-              <div class="flex flex-wrap items-center gap-2 mb-2">
-                <span
-                  class="bg-primary px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                >
-                  {{ pkg.category }}
-                </span>
-                <span
-                  class="flex items-center text-[10px] font-medium bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full"
-                >
-                  <MapPin class="w-2.5 h-2.5 mr-1" /> {{ pkg.location }}
-                </span>
-              </div>
-
-              <h3
-                class="text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold mb-2 md:mb-3 leading-tight tracking-tight drop-shadow-lg line-clamp-2"
-              >
-                {{ pkg.package_name }}
-              </h3>
-
-              <div
-                v-if="pkg.date_from || pkg.date_to"
-                class="flex items-center gap-1.5 text-xs text-white/70 mb-3"
-              >
-                <svg
-                  class="w-3.5 h-3.5 shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <span>{{ formatDate(pkg.date_from) }}</span>
-                <span v-if="pkg.date_to"> → {{ formatDate(pkg.date_to) }}</span>
-              </div>
-
-              <!-- Updated CTA — triggers builder instead of navigating -->
-              <div
-                class="flex items-center justify-between border-t border-white/20 pt-3 md:pt-4 mt-3 md:mt-4 gap-3"
-              >
-                <p class="text-white/70 text-[11px] leading-tight max-w-[55%]">
-                  Design your experience from this destination
-                </p>
-                <button
-                  @click.stop="emit('design', pkg)"
-                  class="shrink-0 rounded-full flex items-center py-2 bg-white text-black hover:bg-primary hover:text-white border-0 font-semibold px-3 md:px-4 text-xs md:text-sm transition-colors duration-200"
-                >
-                  Buy Now
-                  <ArrowRight class="w-3 h-3 md:w-3.5 md:h-3.5 ml-1.5" />
-                </button>
-              </div>
-            </div>
-          </Transition>
-        </div>
-      </div>
-    </div>
-
-    <div class="flex justify-center gap-2 mt-6 md:mt-8">
-      <button
-        v-for="(pkg, index) in packages"
-        :key="index"
-        @click="setActiveIndex(index)"
-        :class="[
-          'h-2 rounded-full transition-all duration-300',
-          index === activeIndex
-            ? 'bg-primary w-6 md:w-8'
-            : 'bg-neutral-300 hover:bg-neutral-400 w-2',
-        ]"
-        :aria-label="`Go to slide ${index + 1}`"
-      />
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, type CSSProperties } from "vue";
 import { ArrowLeft, ArrowRight, MapPin } from "lucide-vue-next";
+import { useCurrency } from "../composables/useCurrency";
 
 interface Package {
   id: number | string;
@@ -149,6 +19,8 @@ interface Package {
   picture3?: string;
   picture4?: string;
   banner?: string;
+  price?: number | string;
+  currency?: string;
 }
 
 interface Props {
@@ -191,6 +63,7 @@ function formatDate(dateStr?: string): string {
 
 const activeIndex = ref(0);
 const windowWidth = ref(0);
+const { format } = useCurrency();
 
 const isMobile = computed(() => windowWidth.value < 768);
 const isTablet = computed(
@@ -342,6 +215,151 @@ const getCardClass = (index: number) => {
     .join(" ");
 };
 </script>
+
+<template>
+  <div class="relative w-full py-8 md:py-12 overflow-hidden">
+    <button
+      @click="prevSlide"
+      class="absolute left-2 md:left-4 lg:left-12 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-14 md:h-14 rounded-full bg-white/90 backdrop-blur-md border border-neutral-200 text-neutral-900 flex items-center justify-center shadow-xl hover:scale-110 hover:bg-white transition-all cursor-pointer"
+      aria-label="Previous slide"
+    >
+      <ArrowLeft class="w-4 h-4 md:w-6 md:h-6" />
+    </button>
+
+    <button
+      @click="nextSlide"
+      class="absolute right-2 md:right-4 lg:right-12 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-14 md:h-14 rounded-full bg-white/90 backdrop-blur-md border border-neutral-200 text-neutral-900 flex items-center justify-center shadow-xl hover:scale-110 hover:bg-white transition-all cursor-pointer"
+      aria-label="Next slide"
+    >
+      <ArrowRight class="w-4 h-4 md:w-6 md:h-6" />
+    </button>
+
+    <div class="relative w-full max-w-7xl mx-auto px-4">
+      <div
+        :class="carouselHeightClass"
+        class="relative w-full"
+        style="perspective: 1500px"
+      >
+        <div
+          v-for="(pkg, index) in packages"
+          :key="pkg.id"
+          :style="getCardStyle(index)"
+          :class="getCardClass(index)"
+          @click="handleCardClick(index)"
+        >
+          <img
+            :src="getHeroImage(pkg)"
+            :alt="pkg.package_name"
+            :class="[
+              'w-full h-full object-cover transition-transform duration-700',
+              getOffset(index) === 0 ? 'scale-100' : 'scale-105',
+            ]"
+            @error="onImageError"
+          />
+
+          <div
+            :class="[
+              'absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent transition-opacity duration-300',
+              getOffset(index) === 0 ? 'opacity-100' : 'opacity-70',
+            ]"
+          />
+
+          <div
+            v-if="pkg.price"
+            class="absolute top-3 right-3 md:top-5 md:right-5 z-10 bg-white/95 backdrop-blur-md text-neutral-900 rounded-xl md:rounded-2xl px-3 py-1.5 md:px-4 md:py-2 shadow-lg text-right"
+          >
+            <p
+              class="text-[9px] md:text-[10px] uppercase tracking-wider text-neutral-500 leading-none mb-0.5"
+            >
+              From
+            </p>
+            <p class="text-sm md:text-lg font-bold leading-none text-primary">
+              {{ format(Number(pkg.price)) }}
+            </p>
+          </div>
+
+          <Transition name="fade-slide">
+            <div
+              v-show="getOffset(index) === 0"
+              class="absolute bottom-0 left-0 right-0 p-4 md:p-5 lg:p-6 text-white"
+            >
+              <div class="flex flex-wrap items-center gap-2 mb-2">
+                <span
+                  class="bg-primary px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                >
+                  {{ pkg.category }}
+                </span>
+                <span
+                  class="flex items-center text-[10px] font-medium bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full"
+                >
+                  <MapPin class="w-2.5 h-2.5 mr-1" /> {{ pkg.location }}
+                </span>
+              </div>
+
+              <h3
+                class="text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold mb-2 md:mb-3 leading-tight tracking-tight drop-shadow-lg line-clamp-2"
+              >
+                {{ pkg.package_name }}
+              </h3>
+
+              <div
+                v-if="pkg.date_from || pkg.date_to"
+                class="flex items-center gap-1.5 text-xs text-white/70 mb-3"
+              >
+                <svg
+                  class="w-3.5 h-3.5 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <span>{{ formatDate(pkg.date_from) }}</span>
+                <span v-if="pkg.date_to"> → {{ formatDate(pkg.date_to) }}</span>
+              </div>
+
+              <!-- Updated CTA — triggers builder instead of navigating -->
+              <div
+                class="flex items-center justify-between border-t border-white/20 pt-3 md:pt-4 mt-3 md:mt-4 gap-3"
+              >
+                <p class="text-white/70 text-[11px] leading-tight max-w-[55%]">
+                  Design your experience from this destination
+                </p>
+                <button
+                  @click.stop="emit('design', pkg)"
+                  class="shrink-0 rounded-full flex items-center py-2 bg-white text-black hover:bg-primary hover:text-white border-0 font-semibold px-3 md:px-4 text-xs md:text-sm transition-colors duration-200"
+                >
+                  Buy Now
+                  <ArrowRight class="w-3 h-3 md:w-3.5 md:h-3.5 ml-1.5" />
+                </button>
+              </div>
+            </div>
+          </Transition>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-center gap-2 mt-6 md:mt-8">
+      <button
+        v-for="(pkg, index) in packages"
+        :key="index"
+        @click="setActiveIndex(index)"
+        :class="[
+          'h-2 rounded-full transition-all duration-300',
+          index === activeIndex
+            ? 'bg-primary w-6 md:w-8'
+            : 'bg-neutral-300 hover:bg-neutral-400 w-2',
+        ]"
+        :aria-label="`Go to slide ${index + 1}`"
+      />
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .fade-slide-enter-active {

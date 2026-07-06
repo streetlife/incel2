@@ -27,6 +27,7 @@
               <div
                 v-for="(deal, index) in hotDealsStore.activeDeals"
                 :key="deal.id"
+                :ref="(el) => setDealRef(el, index)"
                 class="inline-flex items-center gap-2 sm:gap-3 text-sm sm:text-base font-medium cursor-pointer hover:text-blue-200 transition-colors group"
                 @click="navigateTo(`/deals/${deal.id}`)"
               >
@@ -266,7 +267,7 @@
                       currency.name
                     }}</span>
                   </div>
-                  <span class="text-xs text-slate-400 tabular-nums shrink-0">
+                  <!-- <span class="text-xs text-slate-400 tabular-nums shrink-0">
                     {{
                       currency.code === "USD"
                         ? "1.00"
@@ -274,7 +275,7 @@
                             maximumFractionDigits: 2,
                           }) ?? "…")
                     }}
-                  </span>
+                  </span> -->
                   <svg
                     v-if="selectedCurrency === currency.code"
                     class="w-4 h-4 text-blue-600 shrink-0"
@@ -481,7 +482,7 @@
           <div class="p-6 space-y-6 border-t border-gray-100">
             <div class="bg-gray-50 rounded-xl p-4">
               <div class="flex items-center justify-between mb-3">
-                <p class="text-sm font-semibold text-gray-700">Currency</p>
+                <!-- <p class="text-sm font-semibold text-gray-700">Currency</p> -->
                 <span v-if="ratesLoading">
                   <svg
                     class="animate-spin w-4 h-4 text-slate-400"
@@ -503,12 +504,12 @@
                     />
                   </svg>
                 </span>
-                <span
+                <!-- <span
                   v-else-if="formatRateHint"
                   class="text-xs text-slate-400 tabular-nums"
                 >
                   1 USD = {{ formatRateHint }}
-                </span>
+                </span> -->
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <button
@@ -597,7 +598,15 @@
 
 <script setup lang="ts">
 import { navigateTo } from "nuxt/app";
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
+import {
+  ref,
+  computed,
+  onMounted,
+  onUnmounted,
+  nextTick,
+  watch,
+  ComponentPublicInstance,
+} from "vue";
 import { useRoute } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { useCurrency } from "../composables/useCurrency";
@@ -662,24 +671,56 @@ const hideDeals = ref(false);
 const dealsContainer = ref<HTMLElement | null>(null);
 const autoScrollInterval = ref<ReturnType<typeof setInterval> | null>(null);
 const isPaused = ref(false);
+const dealRefs = ref<(HTMLElement | null)[]>([]);
+const currentDealIndex = ref(0);
+
+function setDealRef(
+  el: Element | ComponentPublicInstance | null,
+  index: number,
+) {
+  dealRefs.value[index] = (el as HTMLElement) ?? null;
+}
+
+function scrollToDeal(index: number) {
+  const container = dealsContainer.value;
+  const el = dealRefs.value[index] as HTMLElement | null;
+  if (!container || !el) return;
+
+  const containerRect = container.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  const targetScrollLeft =
+    container.scrollLeft + (elRect.left - containerRect.left);
+
+  container.scrollTo({ left: targetScrollLeft, behavior: "smooth" });
+}
 
 const startAutoScroll = () => {
   if (autoScrollInterval.value) clearInterval(autoScrollInterval.value);
   autoScrollInterval.value = setInterval(() => {
-    if (
-      !dealsContainer.value ||
-      isPaused.value ||
-      hotDealsStore.activeDeals.length <= 1
-    )
-      return;
-    const { scrollLeft, scrollWidth, clientWidth } = dealsContainer.value;
-    if (scrollLeft >= scrollWidth - clientWidth - 10) {
+    const total = hotDealsStore.activeDeals.length;
+    if (!dealsContainer.value || isPaused.value || total <= 1) return;
+
+    const nextIndex = (currentDealIndex.value + 1) % total;
+
+    if (nextIndex === 0) {
+      // looping back to the first deal — jump to the start rather than
+      // sliding all the way backwards across every deal
       dealsContainer.value.scrollTo({ left: 0, behavior: "smooth" });
     } else {
-      dealsContainer.value.scrollBy({ left: 300, behavior: "smooth" });
+      scrollToDeal(nextIndex);
     }
-  }, 3000);
+
+    currentDealIndex.value = nextIndex;
+  }, 5000); // 5s per deal, as requested
 };
+
+watch(
+  () => hotDealsStore.activeDeals.length,
+  () => {
+    dealRefs.value = [];
+    currentDealIndex.value = 0;
+  },
+);
 
 const pauseAutoScroll = () => {
   isPaused.value = true;
@@ -770,11 +811,6 @@ onUnmounted(() => {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
 .slide-down-enter-active,
 .slide-down-leave-active {
   transition: all 0.3s ease;
@@ -816,5 +852,11 @@ onUnmounted(() => {
 .expand-enter-to {
   max-height: 500px;
   opacity: 1;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
 }
 </style>

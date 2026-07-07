@@ -279,7 +279,7 @@ onMounted(async () => {
                     {{ review.first_name }} {{ review.last_name }}
                   </p>
                   <p class="text-xs text-gray-400 truncate">
-                    {{ review.country }} · {{ formatDate(review.created_at) }}
+                    {{ review.country }}
                   </p>
                 </div>
                 <span

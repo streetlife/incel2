@@ -1,372 +1,406 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue'
-import AirportSelect from '../AirportSelect.vue'
-import DateInput from './DateInput.vue'
-import PassengerSelect from './PassengerSelect.vue'
-import { navigateTo, useRoute } from 'nuxt/app'
-import { useFlights } from '../../composables/useFlights'
+import { ref, watch, onMounted, computed } from "vue";
+import AirportSelect from "../AirportSelect.vue";
+import DateInput from "./DateInput.vue";
+import PassengerSelect from "./PassengerSelect.vue";
+import { navigateTo, useRoute } from "nuxt/app";
+import { useFlights } from "../../composables/useFlights";
 
-const route = useRoute()
-const {
-  hasSearched,
-  showSearchForm,
-} = useFlights()
+const route = useRoute();
+const { hasSearched, showSearchForm } = useFlights();
 
 const emit = defineEmits<{
-  search: [searchData: any]
-}>()
+  search: [searchData: any];
+}>();
 
-const tripType = ref('roundtrip')
+const tripType = ref("roundtrip");
 
 const form = ref({
-  supplier: 'amadeus',
-  from: '',
-  to: '',
-  dateFrom: '',
-  dateTo: '',
+  supplier: "amadeus",
+  from: "",
+  to: "",
+  dateFrom: "",
+  dateTo: "",
   passengers: { adult_number: 1, child_number: 0, infants_number: 0 },
-  travelClass: 'economy',
+  travelClass: "economy",
   direct: false,
   flexibleDates: false,
-  stops: 'any'
-})
+  stops: "any",
+});
 
 const errors = ref({
-  from: '',
-  to: '',
-  dateFrom: '',
-  dateTo: '',
-  general: ''
-})
+  from: "",
+  to: "",
+  dateFrom: "",
+  dateTo: "",
+  general: "",
+});
 
 const multiCityFlights = ref([
-  { from: '', to: '', dateFrom: '' },
-  { from: '', to: '', dateFrom: '' },
-  { from: '', to: '', dateFrom: '' },
-  { from: '', to: '', dateFrom: '' },
-  { from: '', to: '', dateFrom: '' },
-  { from: '', to: '', dateFrom: '' }
-])
+  { from: "", to: "", dateFrom: "" },
+  { from: "", to: "", dateFrom: "" },
+  { from: "", to: "", dateFrom: "" },
+  { from: "", to: "", dateFrom: "" },
+  { from: "", to: "", dateFrom: "" },
+  { from: "", to: "", dateFrom: "" },
+]);
 
-const multiCityErrors = ref<Array<{ from: string; to: string; dateFrom: string }>>([
-  { from: '', to: '', dateFrom: '' },
-  { from: '', to: '', dateFrom: '' },
-  { from: '', to: '', dateFrom: '' },
-  { from: '', to: '', dateFrom: '' },
-  { from: '', to: '', dateFrom: '' },
-  { from: '', to: '', dateFrom: '' }
-])
+const multiCityErrors = ref<
+  Array<{ from: string; to: string; dateFrom: string }>
+>([
+  { from: "", to: "", dateFrom: "" },
+  { from: "", to: "", dateFrom: "" },
+  { from: "", to: "", dateFrom: "" },
+  { from: "", to: "", dateFrom: "" },
+  { from: "", to: "", dateFrom: "" },
+  { from: "", to: "", dateFrom: "" },
+]);
 
 // Total passengers validation
 const totalPassengers = computed(() => {
-  return form.value.passengers.adult_number + form.value.passengers.child_number + form.value.passengers.infants_number
-})
+  return (
+    form.value.passengers.adult_number +
+    form.value.passengers.child_number +
+    form.value.passengers.infants_number
+  );
+});
 
 // Watch form fields and clear errors on change
-watch(() => form.value.from, () => {
-  if (errors.value.from) errors.value.from = ''
-})
+watch(
+  () => form.value.from,
+  () => {
+    if (errors.value.from) errors.value.from = "";
+  },
+);
 
-watch(() => form.value.to, () => {
-  if (errors.value.to) errors.value.to = ''
-})
+watch(
+  () => form.value.to,
+  () => {
+    if (errors.value.to) errors.value.to = "";
+  },
+);
 
-watch(() => form.value.dateFrom, () => {
-  if (errors.value.dateFrom) errors.value.dateFrom = ''
-})
+watch(
+  () => form.value.dateFrom,
+  () => {
+    if (errors.value.dateFrom) errors.value.dateFrom = "";
+  },
+);
 
-watch(() => form.value.dateTo, () => {
-  if (errors.value.dateTo) errors.value.dateTo = ''
-})
+watch(
+  () => form.value.dateTo,
+  () => {
+    if (errors.value.dateTo) errors.value.dateTo = "";
+  },
+);
 
-watch(() => form.value.passengers, () => {
-  if (errors.value.general) errors.value.general = ''
-}, { deep: true })
+watch(
+  () => form.value.passengers,
+  () => {
+    if (errors.value.general) errors.value.general = "";
+  },
+  { deep: true },
+);
 
 // Watch multi-city flights and clear errors on change
-watch(() => multiCityFlights.value, (newFlights) => {
-  newFlights.forEach((flight, index) => {
-    if (flight.from && multiCityErrors.value[index].from) {
-      multiCityErrors.value[index].from = ''
-    }
-    if (flight.to && multiCityErrors.value[index].to) {
-      multiCityErrors.value[index].to = ''
-    }
-    if (flight.dateFrom && multiCityErrors.value[index].dateFrom) {
-      multiCityErrors.value[index].dateFrom = ''
-    }
-  })
-}, { deep: true })
+watch(
+  () => multiCityFlights.value,
+  (newFlights) => {
+    newFlights.forEach((flight, index) => {
+      if (flight.from && multiCityErrors.value[index].from) {
+        multiCityErrors.value[index].from = "";
+      }
+      if (flight.to && multiCityErrors.value[index].to) {
+        multiCityErrors.value[index].to = "";
+      }
+      if (flight.dateFrom && multiCityErrors.value[index].dateFrom) {
+        multiCityErrors.value[index].dateFrom = "";
+      }
+    });
+  },
+  { deep: true },
+);
 
 // Clear errors
 const clearErrors = () => {
   errors.value = {
-    from: '',
-    to: '',
-    dateFrom: '',
-    dateTo: '',
-    general: ''
-  }
+    from: "",
+    to: "",
+    dateFrom: "",
+    dateTo: "",
+    general: "",
+  };
   multiCityErrors.value = multiCityErrors.value.map(() => ({
-    from: '',
-    to: '',
-    dateFrom: ''
-  }))
-}
+    from: "",
+    to: "",
+    dateFrom: "",
+  }));
+};
 
 // Validate form
 // Helper function to validate date is today or future
 const isValidFutureDate = (dateString: string): boolean => {
-  const date = new Date(dateString)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return date >= today
-}
+  const date = new Date(dateString);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date >= today;
+};
 
 // Helper function to validate return date is after departure
 const isReturnDateValid = (departDate: string, returnDate: string): boolean => {
-  return new Date(returnDate) > new Date(departDate)
-}
+  return new Date(returnDate) > new Date(departDate);
+};
 
 // Validate a single multi-city flight
 const validateMultiCityFlight = (flight: any, index: number): boolean => {
-  let isValid = true
+  let isValid = true;
 
   if (!flight.from) {
-    multiCityErrors.value[index].from = 'Departure city is required'
-    isValid = false
+    multiCityErrors.value[index].from = "Departure city is required";
+    isValid = false;
   }
 
   if (!flight.to) {
-    multiCityErrors.value[index].to = 'Arrival city is required'
-    isValid = false
+    multiCityErrors.value[index].to = "Arrival city is required";
+    isValid = false;
   }
 
   if (flight.from && flight.to && flight.from === flight.to) {
-    multiCityErrors.value[index].to = 'Arrival city must be different from departure city'
-    isValid = false
+    multiCityErrors.value[index].to =
+      "Arrival city must be different from departure city";
+    isValid = false;
   }
 
   if (!flight.dateFrom) {
-    multiCityErrors.value[index].dateFrom = 'Departure date is required'
-    isValid = false
+    multiCityErrors.value[index].dateFrom = "Departure date is required";
+    isValid = false;
   } else if (!isValidFutureDate(flight.dateFrom)) {
-    multiCityErrors.value[index].dateFrom = 'Date must be today or in the future'
-    isValid = false
+    multiCityErrors.value[index].dateFrom =
+      "Date must be today or in the future";
+    isValid = false;
   }
 
-  return isValid
-}
+  return isValid;
+};
 
 // Validate all multi-city flights
 const validateMultiCityFlights = (): boolean => {
-  const filledFlights = multiCityFlights.value.filter(f => f.from || f.to || f.dateFrom)
-  
+  const filledFlights = multiCityFlights.value.filter(
+    (f) => f.from || f.to || f.dateFrom,
+  );
+
   if (filledFlights.length < 2) {
-    errors.value.general = 'Please fill in at least 2 flights for multi-city booking'
-    return false
+    errors.value.general =
+      "Please fill in at least 2 flights for multi-city booking";
+    return false;
   }
 
-  let isValid = true
+  let isValid = true;
   filledFlights.forEach((flight, index) => {
     if (!validateMultiCityFlight(flight, index)) {
-      isValid = false
+      isValid = false;
     }
-  })
+  });
 
-  return isValid
-}
+  return isValid;
+};
 
 // Validate cities
 const validateCities = (): boolean => {
-  let isValid = true
+  let isValid = true;
 
   if (!form.value.from) {
-    errors.value.from = 'Departure city is required'
-    isValid = false
+    errors.value.from = "Departure city is required";
+    isValid = false;
   }
 
   if (!form.value.to) {
-    errors.value.to = 'Arrival city is required'
-    isValid = false
+    errors.value.to = "Arrival city is required";
+    isValid = false;
   }
 
   if (form.value.from && form.value.to && form.value.from === form.value.to) {
-    errors.value.to = 'Arrival city must be different from departure city'
-    isValid = false
+    errors.value.to = "Arrival city must be different from departure city";
+    isValid = false;
   }
 
-  return isValid
-}
+  return isValid;
+};
 
 // Validate departure date
 const validateDepartureDate = (): boolean => {
   if (!form.value.dateFrom) {
-    errors.value.dateFrom = 'Departure date is required'
-    return false
+    errors.value.dateFrom = "Departure date is required";
+    return false;
   }
 
   if (!isValidFutureDate(form.value.dateFrom)) {
-    errors.value.dateFrom = 'Departure date must be today or in the future'
-    return false
+    errors.value.dateFrom = "Departure date must be today or in the future";
+    return false;
   }
 
-  return true
-}
+  return true;
+};
 
 // Validate return date for roundtrip
 const validateReturnDate = (): boolean => {
-  if (tripType.value !== 'roundtrip') {
-    return true
+  if (tripType.value !== "roundtrip") {
+    return true;
   }
 
   if (!form.value.dateTo) {
-    errors.value.dateTo = 'Return date is required for roundtrip'
-    return false
+    errors.value.dateTo = "Return date is required for roundtrip";
+    return false;
   }
 
-  if (form.value.dateFrom && !isReturnDateValid(form.value.dateFrom, form.value.dateTo)) {
-    errors.value.dateTo = 'Return date must be after departure date'
-    return false
+  if (
+    form.value.dateFrom &&
+    !isReturnDateValid(form.value.dateFrom, form.value.dateTo)
+  ) {
+    errors.value.dateTo = "Return date must be after departure date";
+    return false;
   }
 
-  return true
-}
+  return true;
+};
 
 // Validate single trip (roundtrip or one-way)
 const validateSingleTrip = (): boolean => {
-  const citiesValid = validateCities()
-  const departureValid = validateDepartureDate()
-  const returnValid = validateReturnDate()
+  const citiesValid = validateCities();
+  const departureValid = validateDepartureDate();
+  const returnValid = validateReturnDate();
 
-  return citiesValid && departureValid && returnValid
-}
+  return citiesValid && departureValid && returnValid;
+};
 
 // Validate passengers
 const validatePassengers = (): boolean => {
   if (totalPassengers.value === 0) {
-    errors.value.general = 'At least 1 passenger is required'
-    return false
+    errors.value.general = "At least 1 passenger is required";
+    return false;
   }
 
   if (totalPassengers.value > 9) {
-    errors.value.general = 'Maximum 9 passengers allowed'
-    return false
+    errors.value.general = "Maximum 9 passengers allowed";
+    return false;
   }
 
-  return true
-}
+  return true;
+};
 
 // Main validation function
 const validateForm = (): boolean => {
-  clearErrors()
+  clearErrors();
 
-  const isTripValid = tripType.value === 'multi-city' 
-    ? validateMultiCityFlights() 
-    : validateSingleTrip()
+  const isTripValid =
+    tripType.value === "multi-city"
+      ? validateMultiCityFlights()
+      : validateSingleTrip();
 
-  const arePassengersValid = validatePassengers()
+  const arePassengersValid = validatePassengers();
 
-  return isTripValid && arePassengersValid
-}
+  return isTripValid && arePassengersValid;
+};
 
 // Function to prefill form from query params
 const prefillFromQuery = () => {
-  const query = route.query
+  const query = route.query;
 
-  if (!query || Object.keys(query).length === 0) return
+  if (!query || Object.keys(query).length === 0) return;
 
   // Set trip type
   if (query.tripType) {
-    tripType.value = query.tripType as string
+    tripType.value = query.tripType as string;
   }
 
   // Handle multi-city
-  if (query.tripType === 'multi-city' && query.flights) {
+  if (query.tripType === "multi-city" && query.flights) {
     try {
-      const flights = JSON.parse(query.flights as string)
+      const flights = JSON.parse(query.flights as string);
       multiCityFlights.value = flights.map((f: any) => ({
-        from: f.from || '',
-        to: f.to || '',
-        dateFrom: f.dateFrom || ''
-      }))
+        from: f.from || "",
+        to: f.to || "",
+        dateFrom: f.dateFrom || "",
+      }));
     } catch (e) {
-      console.error('Error parsing multi-city flights:', e)
+      console.error("Error parsing multi-city flights:", e);
     }
 
     // Set passengers for multi-city
     form.value.passengers = {
       adult_number: Number.parseInt(query.adult_number as string) || 1,
       child_number: Number.parseInt(query.child_number as string) || 0,
-      infants_number: Number.parseInt(query.infants_number as string) || 0
-    }
-    form.value.travelClass = (query.travelClass as string) || 'economy'
-    form.value.stops = (query.stops as string) || 'any'
+      infants_number: Number.parseInt(query.infants_number as string) || 0,
+    };
+    form.value.travelClass = (query.travelClass as string) || "economy";
+    form.value.stops = (query.stops as string) || "any";
   } else {
     // Handle roundtrip and one-way
-    form.value.from = (query.from as string) || ''
-    form.value.to = (query.to as string) || ''
-    form.value.dateFrom = (query.dateFrom as string) || ''
-    form.value.dateTo = (query.dateTo as string) || ''
-    form.value.travelClass = (query.travelClass as string) || 'economy'
-    form.value.direct = query.direct === 'true'
-    form.value.flexibleDates = query.flexibleDates === 'true'
+    form.value.from = (query.from as string) || "";
+    form.value.to = (query.to as string) || "";
+    form.value.dateFrom = (query.dateFrom as string) || "";
+    form.value.dateTo = (query.dateTo as string) || "";
+    form.value.travelClass = (query.travelClass as string) || "economy";
+    form.value.direct = query.direct === "true";
+    form.value.flexibleDates = query.flexibleDates === "true";
 
     // Set passengers
     form.value.passengers = {
       adult_number: Number.parseInt(query.adult_number as string) || 1,
       child_number: Number.parseInt(query.child_number as string) || 0,
-      infants_number: Number.parseInt(query.infants_number as string) || 0
-    }
+      infants_number: Number.parseInt(query.infants_number as string) || 0,
+    };
   }
-}
+};
 
 // Prefill on mount
 onMounted(() => {
-  prefillFromQuery()
-})
+  prefillFromQuery();
+});
 
 // Watch for route changes
 watch(
   () => route.query,
   () => {
-    prefillFromQuery()
+    prefillFromQuery();
   },
-  { deep: true }
-)
+  { deep: true },
+);
 
 // Reset multi-city flights when switching trip types
 watch(tripType, (newType) => {
-  clearErrors()
-  if (newType === 'multi-city') {
+  clearErrors();
+  if (newType === "multi-city") {
     // Only reset if coming from query params
-    if (!route.query.tripType || route.query.tripType !== 'multi-city') {
+    if (!route.query.tripType || route.query.tripType !== "multi-city") {
       multiCityFlights.value = multiCityFlights.value.map(() => ({
-        from: '',
-        to: '',
-        dateFrom: ''
-      }))
+        from: "",
+        to: "",
+        dateFrom: "",
+      }));
     }
   }
-})
+});
 
 // Build search data based on trip type
 const buildSearchData = () => {
-  if (tripType.value === 'multi-city') {
+  if (tripType.value === "multi-city") {
     return {
       tripType: tripType.value,
-      flights: multiCityFlights.value.filter(f => f.from || f.to || f.dateFrom),
+      flights: multiCityFlights.value.filter(
+        (f) => f.from || f.to || f.dateFrom,
+      ),
       passengers: form.value.passengers,
       travelClass: form.value.travelClass,
-      stops: form.value.stops
-    }
+      stops: form.value.stops,
+    };
   }
 
   return {
     tripType: tripType.value,
-    ...form.value
-  }
-}
+    ...form.value,
+  };
+};
 
 // Build query params for multi-city
 const buildMultiCityQueryParams = (searchData: any) => {
@@ -377,9 +411,9 @@ const buildMultiCityQueryParams = (searchData: any) => {
     child_number: searchData.passengers.child_number,
     infants_number: searchData.passengers.infants_number,
     travelClass: searchData.travelClass,
-    stops: searchData.stops
-  }
-}
+    stops: searchData.stops,
+  };
+};
 
 // Build query params for roundtrip/one-way
 const buildSingleTripQueryParams = () => {
@@ -389,70 +423,73 @@ const buildSingleTripQueryParams = () => {
     to: form.value.to,
     dateFrom: form.value.dateFrom,
     travelClass: form.value.travelClass,
-    direct: form.value.direct ? 'true' : 'false',
-    flexibleDates: form.value.flexibleDates ? 'true' : 'false',
+    direct: form.value.direct ? "true" : "false",
+    flexibleDates: form.value.flexibleDates ? "true" : "false",
     adult_number: form.value.passengers.adult_number,
     child_number: form.value.passengers.child_number,
-    infants_number: form.value.passengers.infants_number
+    infants_number: form.value.passengers.infants_number,
+  };
+
+  if (tripType.value === "roundtrip" && form.value.dateTo) {
+    queryParams.dateTo = form.value.dateTo;
   }
 
-  if (tripType.value === 'roundtrip' && form.value.dateTo) {
-    queryParams.dateTo = form.value.dateTo
-  }
-
-  return queryParams
-}
+  return queryParams;
+};
 
 // Build query params based on trip type
 const buildQueryParams = (searchData: any) => {
-  return tripType.value === 'multi-city'
+  return tripType.value === "multi-city"
     ? buildMultiCityQueryParams(searchData)
-    : buildSingleTripQueryParams()
-}
+    : buildSingleTripQueryParams();
+};
 
 // Scroll to first error
 const scrollToFirstError = () => {
   // Try to find the first field with error (red border)
-  const firstErrorField = document.querySelector('.border-red-500')
+  const firstErrorField = document.querySelector(".border-red-500");
   if (firstErrorField) {
-    firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    firstErrorField.scrollIntoView({ behavior: "smooth", block: "center" });
   }
-}
+};
 
 // Navigate to flights page if not already there
 const navigateToFlightsPage = async (searchData: any) => {
-  if (route.path === '/travel/flights') {
-    return
+  if (route.path === "/travel/flights") {
+    return;
   }
 
-  const queryParams = buildQueryParams(searchData)
+  const queryParams = buildQueryParams(searchData);
   await navigateTo({
-    path: '/travel/flights',
-    query: queryParams
-  })
-}
+    path: "/travel/flights",
+    query: queryParams,
+  });
+};
 
 // Main submit function
 const submit = async () => {
   if (!validateForm()) {
-    scrollToFirstError()
-    return
+    scrollToFirstError();
+    return;
   }
 
-  const searchData = buildSearchData()
-  
-  emit('search', searchData)
-  
-  hasSearched.value = true
-  showSearchForm.value = false
-  
-  await navigateToFlightsPage(searchData)
-}
+  const searchData = buildSearchData();
+
+  emit("search", searchData);
+
+  hasSearched.value = true;
+  showSearchForm.value = false;
+
+  await navigateToFlightsPage(searchData);
+};
 </script>
 
 <template>
   <!-- General Error -->
-  <div v-if="errors.general" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+  <div
+    v-if="errors.general"
+    class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
+  >
     <p class="text-red-600 text-sm font-medium">{{ errors.general }}</p>
   </div>
 
@@ -493,7 +530,10 @@ const submit = async () => {
               v-model="flight.from"
               :label="index === 0 ? 'Flying from' : ''"
               placeholder="City or airport"
-              :class="{ 'border-red-500 focus:ring-red-500': multiCityErrors[index].from }"
+              :class="{
+                'border-red-500 focus:ring-red-500':
+                  multiCityErrors[index].from,
+              }"
             />
           </div>
 
@@ -503,7 +543,9 @@ const submit = async () => {
               v-model="flight.to"
               :label="index === 0 ? 'Flying to' : ''"
               placeholder="City or airport"
-              :class="{ 'border-red-500 focus:ring-red-500': multiCityErrors[index].to }"
+              :class="{
+                'border-red-500 focus:ring-red-500': multiCityErrors[index].to,
+              }"
             />
           </div>
 
@@ -513,7 +555,10 @@ const submit = async () => {
               v-model="flight.dateFrom"
               :label="index === 0 ? 'Departing' : ''"
               :id="`multi-dateFrom-${index}`"
-              :class="{ 'border-red-500 focus:ring-red-500': multiCityErrors[index].dateFrom }"
+              :class="{
+                'border-red-500 focus:ring-red-500':
+                  multiCityErrors[index].dateFrom,
+              }"
             />
           </div>
         </div>
@@ -532,7 +577,10 @@ const submit = async () => {
         </div>
 
         <div>
-          <label for="multi-class" class="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            for="multi-class"
+            class="block text-sm font-medium text-gray-700 mb-2"
+          >
             Class
           </label>
           <select v-model="form.travelClass" id="multi-class" class="input">
@@ -546,7 +594,10 @@ const submit = async () => {
 
         <!-- Connection/Stops -->
         <div>
-          <label for="multi-stops" class="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            for="multi-stops"
+            class="block text-sm font-medium text-gray-700 mb-2"
+          >
             Connection
           </label>
           <select v-model="form.stops" id="multi-stops" class="input">
@@ -562,8 +613,16 @@ const submit = async () => {
           @click="submit"
           class="btn-primary w-full py-3 px-6 flex items-center justify-center gap-2 transform hover:scale-105 transition"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
             />
           </svg>
@@ -576,10 +635,12 @@ const submit = async () => {
   <!-- Round-trip / One-way Layout -->
   <template v-else>
     <!-- Search Inputs -->
-    <div :class="{ 
-      'grid grid-cols-1 lg:grid-cols-12 gap-4': tripType === 'roundtrip', 
-      'grid grid-cols-1 lg:grid-cols-10 gap-4': tripType === 'oneway' 
-    }">
+    <div
+      :class="{
+        'grid grid-cols-1 lg:grid-cols-12 gap-4': tripType === 'roundtrip',
+        'grid grid-cols-1 lg:grid-cols-10 gap-4': tripType === 'oneway',
+      }"
+    >
       <!-- Flying From -->
       <div class="lg:col-span-2">
         <AirportSelect
@@ -634,8 +695,16 @@ const submit = async () => {
           @click="submit"
           class="btn-primary w-full py-3 px-6 flex items-center justify-center gap-2 transform hover:scale-105 transition"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
             />
           </svg>
@@ -645,21 +714,12 @@ const submit = async () => {
     </div>
 
     <div
-      class="
-        mt-6
-        flex flex-col gap-4
-        sm:flex-row sm:items-center sm:justify-end sm:gap-5
-      "
+      class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end sm:gap-5"
     >
       <!-- Travel Class -->
       <select
         v-model="form.travelClass"
-        class="
-          w-full sm:w-auto
-          px-4 py-3
-          border border-gray-300 rounded-lg
-          focus:ring-2 focus:ring-primary focus:border-transparent
-        "
+        class="w-full sm:w-auto px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
       >
         <option value="economy">Economy</option>
         <option value="premium-economy">Premium Economy</option>
@@ -669,25 +729,16 @@ const submit = async () => {
 
       <!-- Direct -->
       <label class="flex items-center gap-2 cursor-pointer">
-        <input
-          v-model="form.direct"
-          type="checkbox"
-          class="w-5 h-5"
-        />
+        <input v-model="form.direct" type="checkbox" class="w-5 h-5" />
         <span class="text-gray-700 font-medium">Direct</span>
       </label>
 
       <!-- Flexible Dates -->
       <label class="flex items-center gap-2 cursor-pointer">
-        <input
-          v-model="form.flexibleDates"
-          type="checkbox"
-          class="w-5 h-5"
-        />
+        <input v-model="form.flexibleDates" type="checkbox" class="w-5 h-5" />
         <span class="text-gray-700 font-medium">± 3 days</span>
       </label>
     </div>
-
   </template>
 </template>
 

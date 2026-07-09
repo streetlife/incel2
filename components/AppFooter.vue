@@ -256,7 +256,7 @@
     <a
       href="https://wa.me/9113219444?text=Hi%2C%20I%20need%20help%20with%20my%20travel%20plans."
       target="_blank"
-      class="fixed bottom-8 right-8 bg-green-500 text-white p-4 rounded-full shadow-2xl hover:bg-green-600 transition-all hover:scale-110 z-50"
+      class="fixed bottom-24 right-6 bg-green-500 text-white p-4 rounded-full shadow-2xl hover:bg-green-600 transition-all hover:scale-110 z-50"
     >
       <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
         <path

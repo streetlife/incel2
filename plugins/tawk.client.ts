@@ -1,4 +1,4 @@
-import { defineNuxtPlugin, useRuntimeConfig } from "nuxt/app";
+import { defineNuxtPlugin, useHead, useRuntimeConfig } from "nuxt/app";
 
 declare global {
   interface Window {
@@ -9,23 +9,24 @@ declare global {
 
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();
-  const propertyId = config.public.tawkPropertyId;
-  const widgetId = config.public.tawkWidgetId;
+  const propertyId = config.public.tawkPropertyId as string;
+  const widgetId = config.public.tawkWidgetId as string;
 
   if (!propertyId || !widgetId) {
-    console.error(
-      "[tawk] Missing tawkPropertyId or tawkWidgetId widget not loaded.",
-      { propertyId, widgetId },
-    );
+    console.warn("[tawk] Missing config, widget not loaded.");
     return;
   }
 
   window.Tawk_API = window.Tawk_API || {};
   window.Tawk_LoadStart = new Date();
 
-  const script = document.createElement("script");
-  script.async = true;
-  script.src = `https://embed.tawk.to/${propertyId}/${widgetId}`;
-  script.setAttribute("crossorigin", "*");
-  document.head.appendChild(script);
+  useHead({
+    script: [
+      {
+        src: `https://embed.tawk.to/${propertyId}/${widgetId}`,
+        async: true,
+        crossorigin: "anonymous",
+      },
+    ],
+  });
 });

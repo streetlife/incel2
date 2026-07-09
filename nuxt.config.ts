@@ -36,8 +36,8 @@ export default defineNuxtConfig({
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000",
       hotel: process.env.HOTEL_API_KEY ?? "",
-      tawkPropertyId: "5db6cff1e4c2fa4b6bd8c02e",
-      tawkWidgetId: "default",
+      tawkPropertyId: process.env.NUXT_PUBLIC_TAWK_PROPERTY_ID ?? "",
+      tawkWidgetId: process.env.NUXT_PUBLIC_TAWK_WIDGET_ID ?? "",
     },
   },
 });

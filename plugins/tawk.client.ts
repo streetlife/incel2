@@ -14,7 +14,7 @@ export default defineNuxtPlugin(() => {
 
   if (!propertyId || !widgetId) {
     console.error(
-      "[tawk] Missing tawkPropertyId or tawkWidgetId — widget not loaded.",
+      "[tawk] Missing tawkPropertyId or tawkWidgetId widget not loaded.",
       { propertyId, widgetId },
     );
     return;

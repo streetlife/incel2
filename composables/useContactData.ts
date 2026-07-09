@@ -29,8 +29,8 @@ export const useContactData = () => {
     title: "Quick Support",
     description:
       "Need immediate assistance? Our support team is available 24/7 on WhatsApp to answer your queries.",
-    whatsappLink: "https://wa.me/+23490113219444",
-    phoneLink: "tel:+97143977242",
+    whatsappLink: "https://wa.me/+2349113219444",
+    phoneLink: "tel:+2349113219444",
   };
 
   return {

@@ -9,6 +9,9 @@ declare global {
 
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();
+
+  console.log("Nuxt config", config.public);
+
   const propertyId = config.public.tawkPropertyId as string;
   const widgetId = config.public.tawkWidgetId as string;
 

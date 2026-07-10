@@ -8,6 +8,7 @@ import {
   formatPackageDate,
   mapPackage,
 } from "../../utils/packageHelpers";
+import { useCurrency } from "../../composables/useCurrency";
 
 useHead({ title: "All Packages" });
 
@@ -19,6 +20,7 @@ const error = ref(false);
 const showQuote = ref(false);
 const selectedPkg = ref<DisplayPackage | null>(null);
 const showSuccess = ref(false);
+const { format } = useCurrency();
 
 const displayPackages = computed<DisplayPackage[]>(() =>
   rawPackages.value.filter((pkg) => pkg.status === 1).map(mapPackage),
@@ -177,9 +179,18 @@ onMounted(fetchPackages);
             >
               {{ pkg.package_name }}
             </h3>
-            <p v-if="pkg.date_from" class="text-xs text-gray-400 mb-4">
-              Available {{ formatPackageDate(pkg.date_from) }}
-            </p>
+
+            <div class="flex items-center justify-between mb-4">
+              <p v-if="pkg.date_from" class="text-xs text-gray-400">
+                Available {{ formatPackageDate(pkg.date_from) }}
+              </p>
+              <span
+                v-if="pkg.price"
+                class="inline-flex items-center bg-neutral-900 text-white text-xs font-bold px-3 py-1 rounded-full"
+              >
+                From {{ format(Number(pkg.price)) }}
+              </span>
+            </div>
 
             <button
               class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-accent text-white font-semibold py-2.5 rounded-xl text-sm hover:opacity-90 transition-opacity group-hover:shadow-md mt-2"

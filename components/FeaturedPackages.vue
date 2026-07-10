@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useGeneralService } from "../services/general.service";
 import type { PackageResponse } from "../types/general";
+import { useCurrency } from "../composables/useCurrency";
 
 interface DisplaySlide {
   id: PackageResponse["id"];
@@ -9,12 +10,15 @@ interface DisplaySlide {
   location: string;
   category: string;
   poster?: string;
+  price?: number | string;
+  currency?: string;
 }
 
 const rawPackages = ref<PackageResponse[]>([]);
 const loading = ref(true);
 const error = ref(false);
 const generalService = useGeneralService();
+const { format } = useCurrency();
 
 const activeIndex = ref(0);
 let autoplayTimer: ReturnType<typeof setInterval> | null = null;
@@ -33,6 +37,8 @@ function mapPackage(pkg: PackageResponse): DisplaySlide {
     location: toTitleCase(pkg.location || pkg.country_code || ""),
     category: toTitleCase(pkg.category || ""),
     poster: pkg.poster,
+    price: pkg.price,
+    currency: pkg.currency,
   };
 }
 
@@ -285,6 +291,13 @@ onUnmounted(stopAutoplay);
                   />
                 </svg>
                 {{ currentSlide?.location }}
+              </p>
+              <p
+                v-if="currentSlide?.price"
+                class="inline-flex items-center bg-white text-neutral-900 text-sm font-bold px-3.5 py-1.5 rounded-full shadow-sm mt-3"
+              >
+                From
+                {{ format(Number(currentSlide.price)) }}
               </p>
             </div>
           </div>

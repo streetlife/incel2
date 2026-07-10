@@ -10,10 +10,8 @@ declare global {
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();
 
-  console.log("Nuxt config", config);
-
-  const propertyId = config.public.tawkPropertyId as string;
-  const widgetId = config.public.tawkWidgetId as string;
+  const propertyId = config.public.tawkPropertyId;
+  const widgetId = config.public.tawkWidgetId;
 
   if (!propertyId || !widgetId) {
     console.warn("[tawk] Missing config, widget not loaded.");

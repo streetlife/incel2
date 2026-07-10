@@ -5,6 +5,13 @@ console.log("Tawk envs:", {
   widget: process.env.NUXT_PUBLIC_TAWK_WIDGET_ID,
 });
 
+console.log("Runtime config in nuxt.config:", {
+  apiBase: process.env.NUXT_PUBLIC_API_BASE_URL,
+  hotel: process.env.HOTEL_API_KEY,
+  tawkPropertyId: process.env.NUXT_PUBLIC_TAWK_PROPERTY_ID,
+  tawkWidgetId: process.env.NUXT_PUBLIC_TAWK_WIDGET_ID,
+});
+
 export default defineNuxtConfig({
   compatibilityDate: "2024-04-03",
   devtools: { enabled: true },
@@ -38,10 +45,10 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000",
-      hotel: process.env.HOTEL_API_KEY ?? "",
-      tawkPropertyId: process.env.NUXT_PUBLIC_TAWK_PROPERTY_ID ?? "",
-      tawkWidgetId: process.env.NUXT_PUBLIC_TAWK_WIDGET_ID ?? "",
+      apiBase: "",
+      hotel: "",
+      tawkPropertyId: "",
+      tawkWidgetId: "",
     },
   },
 });

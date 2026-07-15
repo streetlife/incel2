@@ -1,119 +1,121 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useHotelBookingStore } from '../../stores/useHotelBookingStore'
-import { useToast } from '../../composables/useToast'
-import AppToast from '../toast/AppToast.vue';
-import { useAuthStore } from '../../stores/auth';
-import { normaliseError } from '../../utils/api';
+import { ref, computed } from "vue";
+import { useHotelBookingStore } from "../../stores/useHotelBookingStore";
+import { useToast } from "../../composables/useToast";
+import AppToast from "../toast/AppToast.vue";
+import { useAuthStore } from "../../stores/auth";
+import { normaliseError } from "../../utils/api";
 
-const emit = defineEmits<{ (e: 'next'): void; (e: 'back'): void }>()
-const store = useHotelBookingStore()
+const emit = defineEmits<{ (e: "next"): void; (e: "back"): void }>();
+const store = useHotelBookingStore();
 
-const TITLES = ['Mr', 'Mrs', 'Ms', 'Dr', 'Prof']
+const TITLES = ["Mr", "Mrs", "Ms", "Dr", "Prof"];
 
-const showLogin = ref(false)
-const loginEmail = ref('')
-const loginPass = ref('')
-const loginLoading = ref(false)
-const loginError = ref('')
-const toast = useToast()
-const auth = useAuthStore()
-const showLoginPanel = ref(false)
+const showLogin = ref(false);
+const loginEmail = ref("");
+const loginPass = ref("");
+const loginLoading = ref(false);
+const loginError = ref("");
+const toast = useToast();
+const auth = useAuthStore();
+const showLoginPanel = ref(false);
 
 async function handleLogin() {
-  loginLoading.value = true
-  loginError.value = ''
+  loginLoading.value = true;
+  loginError.value = "";
 
   try {
-    const res = await auth.login(loginEmail.value, loginPass.value)
-    if (res === null) return
-    
-    toast.success("Login successful")
-    showLoginPanel.value = false
-  } catch (err) {
-    loginLoading.value = false
-    loginError.value = normaliseError(err)
+    const res = await auth.login(loginEmail.value, loginPass.value);
+    if (res === null) return;
 
-    toast.error(loginError.value)
+    toast.success("Login successful");
+    showLoginPanel.value = false;
+  } catch (err) {
+    loginLoading.value = false;
+    loginError.value = normaliseError(err);
+
+    toast.error(loginError.value);
   }
-  loginLoading.value = false
+  loginLoading.value = false;
 }
 
 function handleLogout() {
-  store.isLoggedIn = false
-  store.accountName = ''
-  loginEmail.value = ''
-  loginPass.value = ''
+  store.isLoggedIn = false;
+  store.accountName = "";
+  loginEmail.value = "";
+  loginPass.value = "";
 }
 
 const guestLabels = computed(() => {
-  let adultCount = 0
-  let childCount = 0
+  let adultCount = 0;
+  let childCount = 0;
 
   return store.guests.map((g) => {
-    if (g.type === 'adult') {
-      adultCount++
-      return `Adult ${adultCount}`
+    if (g.type === "adult") {
+      adultCount++;
+      return `Adult ${adultCount}`;
     }
 
-    childCount++
+    childCount++;
 
-    let ageLabel = ''
+    let ageLabel = "";
     if (g.age !== undefined) {
       if (g.age === 0) {
-        ageLabel = ' (Under 1)'
+        ageLabel = " (Under 1)";
       } else {
-        ageLabel = ` (Age ${g.age})`
+        ageLabel = ` (Age ${g.age})`;
       }
     }
 
-    return `Child ${childCount}${ageLabel}`
-  })
-})
+    return `Child ${childCount}${ageLabel}`;
+  });
+});
 
-const isPrimary = (index: number) => index === 0
+const isPrimary = (index: number) => index === 0;
 
-const errors = ref<Record<string, string>>({})
+const errors = ref<Record<string, string>>({});
 
 const fieldClass = (key: string) =>
   `w-full px-3.5 py-2.5 text-sm rounded-xl border transition-colors outline-none focus:ring-2 focus:ring-primary/20 ${
     errors.value[key]
-      ? 'border-red-300 bg-red-50'
-      : 'border-slate-200 bg-white focus:border-primary'
-  }`
+      ? "border-red-300 bg-red-50"
+      : "border-slate-200 bg-white focus:border-primary"
+  }`;
 
 function validate(): boolean {
-  errors.value = {}
+  errors.value = {};
   store.guests.forEach((g, i) => {
-    const p = `g${i}`
-    if (!g.title) errors.value[`${p}_title`] = 'Required'
-    if (!g.firstName.trim()) errors.value[`${p}_first`] = 'Required'
-    if (!g.lastName.trim()) errors.value[`${p}_last`] = 'Required'
+    const p = `g${i}`;
+    if (!g.title) errors.value[`${p}_title`] = "Required";
+    if (!g.firstName.trim()) errors.value[`${p}_first`] = "Required";
+    if (!g.lastName.trim()) errors.value[`${p}_last`] = "Required";
     if (isPrimary(i)) {
       if (!g.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))
-        errors.value[`${p}_email`] = 'Valid email required'
+        errors.value[`${p}_email`] = "Valid email required";
       if (!g.phone.match(/^\+?[\d\s\-()\u202A]{8,}$/))
-        errors.value[`${p}_phone`] = 'Valid phone required'
+        errors.value[`${p}_phone`] = "Valid phone required";
     }
-  })
-  return Object.keys(errors.value).length === 0
+  });
+  return Object.keys(errors.value).length === 0;
 }
 
-const isSubmitting = computed(() => store.status === 'submitting')
+const isSubmitting = computed(() => store.status === "submitting");
 
 async function submit() {
   if (!validate()) {
-    document.querySelector('.border-red-300')
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    return
+    document
+      .querySelector(".border-red-300")
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
   }
 
-  const ok = await store.submitGuests()
-
-  if (ok) {
-    toast.success('Guest information created successfully')
-    emit('next')
+  const primary = store.guests[0];
+  if (primary) {
+    store.contactEmail = primary.email;
+    store.contactPhone = primary.phone;
   }
+
+  emit("next");
 }
 </script>
 
@@ -121,25 +123,36 @@ async function submit() {
   <AppToast />
   <div class="space-y-6">
     <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-      <div v-if="!store.isLoggedIn" class="flex items-start justify-between gap-4">
+      <div
+        v-if="!store.isLoggedIn"
+        class="flex items-start justify-between gap-4"
+      >
         <div>
-          <p class="text-sm font-semibold text-black">Already have an account?</p>
-          <p class="text-xs text-primary mt-0.5">Log in to auto-fill your details and view past bookings.</p>
+          <p class="text-sm font-semibold text-black">
+            Already have an account?
+          </p>
+          <p class="text-xs text-primary mt-0.5">
+            Log in to auto-fill your details and view past bookings.
+          </p>
         </div>
         <button
           class="shrink-0 text-xs font-semibold px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/45 transition-colors border-none cursor-pointer"
           @click="showLogin = !showLogin"
         >
-          {{ showLogin ? 'Cancel' : 'Log In' }}
+          {{ showLogin ? "Cancel" : "Log In" }}
         </button>
       </div>
 
       <div v-else class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
+          <div
+            class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold"
+          >
             {{ store.accountName.slice(0, 1).toUpperCase() }}
           </div>
-          <p class="text-sm font-semibold text-primary">Logged in as {{ store.accountName }}</p>
+          <p class="text-sm font-semibold text-primary">
+            Logged in as {{ store.accountName }}
+          </p>
         </div>
         <button
           class="text-xs text-primary underline cursor-pointer bg-transparent border-none"
@@ -154,13 +167,20 @@ async function submit() {
         enter-from-class="opacity-0 -translate-y-2"
         enter-to-class="opacity-100 translate-y-0"
       >
-        <div v-if="showLogin && !store.isLoggedIn" class="mt-4 pt-4 border-t border-blue-200 space-y-3">
+        <div
+          v-if="showLogin && !store.isLoggedIn"
+          class="mt-4 pt-4 border-t border-blue-200 space-y-3"
+        >
           <input
-            v-model="loginEmail" type="email" placeholder="Email address"
+            v-model="loginEmail"
+            type="email"
+            placeholder="Email address"
             class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-blue-200 bg-white outline-none focus:border-blue-500"
           />
           <input
-            v-model="loginPass" type="password" placeholder="Password"
+            v-model="loginPass"
+            type="password"
+            placeholder="Password"
             class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-blue-200 bg-white outline-none focus:border-blue-500"
           />
           <p v-if="loginError" class="text-xs text-red-600">{{ loginError }}</p>
@@ -169,7 +189,7 @@ async function submit() {
             :disabled="loginLoading"
             @click="handleLogin"
           >
-            {{ loginLoading ? 'Logging in…' : 'Log In' }}
+            {{ loginLoading ? "Logging in…" : "Log In" }}
           </button>
         </div>
       </Transition>
@@ -203,66 +223,105 @@ async function submit() {
 
       <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">
+          <label
+            for=""
+            class="text-xs font-semibold text-slate-500 mb-1.5 block"
+          >
             Title <span class="text-red-400">*</span>
           </label>
           <select v-model="guest.title" :class="fieldClass(`g${i}_title`)">
             <option value="">Select</option>
             <option v-for="t in TITLES" :key="t" :value="t">{{ t }}</option>
           </select>
-          <p v-if="errors[`g${i}_title`]" class="text-xs text-red-500 mt-1">{{ errors[`g${i}_title`] }}</p>
+          <p v-if="errors[`g${i}_title`]" class="text-xs text-red-500 mt-1">
+            {{ errors[`g${i}_title`] }}
+          </p>
         </div>
 
         <div class="hidden sm:block" />
 
         <div>
-          <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">
+          <label
+            for=""
+            class="text-xs font-semibold text-slate-500 mb-1.5 block"
+          >
             First Name <span class="text-red-400">*</span>
           </label>
           <input
-            v-model="guest.firstName" type="text" placeholder="Eg. John"
+            v-model="guest.firstName"
+            type="text"
+            placeholder="Eg. John"
             :class="fieldClass(`g${i}_first`)"
           />
-          <p v-if="errors[`g${i}_first`]" class="text-xs text-red-500 mt-1">{{ errors[`g${i}_first`] }}</p>
+          <p v-if="errors[`g${i}_first`]" class="text-xs text-red-500 mt-1">
+            {{ errors[`g${i}_first`] }}
+          </p>
         </div>
 
         <div>
-          <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">
+          <label
+            for=""
+            class="text-xs font-semibold text-slate-500 mb-1.5 block"
+          >
             Last Name <span class="text-red-400">*</span>
           </label>
           <input
-            v-model="guest.lastName" type="text" placeholder="Eg. Doe"
+            v-model="guest.lastName"
+            type="text"
+            placeholder="Eg. Doe"
             :class="fieldClass(`g${i}_last`)"
           />
-          <p v-if="errors[`g${i}_last`]" class="text-xs text-red-500 mt-1">{{ errors[`g${i}_last`] }}</p>
+          <p v-if="errors[`g${i}_last`]" class="text-xs text-red-500 mt-1">
+            {{ errors[`g${i}_last`] }}
+          </p>
         </div>
 
         <template v-if="isPrimary(i)">
           <div class="sm:col-span-2 border-t border-slate-100 pt-4 mt-1">
-            <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Contact Details</p>
+            <p
+              class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3"
+            >
+              Contact Details
+            </p>
           </div>
 
           <div>
-            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">
+            <label
+              for=""
+              class="text-xs font-semibold text-slate-500 mb-1.5 block"
+            >
               Email <span class="text-red-400">*</span>
             </label>
             <input
-              v-model="guest.email" type="email" placeholder="voucher@example.com"
+              v-model="guest.email"
+              type="email"
+              placeholder="voucher@example.com"
               :class="fieldClass(`g${i}_email`)"
             />
-            <p class="text-[10px] text-slate-400 mt-1">Invoice & voucher will be sent here</p>
-            <p v-if="errors[`g${i}_email`]" class="text-xs text-red-500 mt-1">{{ errors[`g${i}_email`] }}</p>
+            <p class="text-[10px] text-slate-400 mt-1">
+              Invoice & voucher will be sent here
+            </p>
+            <p v-if="errors[`g${i}_email`]" class="text-xs text-red-500 mt-1">
+              {{ errors[`g${i}_email`] }}
+            </p>
           </div>
 
           <div>
-            <label for="" class="text-xs font-semibold text-slate-500 mb-1.5 block">
+            <label
+              for=""
+              class="text-xs font-semibold text-slate-500 mb-1.5 block"
+            >
               Phone <span class="text-red-400">*</span>
             </label>
             <input
-              v-model="guest.phone" type="tel" placeholder="+234 800 000 0000"
+              v-model="guest.phone"
+              type="tel"
+              placeholder="+234 800 000 0000"
               :class="fieldClass(`g${i}_phone`)"
             />
-            <p v-if="errors[`g${i}_phone`]" class="text-xs text-red-500 mt-1">{{ errors[`g${i}_phone`] }}</p>
+            <p v-if="errors[`g${i}_phone`]" class="text-xs text-red-500 mt-1">
+              {{ errors[`g${i}_phone`] }}
+            </p>
           </div>
         </template>
       </div>
@@ -277,7 +336,9 @@ async function submit() {
         v-if="store.status === 'error' && store.errorMessage"
         class="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl"
       >
-        <span class="text-red-500 text-lg leading-none mt-0.5 flex-shrink-0">⚠</span>
+        <span class="text-red-500 text-lg leading-none mt-0.5 flex-shrink-0"
+          >⚠</span
+        >
         <div>
           <p class="text-sm font-semibold text-red-700">Booking failed</p>
           <p class="text-xs text-red-600 mt-0.5">{{ store.errorMessage }}</p>
@@ -300,19 +361,36 @@ async function submit() {
       >
         <template v-if="isSubmitting">
           <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            />
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8z"
+            />
           </svg>
-          Confirming booking…
+          Saving details…
         </template>
         <template v-else>
           Continue to Review
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </template>
       </button>
     </div>
-
   </div>
 </template>

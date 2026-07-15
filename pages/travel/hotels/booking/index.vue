@@ -1,84 +1,85 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useHotelBookingStore } from '../../../../stores/useHotelBookingStore'
-import HotelBookingSummary from '../../../../components/hotel/HotelBookingSummary.vue'
-import HotelRoomSelect from '../../../../components/hotel/HotelRoomSelect.vue'
-import HotelGuestForm from '../../../../components/hotel/HotelGuestForm.vue'
-import HotelBookingReview from '../../../../components/hotel/HotelBookingReview.vue'
-import HotelPaymentForm from '../../../../components/hotel/HotelPaymentForm.vue'
+import { computed, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useHotelBookingStore } from "../../../../stores/useHotelBookingStore";
+import HotelBookingSummary from "../../../../components/hotel/HotelBookingSummary.vue";
+import HotelRoomSelect from "../../../../components/hotel/HotelRoomSelect.vue";
+import HotelGuestForm from "../../../../components/hotel/HotelGuestForm.vue";
+import HotelBookingReview from "../../../../components/hotel/HotelBookingReview.vue";
+import HotelPaymentForm from "../../../../components/hotel/HotelPaymentForm.vue";
 
-const route = useRoute()
-const router = useRouter()
-const store = useHotelBookingStore()
+const route = useRoute();
+const router = useRouter();
+const store = useHotelBookingStore();
 
 const STEPS = [
-  { id: 1, label: 'Rooms'},
-  { id: 2, label: 'Details'},
-  { id: 3, label: 'Review'},
-  { id: 4, label: 'Payment'},
-]
+  { id: 1, label: "Rooms" },
+  { id: 2, label: "Details" },
+  { id: 3, label: "Review" },
+  { id: 4, label: "Payment" },
+];
 
 function goNext() {
-  store.step = Math.min(store.step + 1, 5)
-  router.replace({ query: { ...route.query, step: String(store.step) } })
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  store.step = Math.min(store.step + 1, 5);
+  router.replace({ query: { ...route.query, step: String(store.step) } });
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function goBack() {
-  if (store.step === 1) { router.push('/travel/hotels'); return }
-  store.step = Math.max(store.step - 1, 1)
-  router.replace({ query: { ...route.query, step: String(store.step) } })
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  if (store.step === 1) {
+    router.push("/travel/hotels");
+    return;
+  }
+  store.step = Math.max(store.step - 1, 1);
+  router.replace({ query: { ...route.query, step: String(store.step) } });
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-const showSidebar = computed(() => store.step < 5)
+const showSidebar = computed(() => store.step < 5);
 
 onMounted(() => {
-
-  // Fresh navigation from search → wipe all stale booking state first
-  const isFresh = sessionStorage.getItem('bookingFresh') === 'true'
+  const isFresh = sessionStorage.getItem("bookingFresh") === "true";
   if (isFresh) {
-    sessionStorage.removeItem('bookingFresh')
-    store.reset() // clears selectedRoom, guests, step, availableRooms, status
+    sessionStorage.removeItem("bookingFresh");
+    store.reset();
   }
 
-  // Always apply the latest hotel selection from sessionStorage
-  const raw = sessionStorage.getItem('selectedHotel')
+  const raw = sessionStorage.getItem("selectedHotel");
   if (raw) {
     try {
-      const { hotel, searchParams, sessionCode, sessionId } = JSON.parse(raw)
-      store.setHotel(hotel, searchParams, sessionCode, sessionId)
+      const { hotel, searchParams, sessionCode, sessionId } = JSON.parse(raw);
+      store.setHotel(hotel, searchParams, sessionCode, sessionId);
     } catch {}
   }
 
-  const sessionCodeFromUrl = route.query.sessionCode as string | undefined
+  const sessionCodeFromUrl = route.query.sessionCode as string | undefined;
   if (sessionCodeFromUrl) {
-    store.sessionCode = sessionCodeFromUrl
-    sessionStorage.setItem('hotelSessionCode', sessionCodeFromUrl)
+    store.sessionCode = sessionCodeFromUrl;
+    sessionStorage.setItem("hotelSessionCode", sessionCodeFromUrl);
   }
 
-  const searchSessionIdFromUrl = route.query.searchSessionId as string | undefined
+  const searchSessionIdFromUrl = route.query.searchSessionId as
+    | string
+    | undefined;
   if (searchSessionIdFromUrl) {
-    store.sessionId = searchSessionIdFromUrl
-    sessionStorage.setItem('hotelSessionId', searchSessionIdFromUrl)
+    store.sessionId = searchSessionIdFromUrl;
+    sessionStorage.setItem("hotelSessionId", searchSessionIdFromUrl);
   }
 
-  const stepFromUrl = Number(route.query.step)
+  const stepFromUrl = Number(route.query.step);
   if (stepFromUrl >= 1 && stepFromUrl <= 5) {
-    store.step = stepFromUrl
+    store.step = stepFromUrl;
   }
 
-  // Guard: persisted step > 1 but no room (removed from persistence) → back to step 1
   if (store.step > 1 && !store.selectedRoom && store.step < 5) {
-    store.step = 1
-    router.replace({ query: { ...route.query, step: '1' } })
+    store.step = 1;
+    router.replace({ query: { ...route.query, step: "1" } });
   }
 
   if (!store.hotel && store.step < 5) {
-    router.replace('/travel/hotels')
+    router.replace("/travel/hotels");
   }
-})
+});
 </script>
 
 <template>
@@ -89,11 +90,24 @@ onMounted(() => {
           class="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors cursor-pointer bg-transparent border-none p-0 mb-4"
           @click="goBack"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          {{ store.step === 1 ? 'Back to results' : 'Back' }}
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          {{ store.step === 1 ? "Back to results" : "Back" }}
         </button>
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Complete Your Booking</h1>
-        <p class="text-slate-500 text-sm mt-1">{{ store.hotel?.hotel_name }} · {{ store.searchParams.country }}</p>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">
+          Complete Your Booking
+        </h1>
+        <p class="text-slate-500 text-sm mt-1">
+          {{ store.hotel?.hotel_name }} · {{ store.searchParams.country }}
+        </p>
       </div>
 
       <div v-if="store.step < 5" class="mb-8">
@@ -102,23 +116,51 @@ onMounted(() => {
             <div class="flex flex-col items-center gap-1.5">
               <div
                 class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all border-2"
-                :class="store.step === s.id
-                  ? 'bg-primary border-primary text-white shadow-lg shadow-primary/30'
-                  : store.step > s.id
-                    ? 'bg-green-500 border-green-500 text-white'
-                    : 'bg-white border-slate-200 text-slate-400'"
+                :class="
+                  store.step === s.id
+                    ? 'bg-primary border-primary text-white shadow-lg shadow-primary/30'
+                    : store.step > s.id
+                      ? 'bg-green-500 border-green-500 text-white'
+                      : 'bg-white border-slate-200 text-slate-400'
+                "
               >
-                <svg v-if="store.step > s.id" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg>
+                <svg
+                  v-if="store.step > s.id"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                >
+                  <polyline points="20,6 9,17 4,12" />
+                </svg>
                 <span v-else>{{ s.id }}</span>
               </div>
-              <span class="text-xs font-medium hidden sm:block" :class="store.step >= s.id ? 'text-slate-700' : 'text-slate-400'">{{ s.label }}</span>
+              <span
+                class="text-xs font-medium hidden sm:block"
+                :class="
+                  store.step >= s.id ? 'text-slate-700' : 'text-slate-400'
+                "
+                >{{ s.label }}</span
+              >
             </div>
-            <div v-if="i < 3" class="flex-1 h-0.5 mx-2 mb-5 transition-colors" :class="store.step > s.id ? 'bg-green-400' : 'bg-slate-200'"></div>
+            <div
+              v-if="i < 3"
+              class="flex-1 h-0.5 mx-2 mb-5 transition-colors"
+              :class="store.step > s.id ? 'bg-green-400' : 'bg-slate-200'"
+            ></div>
           </template>
         </div>
       </div>
 
-      <div :class="showSidebar ? 'grid gap-6 lg:grid-cols-[1fr_320px]' : 'max-w-2xl mx-auto'">
+      <div
+        :class="
+          showSidebar
+            ? 'grid gap-6 lg:grid-cols-[1fr_320px]'
+            : 'max-w-2xl mx-auto'
+        "
+      >
         <div class="min-w-0">
           <Transition
             :key="store.step"
@@ -131,8 +173,16 @@ onMounted(() => {
             leave-to-class="opacity-0 -translate-x-4"
           >
             <HotelRoomSelect v-if="store.step === 1" @next="goNext" />
-            <HotelGuestForm v-else-if="store.step === 2" @next="goNext" @back="goBack" />
-            <HotelBookingReview v-else-if="store.step === 3" @next="goNext" @back="goBack" />
+            <HotelGuestForm
+              v-else-if="store.step === 2"
+              @next="goNext"
+              @back="goBack"
+            />
+            <HotelBookingReview
+              v-else-if="store.step === 3"
+              @next="goNext"
+              @back="goBack"
+            />
             <HotelPaymentForm v-else-if="store.step === 4" @back="goBack" />
           </Transition>
         </div>
@@ -141,7 +191,6 @@ onMounted(() => {
           <HotelBookingSummary />
         </div>
       </div>
-
     </div>
   </div>
 </template>

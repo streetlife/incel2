@@ -298,7 +298,7 @@ async function proceed() {
       <div
         class="flex items-start justify-between px-6 py-5 border-b border-slate-100"
       >
-        <div>
+        <!-- <div>
           <div class="flex items-center gap-2 mb-1">
             <div
               class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center"
@@ -318,7 +318,7 @@ async function proceed() {
             <span class="text-lg font-bold text-slate-900">TravelCo</span>
           </div>
           <p class="text-xs text-slate-400">VAT Reg: NG-123456789</p>
-        </div>
+        </div> -->
         <div class="text-right">
           <p class="text-xs text-slate-400 mb-0.5">PROFORMA INVOICE</p>
           <p class="text-sm font-bold text-slate-700">

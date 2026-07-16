@@ -186,6 +186,8 @@ export interface PreBookingData {
 }
 
 export interface PreBookResponse {
+  status: boolean;
+  message: string;
   searchSessionId: string;
   arrivalDate: string;
   departureDate: string;

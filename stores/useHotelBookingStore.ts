@@ -271,6 +271,7 @@ export const useHotelBookingStore = defineStore(
 
         if (!result?.searchSessionId || !roomsKey) {
           preBookError.value =
+            result?.message ||
             "An error occurred while pre-booking the room. Please try again.";
           return false;
         }

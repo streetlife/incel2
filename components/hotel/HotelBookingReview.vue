@@ -295,48 +295,6 @@ async function proceed() {
     <div
       class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
     >
-      <!-- <div
-        class="flex items-start justify-between px-6 py-5 border-b border-slate-100"
-      >
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <div
-              class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="white"
-                stroke-width="2"
-              >
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-            </div>
-            <span class="text-lg font-bold text-slate-900">TravelCo</span>
-          </div>
-          <p class="text-xs text-slate-400">VAT Reg: NG-123456789</p>
-        </div>
-        <div class="text-right">
-          <p class="text-xs text-slate-400 mb-0.5">PROFORMA INVOICE</p>
-          <p class="text-sm font-bold text-slate-700">
-            {{ store.invoiceNumber || "INV-PREVIEW" }}
-          </p>
-          <p class="text-xs text-slate-400 mt-1">
-            {{
-              store.invoiceDate ||
-              new Date().toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })
-            }}
-          </p>
-        </div>
-      </div> -->
-
       <div class="px-6 py-4 bg-slate-50 border-b border-slate-100">
         <p
           class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2"

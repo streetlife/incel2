@@ -7,6 +7,22 @@ import type {
   HotelSearchParams,
 } from "../types/hotel";
 
+/**
+ * Parse a date string that may be in DD/MM/YYYY (API format)
+ * or YYYY-MM-DD (ISO format). Falls back to native Date parsing
+ * for any other recognised format.
+ */
+function parseDate(dateStr: string): Date {
+  // DD/MM/YYYY — the format returned by the hotel API
+  const slashParts = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashParts) {
+    const [, day, month, year] = slashParts;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+  // YYYY-MM-DD or anything else the browser understands
+  return new Date(dateStr);
+}
+
 export const useHotelSearchStore = defineStore(
   "hotelSearch",
   () => {
@@ -33,10 +49,10 @@ export const useHotelSearchStore = defineStore(
 
     const nights = computed(() => {
       if (!searchMeta.value) return 1;
+      const arrival = parseDate(searchMeta.value.arrival_date);
+      const departure = parseDate(searchMeta.value.departure_date);
       const diff = Math.ceil(
-        (new Date(searchMeta.value.departure_date).getTime() -
-          new Date(searchMeta.value.arrival_date).getTime()) /
-          86_400_000,
+        (departure.getTime() - arrival.getTime()) / 86_400_000,
       );
       return diff > 0 ? diff : 1;
     });

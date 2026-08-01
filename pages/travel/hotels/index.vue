@@ -629,7 +629,7 @@ onMounted(() => {
         </template>
 
         <div
-          v-if="!isLoading && !searchError && store.results?.length === 0"
+          v-else-if="!searchError && store.results?.length === 0"
           class="max-w-sm mx-auto mt-20 text-center px-10 py-14 bg-white rounded-2xl border border-stone-200 shadow-sm"
         >
           <h3 class="text-2xl font-bold text-stone-800 mb-3">
@@ -648,12 +648,15 @@ onMounted(() => {
         </div>
 
         <div
-          v-else
+          v-else-if="searchError"
           class="max-w-sm mx-auto mt-20 text-center px-10 py-14 bg-white rounded-2xl border border-stone-200 shadow-sm"
         >
           <h3 class="text-xl font-bold text-stone-800 mb-3">
             An error occurred while fetching hotels.
           </h3>
+          <p class="text-stone-500 text-sm leading-relaxed mb-5">
+            {{ searchError }}
+          </p>
           <button
             class="px-8 py-2.5 bg-primary hover:bg-primary/10 text-white text-sm font-semibold rounded-lg transition-colors border-none cursor-pointer"
             @click="toggleSearchForm"

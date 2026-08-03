@@ -45,6 +45,9 @@ const guestLabels = computed(() => {
 function bookAnother() {
   store.reset();
   searchStore.clearResults();
+  sessionStorage.removeItem("hotelSessionCode");
+  sessionStorage.removeItem("hotelSessionId");
+  sessionStorage.removeItem("selectedHotel");
   router.push("/travel/hotels");
 }
 

@@ -38,13 +38,15 @@ function goBack() {
 const showSidebar = computed(() => store.step < 5);
 
 onMounted(() => {
+  // Read selectedHotel BEFORE reset(), because reset() removes it from sessionStorage
+  const raw = sessionStorage.getItem("selectedHotel");
+
   const isFresh = sessionStorage.getItem("bookingFresh") === "true";
   if (isFresh) {
     sessionStorage.removeItem("bookingFresh");
     store.reset();
   }
 
-  const raw = sessionStorage.getItem("selectedHotel");
   if (raw) {
     try {
       const { hotel, searchParams, sessionCode, sessionId } = JSON.parse(raw);

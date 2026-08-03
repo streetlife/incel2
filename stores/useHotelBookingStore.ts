@@ -426,9 +426,6 @@ export const useHotelBookingStore = defineStore(
         nationality: "",
         currency: "USD",
       };
-      sessionStorage.removeItem("hotelSessionCode");
-      sessionStorage.removeItem("hotelSessionId");
-      sessionStorage.removeItem("selectedHotel");
     }
 
     return {

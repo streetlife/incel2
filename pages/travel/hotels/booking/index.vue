@@ -12,6 +12,74 @@ const route = useRoute();
 const router = useRouter();
 const store = useHotelBookingStore();
 
+/**
+ * Fill empty searchParams and sessionId fields from the URL query string.
+ * Called after setHotel() to patch any fields that arrived empty from
+ * sessionStorage.  Also runs on page refresh (when bookingFresh is false).
+ */
+function hydrateFromUrl(query: Record<string, any>) {
+  const sp = store.searchParams;
+
+  // Data-driven hydrators — each tuple is [current, urlKey, setter]
+  const strFields: [string | undefined, string, (v: any) => void][] = [
+    [sp.checkInStart, "checkInStart", (v) => (sp.checkInStart = v)],
+    [sp.checkInEnd, "checkInEnd", (v) => (sp.checkInEnd = v)],
+    [sp.nationality, "nationality", (v) => (sp.nationality = v)],
+    [sp.country, "country", (v) => (sp.country = v)],
+    [sp.city, "city", (v) => (sp.city = v)],
+  ];
+
+  const numFields: [number | undefined, string, (v: number) => void][] = [
+    [sp.totalGuests, "totalGuests", (v) => (sp.totalGuests = v)],
+    [sp.totalRooms, "rooms", (v) => (sp.totalRooms = v)],
+  ];
+
+  const storeFields: [string, string, (v: string) => void][] = [
+    [store.sessionId, "sessionId", (v) => (store.sessionId = v)],
+    [store.sessionCode, "sessionCode", (v) => (store.sessionCode = v)],
+  ];
+
+  let patched = false;
+
+  for (const [current, key, set] of strFields) {
+    if (!current && query[key]) {
+      set(query[key] as string);
+      patched = true;
+    }
+  }
+
+  for (const [current, key, set] of numFields) {
+    if (!current && query[key]) {
+      set(Number(query[key]) || 1);
+      patched = true;
+    }
+  }
+
+  for (const [current, key, set] of storeFields) {
+    if (!current && query[key]) {
+      set(query[key] as string);
+      patched = true;
+    }
+  }
+
+  if (sp.rooms.length === 0 && query.rooms) {
+    const roomCount = Number(query.rooms) || 1;
+    sp.rooms = Array.from({ length: roomCount }, (_, i) => ({
+      adults: Number(query[`r${i}_adults`]) || 1,
+      children: Number(query[`r${i}_children`]) || 0,
+      childAges: ((query[`r${i}_child_ages`] as string) || "")
+        .split(",")
+        .map(Number)
+        .filter((n) => !Number.isNaN(n)),
+    }));
+    patched = true;
+  }
+
+  if (patched) {
+    console.warn("[booking] Hydrated missing fields from URL query");
+  }
+}
+
 const STEPS = [
   { id: 1, label: "Rooms" },
   { id: 2, label: "Details" },
@@ -35,24 +103,34 @@ function goBack() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-const showSidebar = computed(() => store.step < 5);
-
-onMounted(() => {
-  // Read selectedHotel BEFORE reset(), because reset() removes it from sessionStorage
-  const raw = sessionStorage.getItem("selectedHotel");
-
-  const isFresh = sessionStorage.getItem("bookingFresh") === "true";
-  if (isFresh) {
-    sessionStorage.removeItem("bookingFresh");
-    store.reset();
-  }
-
+function restoreFromSessionStorage(raw: string | null, isFresh: boolean) {
   if (raw) {
+    if (isFresh) {
+      store.contactEmail = "";
+      store.contactPhone = "";
+      store.errorMessage = "";
+      store.preBookError = "";
+    }
+
     try {
       const { hotel, searchParams, sessionCode, sessionId } = JSON.parse(raw);
       store.setHotel(hotel, searchParams, sessionCode, sessionId);
+      hydrateFromUrl(route.query);
     } catch {}
+  } else if (isFresh) {
+    store.reset();
   }
+}
+
+const showSidebar = computed(() => store.step < 5);
+
+onMounted(() => {
+  const raw = sessionStorage.getItem("selectedHotel");
+
+  const isFresh = sessionStorage.getItem("bookingFresh") === "true";
+  if (isFresh) sessionStorage.removeItem("bookingFresh");
+
+  restoreFromSessionStorage(raw, isFresh);
 
   const sessionCodeFromUrl = route.query.sessionCode as string | undefined;
   if (sessionCodeFromUrl) {
@@ -60,12 +138,14 @@ onMounted(() => {
     sessionStorage.setItem("hotelSessionCode", sessionCodeFromUrl);
   }
 
-  const searchSessionIdFromUrl = route.query.searchSessionId as
-    | string
-    | undefined;
+  const searchSessionIdFromUrl = route.query.searchSessionId as string | undefined;
   if (searchSessionIdFromUrl) {
     store.sessionId = searchSessionIdFromUrl;
     sessionStorage.setItem("hotelSessionId", searchSessionIdFromUrl);
+  }
+
+  if (!raw) {
+    hydrateFromUrl(route.query);
   }
 
   const stepFromUrl = Number(route.query.step);

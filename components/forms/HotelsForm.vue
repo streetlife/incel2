@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
-import { navigateTo, useRoute } from 'nuxt/app'
+import { navigateTo, useRoute, useRouter } from 'nuxt/app'
 import DateRangeInput from './DateRangeInput.vue'
 import GuestsRooms from './GuestsRooms.vue'
 import { useHotelService } from '../../services/hotel.service'
 import type { HotelCountryCodeResponse, HotelCountryResponse } from '../../types/hotel'
 
 const route = useRoute()
+const router = useRouter()
 const hotelService = useHotelService()
 const countries = ref<HotelCountryResponse[]>([])
 const cities = ref<HotelCountryCodeResponse[]>([])
@@ -187,8 +188,13 @@ const submit = async () => {
 
   emit('search', searchData)
 
+  // Always keep the URL query in sync with the current search so the
+  // booking page can reconstruct state from the URL when needed.
   if (route.path !== '/travel/hotels') {
     await navigateTo({ path: '/travel/hotels', query: buildQueryParams() })
+  } else {
+    // Same-page search: silently replace URL query without navigation
+    router.replace({ query: buildQueryParams() })
   }
 }
 </script>

@@ -145,6 +145,21 @@ export const useHotelBookingStore = defineStore(
 
       hotel.value = hotelData;
       searchParams.value = { ...params };
+
+      // ── Diagnostic: warn when searchParams arrives with empty critical fields ──
+      if (
+        !params.checkInStart ||
+        !params.checkInEnd ||
+        !params.nationality ||
+        !params.country ||
+        !params.city ||
+        !params.rooms?.length
+      ) {
+        console.warn(
+          "[hotelBooking] setHotel received incomplete searchParams",
+          { params, providedCode: code, providedSessionId: searchSessionId },
+        );
+      }
       errorMessage.value = "";
       sessionCode.value =
         code || sessionStorage.getItem("hotelSessionCode") || "";
@@ -240,12 +255,35 @@ export const useHotelBookingStore = defineStore(
       preBookError.value = "";
 
       try {
+        // ── Validate required payload fields before sending ──
+        // This guards against stale / empty searchParams that can occur
+        // when Pinia persistence or sessionStorage hydrates empty values.
+        const missing: string[] = [];
+
+        if (!searchParams.value.checkInStart) missing.push("arrival date");
+        if (!searchParams.value.checkInEnd) missing.push("departure date");
+        if (!searchParams.value.nationality) missing.push("nationality");
+        if (!searchParams.value.country) missing.push("country");
+        if (!searchParams.value.city) missing.push("city");
+
         const roomsAdults = searchParams.value.rooms.map((r) => r.adults ?? 1);
+        if (roomsAdults.length === 0) missing.push("room guests");
+
+        if (missing.length > 0) {
+          preBookError.value = `Booking details are incomplete (${missing.join(", ")}). Please go back and search again.`;
+          console.warn(
+            "[hotelBooking] runPreBook blocked — incomplete payload",
+            { missing, searchParams: searchParams.value, sessionId: sessionId.value },
+          );
+          preBookLoading.value = false;
+          return false;
+        }
+
         const roomsChildren = searchParams.value.rooms.map(
           (r) => r.children ?? 0,
         );
-        const roomsChildrenAges = searchParams.value.rooms.map((r) =>
-          r.childAges?.length ? r.childAges[0] : 0,
+        const roomsChildrenAges = searchParams.value.rooms.flatMap((r) =>
+          r.childAges?.length ? r.childAges : [0],
         );
 
         const payload: PreBookingData = {

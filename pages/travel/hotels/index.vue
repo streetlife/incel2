@@ -182,45 +182,90 @@ function viewHotelDetails(hotel: any) {
   // Signal that this is intentional fresh navigation, not a page refresh
   sessionStorage.setItem("bookingFresh", "true");
 
+  const searchParamsToStore = {
+    country:
+      store.lastParams?.country || (route.query.country as string) || "",
+    city:
+      store.lastParams?.city || (route.query.city as string) || hotel.city,
+    nationality:
+      store.lastParams?.nationality ||
+      (route.query.nationality as string) ||
+      "",
+    checkInStart:
+      store.searchMeta?.arrival_date ||
+      (route.query.checkInStart as string),
+    checkInEnd:
+      store.searchMeta?.departure_date ||
+      (route.query.checkInEnd as string),
+    rooms: store.lastParams?.rooms ?? buildRoomsFromQuery(),
+    totalGuests:
+      (store.searchMeta?.adults ?? 0) + (store.searchMeta?.children ?? 0) ||
+      store.lastParams?.totalGuests ||
+      1,
+    totalRooms: store.searchMeta?.rooms || 1,
+    currency: store.searchMeta?.currency || "USD",
+  };
+
+  // ── Diagnostic: warn if critical fields are empty (will be caught downstream) ──
+  if (
+    !searchParamsToStore.checkInStart ||
+    !searchParamsToStore.checkInEnd ||
+    !searchParamsToStore.nationality ||
+    !searchParamsToStore.country ||
+    !searchParamsToStore.city ||
+    searchParamsToStore.rooms.length === 0
+  ) {
+    console.warn(
+      "[viewHotelDetails] Some search params are empty — booking may fail",
+      {
+        missing: {
+          checkInStart: !searchParamsToStore.checkInStart,
+          checkInEnd: !searchParamsToStore.checkInEnd,
+          nationality: !searchParamsToStore.nationality,
+          country: !searchParamsToStore.country,
+          city: !searchParamsToStore.city,
+          rooms: searchParamsToStore.rooms.length === 0,
+        },
+        storeLastParams: store.lastParams,
+        routeQuery: route.query,
+      },
+    );
+  }
+
   sessionStorage.setItem(
     "selectedHotel",
     JSON.stringify({
       hotel,
       sessionCode: store.sessionCode,
       sessionId: store.sessionId,
-      searchParams: {
-        country:
-          store.lastParams?.country || (route.query.country as string) || "",
-        city:
-          store.lastParams?.city || (route.query.city as string) || hotel.city,
-        nationality:
-          store.lastParams?.nationality ||
-          (route.query.nationality as string) ||
-          "",
-        checkInStart:
-          store.searchMeta?.arrival_date ||
-          (route.query.checkInStart as string),
-        checkInEnd:
-          store.searchMeta?.departure_date ||
-          (route.query.checkInEnd as string),
-        rooms: store.lastParams?.rooms ?? buildRoomsFromQuery(),
-        totalGuests:
-          (store.searchMeta?.adults ?? 0) + (store.searchMeta?.children ?? 0) ||
-          store.lastParams?.totalGuests ||
-          1,
-        totalRooms: store.searchMeta?.rooms || 1,
-        currency: store.searchMeta?.currency || "USD",
-      },
+      searchParams: searchParamsToStore,
     }),
   );
+  // ── Carry ALL search params in the URL so the booking page can
+  // reconstruct state even when sessionStorage is corrupted or empty. ──
+  const bookingQuery: Record<string, any> = {
+    hotelId: hotel.hotel_id,
+    step: "1",
+    sessionCode: store.sessionCode,
+    sessionId: store.sessionId,
+    country: searchParamsToStore.country,
+    city: searchParamsToStore.city,
+    nationality: searchParamsToStore.nationality,
+    checkInStart: searchParamsToStore.checkInStart,
+    checkInEnd: searchParamsToStore.checkInEnd,
+    rooms: searchParamsToStore.totalRooms,
+    totalGuests: searchParamsToStore.totalGuests,
+  };
+  // Include per-room adults / children / child-ages for reconstruction
+  searchParamsToStore.rooms.forEach((r: any, i: number) => {
+    bookingQuery[`r${i}_adults`] = r.adults ?? 1;
+    bookingQuery[`r${i}_children`] = r.children ?? 0;
+    bookingQuery[`r${i}_child_ages`] = (r.childAges ?? []).join(",");
+  });
+
   router.push({
     path: "/travel/hotels/booking",
-    query: {
-      hotelId: hotel.hotel_id,
-      step: "1",
-      sessionCode: store.sessionCode,
-      sessionId: store.sessionId,
-    },
+    query: bookingQuery,
   });
 }
 
@@ -238,7 +283,11 @@ const toggleSearchForm = () => {
 watch(
   () => route.query,
   (q) => {
-    if (q.city) {
+    // Skip when a form-initiated search is already in progress — the
+    // HotelsForm emit→performSearch() path handles the search directly.
+    // Without this guard, router.replace() in HotelsForm.submit() triggers
+    // a duplicate API call that races with and can overwrite the real search.
+    if (q.city && !isLoading.value) {
       isLoading.value = true;
       performSearch();
     }

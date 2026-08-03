@@ -1,13 +1,32 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import HotelBookingConfirmation from '../../../../components/hotel/HotelBookingConfirmation.vue'
+import { useHotelBookingStore } from '../../../../stores/useHotelBookingStore'
+import { useHotelSearchStore } from '../../../../stores/hotel'
 
 const route = useRoute()
 const router = useRouter()
 
 const status = ref<'verifying' | 'success' | 'failed'>('verifying')
 const message = ref('')
+
+function cleanupBookingState() {
+  const bookingStore = useHotelBookingStore()
+  const searchStore = useHotelSearchStore()
+  bookingStore.reset()
+  searchStore.clearResults()
+  sessionStorage.removeItem('hotelSessionCode')
+  sessionStorage.removeItem('hotelSessionId')
+  sessionStorage.removeItem('selectedHotel')
+}
+
+// Clean up when user navigates away via menu/back instead of "Book Another"
+onBeforeRouteLeave((_to, _from) => {
+  if (status.value === 'success') {
+    cleanupBookingState()
+  }
+})
 
 onMounted(async () => {
   const q = route.query

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import BookingConfirmation from '../../../../components/flight/BookingConfirmation.vue'
 import { useFlightBooking } from '../../../../composables/useFlightBooking'
 import { computed, onMounted, ref } from 'vue'
@@ -12,6 +12,13 @@ const copied = ref(false)
 
 type Status = 'verifying' | 'success' | 'failed' | 'booking_failed'
 const status = ref<Status>('verifying')
+
+// Clean up when user navigates away via menu/back instead of "Book Another Flight"
+onBeforeRouteLeave((_to, _from) => {
+  if (status.value === 'success') {
+    flightStore.resetAll()
+  }
+})
 
 const route = useRoute()
 

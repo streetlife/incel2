@@ -119,6 +119,7 @@ function buildPayload(params: HotelSearchParams): Record<string, unknown> {
   const totalChildren = params.rooms.reduce((s, r) => s + (r.children ?? 0), 0);
 
   const childAges: number[] = params.rooms.flatMap((r) => {
+    if ((r.children ?? 0) === 0) return [];
     const ages = r.childAges ?? [];
     const missing = Math.max(0, (r.children ?? 0) - ages.length);
     return [...ages, ...new Array(missing).fill(2)];

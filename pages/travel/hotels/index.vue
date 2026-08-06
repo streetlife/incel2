@@ -151,7 +151,7 @@ const performSearch = async (params?: HotelSearchParams) => {
     const result = await searchHotel(sp);
 
     store.setResults(
-      result.hotels,
+      result.hotels ?? [],
       result.search_meta,
       result.filters,
       result.session_code,
@@ -343,6 +343,7 @@ onMounted(() => {
 
         <div class="mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
           <button
+            type="button"
             v-if="store.hasSearched"
             class="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between cursor-pointer border-none"
             @click="toggleSearchForm"
@@ -678,7 +679,7 @@ onMounted(() => {
         </template>
 
         <div
-          v-else-if="!searchError && store.results?.length === 0"
+          v-else-if="!isLoading && !searchError && !store.results?.length"
           class="max-w-sm mx-auto mt-20 text-center px-10 py-14 bg-white rounded-2xl border border-stone-200 shadow-sm"
         >
           <h3 class="text-2xl font-bold text-stone-800 mb-3">

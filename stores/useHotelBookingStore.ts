@@ -283,7 +283,9 @@ export const useHotelBookingStore = defineStore(
           (r) => r.children ?? 0,
         );
         const roomsChildrenAges = searchParams.value.rooms.flatMap((r) =>
-          r.childAges?.length ? r.childAges : [0],
+          (r.children ?? 0) > 0 && r.childAges?.length
+            ? r.childAges.slice(0, r.children)
+            : [],
         );
 
         const payload: PreBookingData = {

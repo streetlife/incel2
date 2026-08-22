@@ -15,6 +15,7 @@ import type {
 } from "../types/hotel";
 import { useApi } from "../utils/api";
 import { toSlashDate } from "../utils/date";
+import { normalizeChildAge } from "../utils/hotel";
 import { ApiResponse } from "../types/api";
 
 export function useHotelService() {
@@ -122,7 +123,9 @@ function buildPayload(params: HotelSearchParams): Record<string, unknown> {
     if ((r.children ?? 0) === 0) return [];
     const ages = r.childAges ?? [];
     const missing = Math.max(0, (r.children ?? 0) - ages.length);
-    return [...ages, ...new Array(missing).fill(2)];
+    return [...ages, ...new Array(missing).fill(2)].map((a) =>
+      normalizeChildAge(a),
+    );
   });
 
   const payload: Record<string, unknown> = {

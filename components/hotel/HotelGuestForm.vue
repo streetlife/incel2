@@ -11,6 +11,9 @@ const store = useHotelBookingStore();
 
 const TITLES = ["Mr", "Mrs", "Ms", "Dr", "Prof"];
 
+const titleOptions = (guest: { type: "adult" | "child" }) =>
+  guest.type === "child" ? ["Child"] : TITLES;
+
 const showLogin = ref(false);
 const loginEmail = ref("");
 const loginPass = ref("");
@@ -96,6 +99,29 @@ function validate(): boolean {
         errors.value[`${p}_phone`] = "Valid phone required";
     }
   });
+
+  // Passenger names must be unique (first + last name combination).
+  const seen = new Map<string, number>();
+  store.guests.forEach((g, i) => {
+    const key = `${g.firstName.trim().toLowerCase()} ${g.lastName.trim().toLowerCase()}`;
+    if (!key.trim()) return; // empty names already flagged as "Required"
+    if (seen.has(key)) {
+      const p = `g${i}`;
+      const firstP = `g${seen.get(key)!}`;
+      const msg = "Duplicate passenger name";
+      errors.value[`${p}_first`] =
+        errors.value[`${p}_first`] || msg;
+      errors.value[`${p}_last`] =
+        errors.value[`${p}_last`] || msg;
+      errors.value[`${firstP}_first`] =
+        errors.value[`${firstP}_first`] || msg;
+      errors.value[`${firstP}_last`] =
+        errors.value[`${firstP}_last`] || msg;
+    } else {
+      seen.set(key, i);
+    }
+  });
+
   return Object.keys(errors.value).length === 0;
 }
 
@@ -136,6 +162,7 @@ async function submit() {
           </p>
         </div>
         <button
+          type="button"
           class="shrink-0 text-xs font-semibold px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/45 transition-colors border-none cursor-pointer"
           @click="showLogin = !showLogin"
         >
@@ -155,6 +182,7 @@ async function submit() {
           </p>
         </div>
         <button
+          type="button"
           class="text-xs text-primary underline cursor-pointer bg-transparent border-none"
           @click="handleLogout"
         >
@@ -185,6 +213,7 @@ async function submit() {
           />
           <p v-if="loginError" class="text-xs text-red-600">{{ loginError }}</p>
           <button
+            type="button"
             class="w-full py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/35 border-none cursor-pointer disabled:opacity-60"
             :disabled="loginLoading"
             @click="handleLogin"
@@ -229,9 +258,19 @@ async function submit() {
           >
             Title <span class="text-red-400">*</span>
           </label>
-          <select v-model="guest.title" :class="fieldClass(`g${i}_title`)">
-            <option value="">Select</option>
-            <option v-for="t in TITLES" :key="t" :value="t">{{ t }}</option>
+          <select
+            v-model="guest.title"
+            :class="fieldClass(`g${i}_title`)"
+            :disabled="guest.type === 'child'"
+          >
+            <option v-if="guest.type !== 'child'" value="">Select</option>
+            <option
+              v-for="t in titleOptions(guest)"
+              :key="t"
+              :value="t"
+            >
+              {{ t }}
+            </option>
           </select>
           <p v-if="errors[`g${i}_title`]" class="text-xs text-red-500 mt-1">
             {{ errors[`g${i}_title`] }}
@@ -348,6 +387,7 @@ async function submit() {
 
     <div class="flex gap-3">
       <button
+        type="button"
         class="flex-1 h-12 border-2 border-slate-200 text-slate-700 font-semibold rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer bg-white disabled:opacity-50"
         :disabled="isSubmitting"
         @click="emit('back')"
@@ -355,6 +395,7 @@ async function submit() {
         ← Back
       </button>
       <button
+        type="button"
         class="flex-[2] h-12 bg-primary hover:opacity-90 text-white font-bold rounded-2xl transition-all border-none cursor-pointer shadow-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         :disabled="isSubmitting"
         @click="submit"

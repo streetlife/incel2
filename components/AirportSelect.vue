@@ -40,8 +40,9 @@
     <Teleport to="body">
       <ul
         v-if="open && suggestions.length"
+        ref="dropdownRef"
         :style="dropdownStyle"
-        class="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+        class="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
       >
         <li
           v-for="option in suggestions"
@@ -56,7 +57,7 @@
       <div
         v-if="open && !loading && !suggestions.length && modelValue"
         :style="dropdownStyle"
-        class="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg px-4 py-3 text-gray-500 text-sm"
+        class="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg px-4 py-3 text-gray-500 text-sm"
       >
         No results found
       </div>
@@ -65,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, onMounted, computed, useAttrs, watch } from "vue"
+import { ref, onUnmounted, onMounted, computed, useAttrs, watch, nextTick } from "vue"
 import { useFlightService } from "../services/flight.service"
 import { normaliseError } from "../utils/api"
 import { Airport } from "../types/flight"
@@ -101,24 +102,36 @@ const open = ref(false)
 const loading = ref(false)
 const suggestions = ref<Airport[]>([])
 const inputRef = ref<HTMLInputElement | null>(null)
+const dropdownRef = ref<HTMLElement | null>(null)
 const dropdownStyle = ref<Record<string, string>>({})
 const service = useFlightService()
 const error = ref("")
 const displayValue = ref(props.modelValue)
 
+const openAbove = ref(false)
+
 const calculateDropdownPosition = () => {
   if (!inputRef.value) return
   const rect = inputRef.value.getBoundingClientRect()
-  const dropdownMaxHeight = 240
-  const openAbove = window.innerHeight - rect.bottom < dropdownMaxHeight && rect.top > window.innerHeight - rect.bottom
+  const dropdownHeight = dropdownRef.value?.offsetHeight || 0
   dropdownStyle.value = {
     width: `${rect.width}px`,
-    left: `${rect.left}px`,
-    top: openAbove ? `${rect.top - dropdownMaxHeight - 8}px` : `${rect.bottom + 4}px`,
+    left: `${rect.left + window.scrollX}px`,
+    top: openAbove.value
+      ? `${rect.top + window.scrollY - dropdownHeight - 8}px`
+      : `${rect.bottom + window.scrollY + 4}px`,
   }
 }
 
-const updatePosition = () => { if (open.value) calculateDropdownPosition() }
+const freezeDirection = () => {
+  if (!inputRef.value) return
+  const rect = inputRef.value.getBoundingClientRect()
+  const dropdownHeight = dropdownRef.value?.offsetHeight || 240
+  const spaceBelow = window.innerHeight - rect.bottom
+  const spaceAbove = rect.top
+  openAbove.value = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
+  calculateDropdownPosition()
+}
 
 const fetchSuggestions = async (query: string): Promise<Airport[]> => {
   if (!query) return []
@@ -134,7 +147,10 @@ const debouncedFetch = useDebounceFn(async (query: string) => {
   try {
     const results = await fetchSuggestions(query)
     suggestions.value = results
-    if (results.length) calculateDropdownPosition()
+    if (results.length) {
+      await nextTick()
+      freezeDirection()
+    }
   } catch {
     suggestions.value = []
   } finally {
@@ -204,13 +220,11 @@ watch(
 )
 
 onMounted(() => {
-  window.addEventListener('scroll', updatePosition, true)
-  window.addEventListener('resize', updatePosition)
+  window.addEventListener('resize', calculateDropdownPosition)
   if (props.modelValue) resolveLabel(props.modelValue)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('scroll', updatePosition, true)
-  window.removeEventListener('resize', updatePosition)
+  window.removeEventListener('resize', calculateDropdownPosition)
 })
 </script>

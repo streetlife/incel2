@@ -74,8 +74,8 @@ onMounted(async () => {
         <h2 class="text-xl font-bold text-slate-900">Payment Failed</h2>
         <p class="text-slate-500 text-sm max-w-sm mx-auto">{{ message }}</p>
         <div class="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-          <button class="px-6 py-2.5 border-2 border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 cursor-pointer bg-white" @click="$router.push('/travel/hotels')">Back to Hotels</button>
-          <button class="px-6 py-2.5 bg-primary hover:opacity-90 text-white font-semibold rounded-xl cursor-pointer border-none" @click="$router.go(-1)">Try Again</button>
+          <button type="button" class="px-6 py-2.5 border-2 border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 cursor-pointer bg-white" @click="$router.push('/travel/hotels')">Back to Hotels</button>
+          <button type="button" class="px-6 py-2.5 bg-primary hover:opacity-90 text-white font-semibold rounded-xl cursor-pointer border-none" @click="$router.go(-1)">Try Again</button>
         </div>
         <p class="text-xs text-slate-400 pt-2">If money was deducted, contact support with your transaction reference.</p>
       </div>

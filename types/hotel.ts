@@ -197,6 +197,12 @@ export interface PreBookResponse {
   hotelId: string;
   currency: string;
   room: IRoomDetail;
+  // Updated-rate fields returned by the BE (the `<BookingAfterPrice>` tag is
+  // surfaced as `afterPrice` in the current response).
+  BookingAfterPrice?: string | number;
+  beforePrice?: string | number;
+  afterPrice?: string | number;
+  priceDifference?: string | number;
   cancellationInformations: {
     cancellationInformation: {
       startDate: string;
@@ -214,8 +220,12 @@ export interface IRoomDetail {
   bookingKey: string;
   adults: string;
   children: string;
-  childrenAges: string;
+  childrenAges?: string;
   totalRooms: string;
   totalRate: string;
+  boardBasis?: string;
   terms: string;
+  BookingAfterPrice?: string | number;
+  beforePrice?: string | number;
+  afterPrice?: string | number;
 }

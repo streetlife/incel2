@@ -484,6 +484,7 @@ onMounted(() => {
               >
               <div class="flex gap-1.5">
                 <button
+                  type="button"
                   v-for="opt in sortOptions"
                   :key="opt.key"
                   class="text-xs font-semibold px-3.5 py-1.5 rounded-full border transition-all duration-150 cursor-pointer"

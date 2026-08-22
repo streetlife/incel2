@@ -335,6 +335,7 @@ function handlePrint() {
       </a>
 
       <button
+        type="button"
         class="h-12 border-2 border-slate-200 text-slate-700 font-semibold rounded-2xl hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 text-sm cursor-pointer bg-white"
         @click="handlePrint"
       >
@@ -356,6 +357,7 @@ function handlePrint() {
       </button>
 
       <button
+        type="button"
         class="col-span-2 h-12 bg-primary hover:opacity-90 text-white font-semibold rounded-2xl transition-all border-none cursor-pointer flex items-center justify-center gap-2 text-sm"
         @click="bookAnother"
       >

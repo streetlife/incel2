@@ -19,9 +19,24 @@ async function choose(room: SelectedRoom) {
   const ok = await store.runPreBook(room);
   choosingRoomId.value = null;
 
-  if (ok) {
-    emit("next");
+  if (!ok) return;
+
+  // If the pre-book returned an updated rate, confirm with the user before
+  // proceeding. Otherwise continue straight to guest details.
+  if (store.rateChange) {
+    return;
   }
+
+  emit("next");
+}
+
+function acceptUpdatedRate() {
+  store.acceptRateChange();
+  emit("next");
+}
+
+function declineUpdatedRate() {
+  store.declineRateChange();
 }
 
 const boardColors: Record<string, string> = {
@@ -71,6 +86,7 @@ onMounted(() => {
       <span class="text-9xl"><SearchX :size="40" /></span>
       <p class="font-semibold text-slate-800">Couldn't load rooms</p>
       <button
+        type="button"
         class="mt-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold border-none cursor-pointer"
         @click="retryFetch"
       >
@@ -199,6 +215,7 @@ onMounted(() => {
               </p>
               <p class="text-xs text-slate-400 mb-3">excl. taxes</p>
               <button
+                type="button"
                 class="w-full sm:w-auto px-6 py-2.5 bg-primary hover:opacity-90 active:scale-95 text-white text-sm font-bold rounded-xl border-none cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-60"
                 :disabled="
                   choosingRoomId === room.rezliveRoomId + room.roomName &&
@@ -240,5 +257,89 @@ onMounted(() => {
         </div>
       </div>
     </template>
+
+    <!-- Rate change confirmation modal -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition-opacity duration-200"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-150"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="store.rateChange"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+        >
+          <div
+            class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+          >
+            <div class="px-6 pt-6 pb-4 text-center">
+              <div
+                class="mx-auto w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mb-3"
+              >
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#d97706"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                  />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-bold text-slate-900">
+                Price has changed
+              </h3>
+              <p class="text-sm text-slate-500 mt-1">
+                The room rate has been updated by the supplier.
+              </p>
+            </div>
+
+            <div class="px-6 pb-4 space-y-2">
+              <div
+                class="flex items-center justify-between text-sm bg-slate-50 rounded-xl px-4 py-3"
+              >
+                <span class="text-slate-500">Previous price</span>
+                <span class="font-semibold text-slate-700 line-through">
+                  {{ format(store.rateChange.previousRate) }}
+                </span>
+              </div>
+              <div
+                class="flex items-center justify-between text-sm bg-amber-50 rounded-xl px-4 py-3"
+              >
+                <span class="text-amber-700 font-medium">Updated price</span>
+                <span class="font-bold text-amber-700">
+                  {{ format(store.rateChange.updatedRate) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="px-6 pb-6 flex gap-3">
+              <button
+                type="button"
+                class="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer bg-white"
+                @click="declineUpdatedRate"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="flex-1 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:opacity-90 transition-opacity border-none cursor-pointer"
+                @click="acceptUpdatedRate"
+              >
+                Accept new price
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>

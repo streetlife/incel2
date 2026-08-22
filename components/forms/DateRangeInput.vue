@@ -211,6 +211,7 @@ const containerRef = ref<HTMLElement>()
 const calendarRef = ref<HTMLElement>()
 const calendarStyle = ref<Record<string, string>>({})
 const isMobile = ref(false)
+const openAbove = ref(false)
 
 /* Constants */
 const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
@@ -264,7 +265,7 @@ const inputClasses = computed(() => [
 ])
 
 const calendarClasses = computed(() => [
-  'fixed z-50 bg-white rounded-lg shadow-2xl border border-gray-200 p-4',
+  'absolute z-50 bg-white rounded-lg shadow-2xl border border-gray-200 p-4',
   isMobile.value ? 'w-[calc(100vw-2rem)] max-w-sm' : 'w-auto'
 ])
 
@@ -283,20 +284,20 @@ const checkMobile = (): void => {
 const calculateMobilePosition = (
   rect: DOMRect,
   viewportWidth: number,
-  viewportHeight: number,
-  padding: number
+  padding: number,
+  calendarHeight: number
 ): Record<string, string> => {
   const calendarWidth = Math.min(viewportWidth - (padding * 2), 384)
-  const calendarHeight = 450
-  
-  let top = rect.bottom + padding
-  const left = (viewportWidth - calendarWidth) / 2
-  
-  // Adjust if calendar goes off bottom
-  if (top + calendarHeight > viewportHeight - padding) {
-    top = Math.max(rect.top - calendarHeight - padding, padding)
-  }
-  
+
+  let top = openAbove.value
+    ? rect.top + window.scrollY - calendarHeight - padding
+    : rect.bottom + window.scrollY + padding
+
+  // Keep the calendar within the viewport
+  top = Math.max(top, window.scrollY + padding)
+
+  const left = ((viewportWidth - calendarWidth) / 2) + window.scrollX
+
   return {
     top: `${top}px`,
     left: `${left}px`
@@ -306,28 +307,24 @@ const calculateMobilePosition = (
 const calculateDesktopPosition = (
   rect: DOMRect,
   viewportWidth: number,
-  viewportHeight: number,
-  padding: number
+  padding: number,
+  calendarHeight: number
 ): Record<string, string> => {
   const calendarWidth = 520
-  const calendarHeight = 380
-  
-  let top = rect.bottom + padding
-  let left = rect.right - calendarWidth
-  
+
+  let top = openAbove.value
+    ? rect.top + window.scrollY - calendarHeight - padding
+    : rect.bottom + window.scrollY + padding
+  let left = rect.right + window.scrollX - calendarWidth
+
   // Ensure calendar doesn't go off left edge
-  left = Math.max(left, rect.left, padding)
-  
+  left = Math.max(left, rect.left + window.scrollX, window.scrollX + padding)
+
   // Ensure calendar doesn't go off right edge
-  if (left + calendarWidth > viewportWidth - padding) {
-    left = viewportWidth - calendarWidth - padding
+  if (left + calendarWidth > window.scrollX + viewportWidth - padding) {
+    left = window.scrollX + viewportWidth - calendarWidth - padding
   }
-  
-  // Adjust vertical position if needed
-  if (top + calendarHeight > viewportHeight - padding) {
-    top = Math.max(rect.top - calendarHeight - padding, rect.bottom + padding)
-  }
-  
+
   return {
     top: `${top}px`,
     left: `${left}px`
@@ -336,15 +333,15 @@ const calculateDesktopPosition = (
 
 const updateCalendarPosition = (): void => {
   if (!containerRef.value) return
-  
+
   const rect = containerRef.value.getBoundingClientRect()
   const viewportWidth = window.innerWidth
-  const viewportHeight = window.innerHeight
   const padding = 8
-  
+  const calendarHeight = calendarRef.value?.offsetHeight || 0
+
   calendarStyle.value = isMobile.value
-    ? calculateMobilePosition(rect, viewportWidth, viewportHeight, padding)
-    : calculateDesktopPosition(rect, viewportWidth, viewportHeight, padding)
+    ? calculateMobilePosition(rect, viewportWidth, padding, calendarHeight)
+    : calculateDesktopPosition(rect, viewportWidth, padding, calendarHeight)
 }
 
 const formatDateDisplay = (dateString: string): string => {
@@ -460,6 +457,15 @@ const toggleCalendar = async (): Promise<void> => {
     
     checkMobile()
     await nextTick()
+    // Decide placement direction once (using the rendered height) so the
+    // calendar does not flip back and forth while the user scrolls.
+    const rect = containerRef.value?.getBoundingClientRect()
+    if (rect) {
+      const calendarHeight = calendarRef.value?.offsetHeight || 0
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+      openAbove.value = spaceBelow < calendarHeight && spaceAbove > spaceBelow
+    }
     updateCalendarPosition()
   }
 }
@@ -527,12 +533,6 @@ const handleClickOutside = (event: MouseEvent): void => {
   }
 }
 
-const handleScroll = (): void => {
-  if (isCalendarOpen.value) {
-    updateCalendarPosition()
-  }
-}
-
 const handleResize = (): void => {
   checkMobile()
   if (isCalendarOpen.value) {
@@ -545,12 +545,10 @@ onMounted(() => {
   checkMobile()
   document.addEventListener('mousedown', handleClickOutside)
   window.addEventListener('resize', handleResize)
-  window.addEventListener('scroll', handleScroll, true)
 })
 
 onUnmounted(() => {
   document.removeEventListener('mousedown', handleClickOutside)
   window.removeEventListener('resize', handleResize)
-  window.removeEventListener('scroll', handleScroll, true)
 })
 </script>

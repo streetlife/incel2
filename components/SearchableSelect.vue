@@ -61,9 +61,9 @@ function calcDropdownStyle() {
   if (!wrapperEl.value) return
   const rect = wrapperEl.value.getBoundingClientRect()
   dropdownStyle.value = {
-    position: 'fixed',
-    top: `${rect.bottom + 6}px`,
-    left: `${rect.left}px`,
+    position: 'absolute',
+    top: `${rect.bottom + window.scrollY + 6}px`,
+    left: `${rect.left + window.scrollX}px`,
     width: `${rect.width}px`,
     zIndex: '9999',
   }
@@ -179,17 +179,13 @@ watch(filtered, () => { activeIndex.value = -1 })
 function onDocClick(e: MouseEvent) {
   if (!containerEl.value?.contains(e.target as Node)) close()
 }
-function onScrollResize() { if (isOpen.value) calcDropdownStyle() }
-
 onMounted(() => {
   document.addEventListener('mousedown', onDocClick)
-  window.addEventListener('scroll', onScrollResize, true)
-  window.addEventListener('resize', onScrollResize)
+  window.addEventListener('resize', calcDropdownStyle)
 })
 onBeforeUnmount(() => {
   document.removeEventListener('mousedown', onDocClick)
-  window.removeEventListener('scroll', onScrollResize, true)
-  window.removeEventListener('resize', onScrollResize)
+  window.removeEventListener('resize', calcDropdownStyle)
 })
 </script>
 

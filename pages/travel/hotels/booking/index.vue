@@ -169,6 +169,7 @@ onMounted(() => {
     <div class="max-w-6xl mx-auto">
       <div class="mb-8">
         <button
+          type="button"
           class="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors cursor-pointer bg-transparent border-none p-0 mb-4"
           @click="goBack"
         >

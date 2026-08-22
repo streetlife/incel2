@@ -33,7 +33,7 @@
         v-if="open"
         ref="dropdownRef"
         :style="dropdownStyle"
-        class="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
+        class="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
       >
         <div class="flex items-center justify-between px-4 py-3.5 border-b border-gray-100">
           <div>
@@ -61,7 +61,7 @@
           </div>
         </div>
 
-        <div class="max-h-[480px] overflow-y-auto">
+        <div class="max-h-[480px] overflow-y-auto overscroll-contain">
           <div
             v-for="(room, i) in rooms"
             :key="i"
@@ -107,7 +107,7 @@
               <div class="flex items-center justify-between">
                 <div>
                   <div class="text-sm font-medium text-gray-900">Children</div>
-                  <div class="text-xs text-gray-500">0 to 17 years</div>
+                  <div class="text-xs text-gray-500">2 to 12 years</div>
                 </div>
                 <div class="flex items-center gap-3">
                   <button
@@ -199,13 +199,10 @@ interface Props {
   maxGuestsPerRoom?: number
 }
 
-const CHILD_AGES = [
-  { value: 0, label: 'Under 1 year' },
-  ...Array.from({ length: 17 }, (_, i) => ({
-    value: i + 1,
-    label: `${i + 1} year${i + 1 > 1 ? 's' : ''}`,
-  })),
-]
+const CHILD_AGES = Array.from({ length: 11 }, (_, i) => ({
+  value: i + 2,
+  label: `${i + 2} years`,
+}))
 
 const defaultRoom = (): RoomState => ({ adults: 1, children: 0, childAges: [] })
 
@@ -221,6 +218,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: GuestsAndRoomsValue] }>(
 const attrs = useAttrs()
 
 const open = ref(false)
+const openAbove = ref(false)
 const triggerRef = ref<HTMLElement>()
 const dropdownRef = ref<HTMLElement>()
 const dropdownStyle = ref<Record<string, string>>({})
@@ -315,27 +313,35 @@ const hasError = computed(() => {
 const calculatePosition = () => {
   if (!triggerRef.value) return
   const rect = triggerRef.value.getBoundingClientRect()
-  const dropdownH = 520
+  const dropdownH = dropdownRef.value?.offsetHeight || 0
   const padding = 8
-  const spaceBelow = window.innerHeight - rect.bottom
-  const openAbove = spaceBelow < dropdownH && rect.top > spaceBelow
 
   dropdownStyle.value = {
     width: `${rect.width}px`,
-    left: `${rect.left}px`,
-    top: openAbove
-      ? `${rect.top - dropdownH - padding}px`
-      : `${rect.bottom + padding}px`,
+    left: `${rect.left + window.scrollX}px`,
+    top: openAbove.value
+      ? `${rect.top + window.scrollY - dropdownH - padding}px`
+      : `${rect.bottom + window.scrollY + padding}px`,
   }
 }
 
 const toggleDropdown = async () => {
   if (props.disabled) return
   open.value = !open.value
-  if (open.value) { await nextTick(); calculatePosition() }
+  if (open.value) {
+    await nextTick()
+    // Decide placement direction once (using the rendered height) so the
+    // dropdown does not flip back and forth while the user scrolls.
+    const rect = triggerRef.value?.getBoundingClientRect()
+    if (rect) {
+      const dropdownH = dropdownRef.value?.offsetHeight || 0
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+      openAbove.value = spaceBelow < dropdownH && spaceAbove > spaceBelow
+    }
+    calculatePosition()
+  }
 }
-
-const updatePosition = () => { if (open.value) calculatePosition() }
 
 watch(
   () => props.modelValue,
@@ -346,13 +352,11 @@ watch(
 )
 
 onMounted(() => {
-  window.addEventListener('scroll', updatePosition, true)
-  window.addEventListener('resize', updatePosition)
+  window.addEventListener('resize', calculatePosition)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('scroll', updatePosition, true)
-  window.removeEventListener('resize', updatePosition)
+  window.removeEventListener('resize', calculatePosition)
 })
 </script>
 

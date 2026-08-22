@@ -249,7 +249,7 @@ async function proceed() {
           <div class="text-right shrink-0">
             <p class="text-[10px] text-slate-400 mb-0.5">per night</p>
             <p class="text-base font-bold text-slate-900">
-              {{ format(store.selectedRoom?.pricePerNight ?? 0) }}
+              {{ format(store.effectivePricePerNight) }}
             </p>
           </div>
         </div>
@@ -264,7 +264,7 @@ async function proceed() {
 
         <div class="flex justify-between text-sm text-slate-600">
           <span>
-            {{ format(store.selectedRoom?.pricePerNight ?? 0) }}/night ×
+            {{ format(store.effectivePricePerNight) }}/night ×
             {{ store.nights }} night{{ store.nights !== 1 ? "s" : "" }} ×
             {{ store.searchParams.totalRooms }} room{{
               store.searchParams.totalRooms !== 1 ? "s" : ""

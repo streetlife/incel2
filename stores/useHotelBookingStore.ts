@@ -6,6 +6,7 @@ import type {
   PreBookingData,
   RoomConfig,
 } from "../types/hotel";
+import { normalizeChildAge } from "../utils/hotel";
 
 export interface GuestDetail {
   type: "adult" | "child";
@@ -82,6 +83,14 @@ export const useHotelBookingStore = defineStore(
     const preBookResult = ref<any | null>(null);
     const prebookedRoomsKey = ref<string>("");
     const preBookTotalRate = ref<string>("");
+    // Updated rate received from the pre-book response `<BookingAfterPrice>` tag.
+    // Used for the booking request and to notify the user of a price change.
+    const bookingAfterPrice = ref<string>("");
+    const rateChange = ref<{
+      previousRate: number;
+      updatedRate: number;
+      currency: string;
+    } | null>(null);
 
     const nights = computed(() => {
       const { checkInStart, checkInEnd } = searchParams.value;
@@ -94,12 +103,30 @@ export const useHotelBookingStore = defineStore(
     });
 
     const priceBreakdown = computed(() => {
+      // Prefer the confirmed updated rate (from the pre-book `afterPrice` /
+      // `<BookingAfterPrice>` response) over the originally quoted room price,
+      // so the summary, review and payment all reflect the accepted price.
+      const confirmed = Number(bookingAfterPrice.value);
       const base =
-        (selectedRoom.value?.totalPrice ?? 0) * searchParams.value.totalRooms;
+        bookingAfterPrice.value && Number.isFinite(confirmed)
+          ? confirmed
+          : (selectedRoom.value?.totalPrice ?? 0) * searchParams.value.totalRooms;
       const baseNgn = Math.round(base);
       const tax = Math.round(baseNgn * TAX_RATE);
       const total = baseNgn + tax;
       return { baseUsd: base, baseNgn, tax, total };
+    });
+
+    // Per-room-per-night rate, reflecting the confirmed updated price when the
+    // user has accepted a rate change (otherwise the quoted price).
+    const effectivePricePerNight = computed(() => {
+      const confirmed = Number(bookingAfterPrice.value);
+      if (bookingAfterPrice.value && Number.isFinite(confirmed)) {
+        const rooms = searchParams.value.totalRooms || 1;
+        const nightsCount = nights.value || 1;
+        return confirmed / rooms / nightsCount;
+      }
+      return selectedRoom.value?.pricePerNight ?? 0;
     });
 
     function buildGuestList(rooms: RoomConfig[]): GuestDetail[] {
@@ -119,7 +146,7 @@ export const useHotelBookingStore = defineStore(
           list.push({
             type: "child",
             age: room.childAges?.[c] ?? 2,
-            title: "",
+            title: "Child",
             firstName: "",
             lastName: "",
             email: "",
@@ -175,6 +202,8 @@ export const useHotelBookingStore = defineStore(
         preBookResult.value = null;
         prebookedRoomsKey.value = "";
         preBookTotalRate.value = "";
+        bookingAfterPrice.value = "";
+        rateChange.value = null;
       }
     }
 
@@ -253,6 +282,10 @@ export const useHotelBookingStore = defineStore(
 
       preBookLoading.value = true;
       preBookError.value = "";
+      // Reset any prior rate-change state so a fresh pre-book never reuses a
+      // stale confirmed/declined price from a previous room selection.
+      rateChange.value = null;
+      bookingAfterPrice.value = "";
 
       try {
         // ── Validate required payload fields before sending ──
@@ -284,7 +317,7 @@ export const useHotelBookingStore = defineStore(
         );
         const roomsChildrenAges = searchParams.value.rooms.flatMap((r) =>
           (r.children ?? 0) > 0 && r.childAges?.length
-            ? r.childAges.slice(0, r.children)
+            ? r.childAges.slice(0, r.children).map((a) => normalizeChildAge(a))
             : [],
         );
 
@@ -319,6 +352,26 @@ export const useHotelBookingStore = defineStore(
         preBookResult.value = result;
         prebookedRoomsKey.value = roomsKey;
         preBookTotalRate.value = totalRate;
+
+        // ── Rate change detection via `<BookingAfterPrice>` ──
+        // The pre-book response may carry an updated rate that differs from the
+        // originally quoted total. If so, flag it so the UI can confirm with
+        // the user before proceeding (and the booking request must use it).
+        const afterPrice = extractBookingAfterPrice(result);
+        const previousRate = extractBeforePrice(result, totalRate);
+
+        if (
+          afterPrice !== undefined &&
+          Math.abs(afterPrice - previousRate) > 0.005
+        ) {
+          rateChange.value = {
+            previousRate,
+            updatedRate: afterPrice,
+            currency: searchParams.value.currency ?? "USD",
+          };
+        } else {
+          rateChange.value = null;
+        }
 
         return true;
       } catch (e: any) {
@@ -358,10 +411,10 @@ export const useHotelBookingStore = defineStore(
           if (g) {
             travellers.push({
               type: "CHILD",
-              title: g.title,
+              title: "Child",
               first_name: g.firstName,
               last_name: g.lastName,
-              age: g.age,
+              age: normalizeChildAge(g.age),
               room: roomIndex,
             });
           }
@@ -381,9 +434,37 @@ export const useHotelBookingStore = defineStore(
         rooms_key: prebookedRoomsKey.value || "",
         rooms_adults: roomsAdults,
         rooms_children: roomsChildren,
-        room_rates: preBookTotalRate.value,
+        room_rates: buildBookingRoomRates(),
         travellers,
       };
+    }
+
+    // When the user confirms an updated rate, re-distribute it across rooms so
+    // the booking request's pipeline-separated `room_rates` sums to the
+    // confirmed `<BookingAfterPrice>`. Without a change, keep the pre-book rate.
+    function buildBookingRoomRates(): string {
+      const updated = Number(bookingAfterPrice.value);
+      if (bookingAfterPrice.value && Number.isFinite(updated)) {
+        const roomCount =
+          searchParams.value.totalRooms || searchParams.value.rooms.length || 1;
+        return distributeRates(updated, roomCount, preBookTotalRate.value);
+      }
+      return preBookTotalRate.value;
+    }
+
+    // The user accepted the updated rate; persist it for the booking request.
+    function acceptRateChange(): void {
+      if (rateChange.value) {
+        bookingAfterPrice.value = String(rateChange.value.updatedRate);
+      }
+      rateChange.value = null;
+    }
+
+    // The user declined the updated rate; clear it and fall back to the
+    // originally quoted rate.
+    function declineRateChange(): void {
+      rateChange.value = null;
+      bookingAfterPrice.value = "";
     }
 
     async function submitGuests(): Promise<boolean> {
@@ -454,6 +535,8 @@ export const useHotelBookingStore = defineStore(
       preBookResult.value = null;
       prebookedRoomsKey.value = "";
       preBookTotalRate.value = "";
+      bookingAfterPrice.value = "";
+      rateChange.value = null;
       preBookError.value = "";
       searchParams.value = {
         country: "",
@@ -494,12 +577,17 @@ export const useHotelBookingStore = defineStore(
       preBookResult,
       prebookedRoomsKey,
       preBookTotalRate,
+      bookingAfterPrice,
+      rateChange,
       nights,
       priceBreakdown,
+      effectivePricePerNight,
       setHotel,
       fetchRooms,
       selectRoom,
       runPreBook,
+      acceptRateChange,
+      declineRateChange,
       submitGuests,
       generateInvoice,
       reset,
@@ -528,10 +616,98 @@ export const useHotelBookingStore = defineStore(
         "step",
         "prebookedRoomsKey",
         "preBookTotalRate",
+        "bookingAfterPrice",
       ],
     },
   },
 );
+
+// ── Rate helpers ────────────────────────────────────────────────────────────
+// The pre-book/booking payloads carry pipeline-separated (`|`) rates, one
+// segment per room. These helpers parse, sum, detect and re-distribute them so
+// the booking `room_rates` total always matches the confirmed rate.
+
+function parseRateParts(rate: string | number | null | undefined): number[] {
+  if (rate === null || rate === undefined) return [];
+  const parts: number[] = [];
+  for (const seg of String(rate).split("|")) {
+    const n = Number(seg);
+    if (Number.isFinite(n)) parts.push(n);
+  }
+  return parts;
+}
+
+function sumRates(parts: number[]): number {
+  return parts.reduce((s: number, n: number) => s + n, 0);
+}
+
+// Extract the updated rate from the pre-book response. The 3rd-party API wraps
+// it in a `<BookingAfterPrice>` tag; we accept several common serialisations to
+// stay backward compatible.
+function extractBookingAfterPrice(result: any): number | undefined {
+  const raw =
+    result?.afterPrice ??
+    result?.BookingAfterPrice ??
+    result?.bookingAfterPrice ??
+    result?.room?.afterPrice ??
+    result?.room?.BookingAfterPrice ??
+    result?.room?.bookingAfterPrice ??
+    result?.room?.booking_after_price;
+
+  if (raw === null || raw === undefined || raw === "") return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+// Extract the pre-change price. Prefer the explicit `beforePrice` field, then
+// fall back to the sum of the pipeline-separated `totalRate`.
+function extractBeforePrice(
+  result: any,
+  totalRate?: string | number | null,
+): number {
+  const raw =
+    result?.beforePrice ??
+    result?.room?.beforePrice ??
+    result?.room?.BookingBeforePrice;
+  if (raw !== null && raw !== undefined && raw !== "") {
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n;
+  }
+  return sumRates(parseRateParts(totalRate));
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+// Build a pipeline-separated `room_rates` string whose segments sum exactly to
+// `total`. When the original rate has one segment per room, scale them
+// proportionally; otherwise split the total evenly. This keeps the booking
+// request's `room_rates` total equal to the confirmed `<BookingAfterPrice>`.
+function distributeRates(
+  total: number,
+  roomCount: number,
+  originalRate?: string,
+): string {
+  const count = Math.max(1, roomCount);
+  const parts = originalRate ? parseRateParts(originalRate) : [];
+
+  if (parts.length === count) {
+    const oldSum = sumRates(parts);
+    if (oldSum > 0) {
+      const scaled = parts.map((p) => round2((p / oldSum) * total));
+      const last = scaled.length - 1;
+      scaled[last] = round2(scaled[last] + (total - sumRates(scaled)));
+      return scaled.join("|");
+    }
+  }
+
+  const per = round2(total / count);
+  const arr: number[] = new Array(count).fill(per);
+  const last = arr.length - 1;
+  arr[last] = round2(arr[last] + (total - per * count));
+  return arr.join("|");
+}
 
 function extractBoardType(desc: string): string {
   if (!desc) return "Room Only";

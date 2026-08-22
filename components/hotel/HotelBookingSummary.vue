@@ -158,7 +158,7 @@ const guestBreakdown = computed(() => {
 
       <div class="flex justify-between text-sm text-slate-600">
         <span>
-          {{ format(store.selectedRoom.pricePerNight) }}/night ×
+          {{ format(store.effectivePricePerNight) }}/night ×
           {{ store.nights }} night{{ store.nights !== 1 ? "s" : "" }} ×
           {{ store.searchParams.totalRooms }} room{{
             store.searchParams.totalRooms !== 1 ? "s" : ""

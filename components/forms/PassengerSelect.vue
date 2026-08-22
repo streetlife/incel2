@@ -47,7 +47,7 @@
         v-if="open"
         ref="dropdownRef"
         :style="dropdownStyle"
-        class="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 space-y-4"
+        class="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 space-y-4"
       >
         <div
           v-for="category in activeCategories"
@@ -249,6 +249,7 @@ const emit = defineEmits<{
 const attrs = useAttrs()
 
 const open = ref(false)
+const openAbove = ref(false)
 const triggerRef = ref<HTMLElement>()
 const dropdownRef = ref<HTMLElement>()
 const dropdownStyle = ref<Record<string, string>>({})
@@ -293,20 +294,18 @@ const displayText = computed(() => {
 const calculateDropdownPosition = (): void => {
   if (!triggerRef.value) return
 
+  // Position in document coordinates (absolute) so the dropdown scrolls
+  // natively with the page instead of lagging behind a fixed-position element.
   const rect = triggerRef.value.getBoundingClientRect()
-  const dropdownHeight = 350
+  const dropdownHeight = dropdownRef.value?.offsetHeight || 0
   const padding = 8
-  const spaceBelow = window.innerHeight - rect.bottom
-  const spaceAbove = rect.top
-
-  const openAbove = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
 
   dropdownStyle.value = {
     width: `${rect.width}px`,
-    left: `${rect.left}px`,
-    top: openAbove 
-      ? `${rect.top - dropdownHeight - padding}px` 
-      : `${rect.bottom + padding}px`,
+    left: `${rect.left + window.scrollX}px`,
+    top: openAbove.value
+      ? `${rect.top + window.scrollY - dropdownHeight - padding}px`
+      : `${rect.bottom + window.scrollY + padding}px`,
   }
 }
 
@@ -329,12 +328,15 @@ const toggleDropdown = async (): Promise<void> => {
   open.value = !open.value
   if (open.value) {
     await nextTick()
-    calculateDropdownPosition()
-  }
-}
-
-const updatePosition = (): void => {
-  if (open.value) {
+    // Decide placement direction once (using the rendered height) so the
+    // dropdown does not flip back and forth while the user scrolls.
+    const rect = triggerRef.value?.getBoundingClientRect()
+    if (rect) {
+      const dropdownHeight = dropdownRef.value?.offsetHeight || 0
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+      openAbove.value = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
+    }
     calculateDropdownPosition()
   }
 }
@@ -434,8 +436,7 @@ watch(() => props.mode, () => {
 })
 
 onMounted(() => {
-  window.addEventListener('scroll', updatePosition, true)
-  window.addEventListener('resize', updatePosition)
+  window.addEventListener('resize', calculateDropdownPosition)
   
   if (Object.keys(counts.value).length === 0) {
     const initialCounts: Record<string, number> = {}
@@ -447,7 +448,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('scroll', updatePosition, true)
-  window.removeEventListener('resize', updatePosition)
+  window.removeEventListener('resize', calculateDropdownPosition)
 })
 </script>

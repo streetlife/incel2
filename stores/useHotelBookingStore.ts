@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { useHotelService } from "../services/hotel.service";
 import type {
   CreateBookingData,
@@ -549,6 +549,15 @@ export const useHotelBookingStore = defineStore(
         nationality: "",
         currency: "USD",
       };
+
+      // Remove the persisted key so no empty booking state lingers in
+      // localStorage (the unstorage plugin re-writes state on every mutation,
+      // so this must run after that write flushes).
+      nextTick(() => {
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem("pinia:hotelBooking");
+        }
+      });
     }
 
     return {

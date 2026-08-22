@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, nextTick } from "vue";
 import type {
   HotelResult,
   HotelSearchFilters,
@@ -94,6 +94,15 @@ export const useHotelSearchStore = defineStore(
       hasSearched.value = false;
       currentPage.value = 1;
       sortKey.value = "price_asc";
+
+      // Remove the persisted key so no empty search state lingers in
+      // localStorage (the unstorage plugin re-writes state on every mutation,
+      // so this must run after that write flushes).
+      nextTick(() => {
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem("pinia:hotelSearch");
+        }
+      });
     }
 
     return {

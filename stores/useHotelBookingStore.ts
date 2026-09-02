@@ -490,9 +490,13 @@ export const useHotelBookingStore = defineStore(
         const payload = buildBookingPayload();
         const result = await createBooking(payload);
 
+        // The booking code is returned by the create-booking API on success.
+        // Accept several common field names to remain backward compatible.
         bookingReference.value =
+          (result as any)?.booking_code ||
           (result as any)?.booking_reference ||
           (result as any)?.reference ||
+          (result as any)?.rezliveBookingCode ||
           (result as any)?.id ||
           "";
         status.value = "confirmed";
@@ -631,11 +635,6 @@ export const useHotelBookingStore = defineStore(
   },
 );
 
-// ── Rate helpers ────────────────────────────────────────────────────────────
-// The pre-book/booking payloads carry pipeline-separated (`|`) rates, one
-// segment per room. These helpers parse, sum, detect and re-distribute them so
-// the booking `room_rates` total always matches the confirmed rate.
-
 function parseRateParts(rate: string | number | null | undefined): number[] {
   if (rate === null || rate === undefined) return [];
   const parts: number[] = [];
@@ -650,9 +649,6 @@ function sumRates(parts: number[]): number {
   return parts.reduce((s: number, n: number) => s + n, 0);
 }
 
-// Extract the updated rate from the pre-book response. The 3rd-party API wraps
-// it in a `<BookingAfterPrice>` tag; we accept several common serialisations to
-// stay backward compatible.
 function extractBookingAfterPrice(result: any): number | undefined {
   const raw =
     result?.afterPrice ??
@@ -668,8 +664,6 @@ function extractBookingAfterPrice(result: any): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-// Extract the pre-change price. Prefer the explicit `beforePrice` field, then
-// fall back to the sum of the pipeline-separated `totalRate`.
 function extractBeforePrice(
   result: any,
   totalRate?: string | number | null,
@@ -689,10 +683,6 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-// Build a pipeline-separated `room_rates` string whose segments sum exactly to
-// `total`. When the original rate has one segment per room, scale them
-// proportionally; otherwise split the total evenly. This keeps the booking
-// request's `room_rates` total equal to the confirmed `<BookingAfterPrice>`.
 function distributeRates(
   total: number,
   roomCount: number,

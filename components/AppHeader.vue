@@ -412,6 +412,13 @@
                     d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                   <path
+                    v-else-if="link.name === 'My Booking'"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                  <path
                     v-else-if="link.name === 'Contact'"
                     stroke-linecap="round"
                     stroke-linejoin="round"
@@ -748,6 +755,7 @@ const navLinks: NavLink[] = [
       { name: "Car Hire", path: "/services/car-hire" },
     ],
   },
+  { name: "My Booking", path: "/my-booking" },
   { name: "Contact", path: "/contact" },
 ];
 
@@ -756,6 +764,7 @@ const isMainPage = computed(() => {
     "/",
     "/about-us",
     "/contact",
+    "/my-booking",
     "/travel/flights",
     "/travel/packages",
     "/travel/hotels",

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useHotelBookingStore } from "../../stores/useHotelBookingStore";
 import { useCurrency } from "../../composables/useCurrency";
@@ -54,6 +54,33 @@ function bookAnother() {
 function handlePrint() {
   globalThis.print();
 }
+
+const copied = ref(false);
+
+async function copyBookingCode() {
+  const code = store.bookingReference;
+  if (!code) return;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(code);
+    } else {
+      // Fallback for older browsers / non-secure contexts.
+      const textarea = document.createElement("textarea");
+      textarea.value = code;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    }
+    copied.value = true;
+    setTimeout(() => (copied.value = false), 2000);
+  } catch {
+    // Ignore clipboard errors — the code is still visible on screen.
+  }
+}
 </script>
 
 <template>
@@ -79,11 +106,28 @@ function handlePrint() {
       <p class="text-green-100 text-sm mb-4">
         Your hotel has been booked successfully.
       </p>
-      <div class="inline-block bg-white/20 rounded-xl px-5 py-2">
-        <p class="text-xs text-green-100 mb-0.5">Booking Reference</p>
-        <p class="text-2xl font-bold text-white font-mono tracking-widest">
-          {{ store.bookingReference }}
-        </p>
+      <div class="inline-flex flex-col items-center bg-white/20 rounded-xl px-5 py-2">
+        <p class="text-xs text-green-100 mb-0.5">Booking Code</p>
+        <div class="flex items-center gap-2">
+          <p class="text-2xl font-bold text-white font-mono tracking-widest">
+            {{ store.bookingReference }}
+          </p>
+          <button
+            type="button"
+            class="shrink-0 w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 transition-colors flex items-center justify-center text-white cursor-pointer"
+            :title="copied ? 'Copied!' : 'Copy booking code'"
+            :aria-label="copied ? 'Copied' : 'Copy booking code'"
+            @click="copyBookingCode"
+          >
+            <svg v-if="!copied" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20,6 9,17 4,12" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 

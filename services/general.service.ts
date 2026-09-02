@@ -29,6 +29,12 @@ import {
   TravelInsuranceData,
   TravelInsuranceResponse,
 } from "../types/general";
+import type {
+  BookingInfoResponse,
+  BookingSearchParams,
+  CancelBookingData,
+  CancelBookingResponse,
+} from "../types/booking";
 import { useApi } from "../utils/api";
 
 export function useGeneralService() {
@@ -254,6 +260,32 @@ export function useGeneralService() {
         },
       );
       return res.data.rate;
+    },
+
+    async getBookingInfo(
+      params: BookingSearchParams,
+    ): Promise<BookingInfoResponse> {
+      const res = await $api<ApiResponse<BookingInfoResponse>>(
+        "/services/booking-info",
+        {
+          method: "GET",
+          query: { bookingCode: params.bookingCode, type: params.type },
+        },
+      );
+      return res.data;
+    },
+
+    async cancelHotelBooking(
+      data: CancelBookingData,
+    ): Promise<CancelBookingResponse> {
+      const res = await $api<ApiResponse<CancelBookingResponse>>(
+        "/hotels/cancel",
+        {
+          method: "POST",
+          body: data,
+        },
+      );
+      return res.data;
     },
   };
 }

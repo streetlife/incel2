@@ -31,6 +31,8 @@ export interface HotelBookingDetail {
   occupancy: HotelOccupancy
   guests: HotelGuest[]
   rezliveBookingCode: string
+  bookingCode: string
+  status: string
 }
 
 export interface BookingInfoResponse {
@@ -42,6 +44,7 @@ export interface BookingInfoResponse {
 export interface CancelBookingData {
   booking_id: string
   booking_code: string
+  code: string
 }
 
 export interface CancelBookingResponse {

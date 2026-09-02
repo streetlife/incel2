@@ -70,6 +70,8 @@ const totalGuests = computed(() => {
   return hotelBooking.value.guests.length
 })
 
+const isCancelled = computed(() => hotelBooking.value?.status === 'cancelled')
+
 async function handleSearch() {
   if (!bookingCode.value.trim()) {
     searchError.value = 'Please enter a booking code.'
@@ -102,6 +104,7 @@ async function handleCancel() {
     await generalService.cancelHotelBooking({
       booking_id: hotelBooking.value.rezliveBookingId,
       booking_code: hotelBooking.value.rezliveBookingCode,
+      code: hotelBooking.value.bookingCode
     })
     
     showCancelModal.value = false
@@ -303,10 +306,12 @@ function resetSearch() {
                 </div>
                 <span
                   class="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full"
-                  style="background: rgba(74,222,128,0.2); color: #4ade80"
+                  :style="isCancelled
+                    ? 'background: rgba(239,68,68,0.15); color: #ef4444'
+                    : 'background: rgba(74,222,128,0.2); color: #4ade80'"
                 >
-                  <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                  Confirmed
+                  <span :class="['w-2 h-2 rounded-full', isCancelled ? 'bg-red-500' : 'bg-green-400 animate-pulse']" />
+                  {{ isCancelled ? 'Cancelled' : 'Confirmed' }}
                 </span>
               </div>
 
@@ -436,6 +441,7 @@ function resetSearch() {
             </p>
           </div>
           <button
+            v-if="!isCancelled"
             @click="showCancelModal = true"
             class="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition-all duration-300"
             style="background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 4px 15px rgba(239,68,68,0.3)"
@@ -443,6 +449,13 @@ function resetSearch() {
             <X class="w-5 h-5" />
             Cancel Booking
           </button>
+          <span
+            v-else
+            class="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-gray-400 bg-gray-100"
+          >
+            <CircleCheck class="w-5 h-5" />
+            Already Cancelled
+          </span>
         </div>
       </div>
 
@@ -463,7 +476,6 @@ function resetSearch() {
       </div>
     </section>
 
-    <!-- ── Cancel Confirmation Modal ───────────────────────────────── -->
     <Transition name="fade">
       <div
         v-if="showCancelModal"

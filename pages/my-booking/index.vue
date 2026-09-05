@@ -11,6 +11,7 @@ import {
   FileText,
   Search,
   ChevronDown,
+  Info,
   ChevronLeft,
   MapPin,
   Hash,
@@ -53,11 +54,11 @@ const showCancelModal = ref(false)
 const cancelling = ref(false)
 const { format } = useCurrency();
 
-const typeOptions: { value: BookingType; label: string }[] = [
+const typeOptions: { value: BookingType; label: string; disabled?: boolean }[] = [
   { value: 'hotel', label: 'Hotel' },
-  { value: 'flight', label: 'Flight' },
-  { value: 'tour', label: 'Tour' },
-  { value: 'visa', label: 'Visa' },
+  { value: 'flight', label: 'Flight (Coming soon)', disabled: true },
+  { value: 'tour', label: 'Tour (Coming soon)', disabled: true },
+  { value: 'visa', label: 'Visa (Coming soon)', disabled: true },
 ]
 
 const hotelBooking = computed<HotelBookingDetail | null>(() => {
@@ -91,7 +92,7 @@ async function handleSearch() {
     resultSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   } catch (err) {
     const apiErr = parseApiError(err)
-    searchError.value = apiErr.userMessage || 'Booking not found. Please check your booking code and type.'
+    searchError.value = apiErr.userMessage || 'Booking not found. Please check your booking code.'
   } finally {
     searching.value = false
   }
@@ -213,7 +214,7 @@ function resetSearch() {
                 </p>
               </div>
 
-              <!-- <div>
+              <div>
                 <label for="booking-type" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                   Booking Type
                 </label>
@@ -223,13 +224,26 @@ function resetSearch() {
                     v-model="bookingType"
                     class="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 appearance-none focus:outline-none focus:border-transparent transition pr-10 bg-white"
                   >
-                    <option v-for="opt in typeOptions" :key="opt.value" :value="opt.value">
+                    <option
+                      v-for="opt in typeOptions"
+                      :key="opt.value"
+                      :value="opt.value"
+                      :disabled="opt.disabled"
+                      :class="opt.disabled ? 'text-gray-400 bg-gray-50' : 'text-gray-800'"
+                    >
                       {{ opt.label }}
                     </option>
                   </select>
                   <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
-              </div> -->
+              </div>
+
+              <div class="flex items-start gap-2.5 p-3 rounded-xl bg-blue-50/80 border border-blue-100 text-slate-700">
+                <Info class="w-4 h-4 text-[#0168a7] flex-shrink-0 mt-0.5" />
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  <span class="font-semibold text-slate-900">Notice:</span> Only hotel booking search is currently supported. Flights, tours, and visas will be available soon.
+                </p>
+              </div>
 
               <button
                 type="submit"

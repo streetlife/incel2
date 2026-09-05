@@ -213,7 +213,7 @@ function resetSearch() {
                 </p>
               </div>
 
-              <div>
+              <!-- <div>
                 <label for="booking-type" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                   Booking Type
                 </label>
@@ -229,7 +229,7 @@ function resetSearch() {
                   </select>
                   <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
-              </div>
+              </div> -->
 
               <button
                 type="submit"

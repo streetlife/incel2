@@ -12,15 +12,9 @@ const route = useRoute();
 const router = useRouter();
 const store = useHotelBookingStore();
 
-/**
- * Fill empty searchParams and sessionId fields from the URL query string.
- * Called after setHotel() to patch any fields that arrived empty from
- * sessionStorage.  Also runs on page refresh (when bookingFresh is false).
- */
 function hydrateFromUrl(query: Record<string, any>) {
   const sp = store.searchParams;
 
-  // Data-driven hydrators — each tuple is [current, urlKey, setter]
   const strFields: [string | undefined, string, (v: any) => void][] = [
     [sp.checkInStart, "checkInStart", (v) => (sp.checkInStart = v)],
     [sp.checkInEnd, "checkInEnd", (v) => (sp.checkInEnd = v)],

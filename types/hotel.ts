@@ -133,6 +133,7 @@ export interface CreateBookingData {
   rooms_children: number[];
   room_rates: string;
   travellers: ITraveller[];
+  amount?: number | string;
 }
 
 interface ITraveller {

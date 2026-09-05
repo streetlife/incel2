@@ -383,7 +383,9 @@ export const useHotelBookingStore = defineStore(
       }
     }
 
-    function buildBookingPayload(): CreateBookingData {
+    function buildBookingPayload(
+      overrideAmount?: number | string,
+    ): CreateBookingData {
       const roomsAdults = searchParams.value.rooms.map((r) => r.adults ?? 0);
       const roomsChildren = searchParams.value.rooms.map(
         (r) => r.children ?? 0,
@@ -436,6 +438,7 @@ export const useHotelBookingStore = defineStore(
         rooms_children: roomsChildren,
         room_rates: buildBookingRoomRates(),
         travellers,
+        amount: overrideAmount ?? (priceBreakdown.value.total || 0),
       };
     }
 
@@ -467,7 +470,9 @@ export const useHotelBookingStore = defineStore(
       bookingAfterPrice.value = "";
     }
 
-    async function submitGuests(): Promise<boolean> {
+    async function submitGuests(
+      overrideAmount?: number | string,
+    ): Promise<boolean> {
       const { createBooking } = useHotelService();
 
       if (!selectedRoom.value) {
@@ -487,7 +492,7 @@ export const useHotelBookingStore = defineStore(
       }
 
       try {
-        const payload = buildBookingPayload();
+        const payload = buildBookingPayload(overrideAmount);
         const result = await createBooking(payload);
 
         // The booking code is returned by the create-booking API on success.
@@ -601,6 +606,7 @@ export const useHotelBookingStore = defineStore(
       runPreBook,
       acceptRateChange,
       declineRateChange,
+      buildBookingPayload,
       submitGuests,
       generateInvoice,
       reset,

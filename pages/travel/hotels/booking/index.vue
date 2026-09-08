@@ -159,7 +159,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-100 pt-36 pb-16 sm:px-24 px-4">
+  <div class="min-h-screen bg-slate-100 pt-44 pb-16 sm:px-24 px-4">
     <div class="max-w-6xl mx-auto">
       <div class="mb-8">
         <button

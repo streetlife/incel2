@@ -5,7 +5,7 @@ import { useHotelBookingStore } from "../../stores/useHotelBookingStore";
 import AppToast from "../toast/AppToast.vue";
 import { useToast } from "../../composables/useToast";
 
-const emit = defineEmits<{ (e: "next"): void; (e: "back"): void }>();
+const emit = defineEmits<{ (e: "next"): void }>();
 const store = useHotelBookingStore();
 const { format } = useCurrency();
 const toast = useToast();
@@ -464,16 +464,9 @@ async function proceed() {
       </div>
     </Transition>
 
-    <div class="flex gap-3">
+    <div>
       <button
-        class="flex-1 h-12 border-2 border-slate-200 text-slate-700 font-semibold rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer bg-white disabled:opacity-50"
-        :disabled="isSubmitting"
-        @click="emit('back')"
-      >
-        ← Back
-      </button>
-      <button
-        class="flex-[2] h-12 bg-primary hover:opacity-90 text-white font-bold rounded-2xl transition-all border-none cursor-pointer shadow-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+        class="w-full h-12 bg-primary hover:opacity-90 text-white font-bold rounded-2xl transition-all border-none cursor-pointer shadow-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         :disabled="isSubmitting"
         @click="proceed"
       >

@@ -4,7 +4,7 @@ import { useHotelBookingStore } from "../../stores/useHotelBookingStore";
 import { useHotelService } from "../../services/hotel.service";
 import { useCurrency } from "../../composables/useCurrency";
 
-const emit = defineEmits<{ (e: "back"): void }>();
+const emit = defineEmits<Record<string, never>>();
 const store = useHotelBookingStore();
 const { paystackPayment, flutterwavePayment } = useHotelService();
 const { format, formatNumber, currentConfig } = useCurrency();
@@ -260,16 +260,9 @@ async function handlePay() {
       </div>
     </Transition>
 
-    <div class="flex gap-3">
+    <div>
       <button
-        class="flex-1 h-14 border-2 border-slate-200 text-slate-700 font-semibold rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer bg-white disabled:opacity-50"
-        :disabled="loading"
-        @click="emit('back')"
-      >
-        ← Back
-      </button>
-      <button
-        class="flex-[2] h-14 font-bold rounded-2xl transition-all border-none cursor-pointer shadow-lg flex items-center justify-center gap-2 text-white disabled:opacity-60 disabled:cursor-not-allowed"
+        class="w-full h-14 font-bold rounded-2xl transition-all border-none cursor-pointer shadow-lg flex items-center justify-center gap-2 text-white disabled:opacity-60 disabled:cursor-not-allowed"
         :style="`background: ${meta.color}`"
         :disabled="loading"
         @click="handlePay"

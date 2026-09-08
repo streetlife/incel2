@@ -4,7 +4,6 @@ import { useHotelBookingStore } from "../../stores/useHotelBookingStore";
 import { useHotelService } from "../../services/hotel.service";
 import { useCurrency } from "../../composables/useCurrency";
 
-const emit = defineEmits<Record<string, never>>();
 const store = useHotelBookingStore();
 const { paystackPayment, flutterwavePayment } = useHotelService();
 const { format, formatNumber, currentConfig } = useCurrency();

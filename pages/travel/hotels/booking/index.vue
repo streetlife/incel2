@@ -163,6 +163,7 @@ onMounted(() => {
     <div class="max-w-6xl mx-auto">
       <div class="mb-8">
         <button
+          v-if="store.step !== 3"
           type="button"
           class="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors cursor-pointer bg-transparent border-none p-0 mb-4"
           @click="goBack"
@@ -258,7 +259,6 @@ onMounted(() => {
             <HotelBookingReview
               v-else-if="store.step === 3"
               @next="goNext"
-              @back="goBack"
             />
             <HotelPaymentForm v-else-if="store.step === 4" @back="goBack" />
           </Transition>

@@ -124,6 +124,9 @@ export function useFlights() {
     watch(
         () => route.query,
         async (q) => {
+
+            if (loading.value) return
+
             if (!q.from || !q.to) return
 
             if (q.session_code) {

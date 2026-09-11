@@ -50,13 +50,10 @@ const guestBreakdown = computed(() => {
 
 const isSubmitting = computed(() => store.status === "submitting");
 
-async function proceed() {
+function proceed() {
   store.generateInvoice();
-  const ok = await store.submitGuests();
-  if (ok) {
-    toast.success("Booking confirmed! Proceeding to payment…");
-    emit("next");
-  }
+  toast.success("Proceeding to payment…");
+  emit("next");
 }
 </script>
 

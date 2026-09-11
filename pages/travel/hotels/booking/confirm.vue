@@ -7,21 +7,21 @@ import { useHotelSearchStore } from '../../../../stores/hotel'
 
 const route = useRoute()
 const router = useRouter()
+const store = useHotelBookingStore()
+const searchStore = useHotelSearchStore()
 
 const status = ref<'verifying' | 'success' | 'failed'>('verifying')
 const message = ref('')
 
 function cleanupBookingState() {
-  const bookingStore = useHotelBookingStore()
-  const searchStore = useHotelSearchStore()
-  bookingStore.reset()
+  store.reset()
   searchStore.clearResults()
   sessionStorage.removeItem('hotelSessionCode')
   sessionStorage.removeItem('hotelSessionId')
   sessionStorage.removeItem('selectedHotel')
 }
 
-// Clean up when user navigates away via menu/back instead of "Book Another"
+// Clean up when user navigates away
 onBeforeRouteLeave((_to, _from) => {
   if (status.value === 'success') {
     cleanupBookingState()
@@ -46,7 +46,19 @@ onMounted(async () => {
   }
 
   try {
-    status.value = 'success'
+    // Restore persisted booking state before creating the booking: after the
+    // gateway redirect the page fully reloads and Pinia hydrates async.
+    store.hydrateFromStorage()
+
+    const ok = await store.submitGuests()
+    if (ok) {
+      status.value = 'success'
+    } else {
+      status.value = 'failed'
+      message.value =
+        store.errorMessage ||
+        'Your payment was received, but we could not create your booking. Please contact support.'
+    }
   } catch (e: any) {
     status.value  = 'failed'
     message.value = e.message ?? 'Could not verify payment. Contact support.'

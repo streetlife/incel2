@@ -204,6 +204,13 @@ export const useHotelBookingStore = defineStore(
         preBookTotalRate.value = "";
         bookingAfterPrice.value = "";
         rateChange.value = null;
+        // Clear completed-booking artifacts so a new search starts fresh
+        // (keeps the idempotent submitGuests guard from skipping a new
+        // booking due to stale state).
+        bookingReference.value = "";
+        invoiceNumber.value = "";
+        invoiceDate.value = "";
+        voucherUrl.value = "";
       }
     }
 
@@ -216,15 +223,30 @@ export const useHotelBookingStore = defineStore(
         const res = await getHotelById(code, hotelId);
         const hotelData = res?.hotel ?? (res as any);
 
+        // The rate quoted in the search response (`hotel.price`) is what the
+        // user was shown and accepted. The hotel-detail response can carry a
+        // different `price`, which previously caused the pre-book `total_rate`
+        // to diverge from the search rate. Capture the search rate before
+        // merging the detail and keep it as the canonical quoted rate so
+        // search, room pricing and pre-book stay consistent.
+        const searchRate: number = Number(hotel.value?.price) || 0;
+
         // Persist the full hotel detail
         if (hotelData?.hotel_id) {
           hotel.value = { ...hotel.value, ...hotelData };
+          // Preserve the search-quoted rate (the detail `price` may differ).
+          if (searchRate > 0) {
+            hotel.value.price = searchRate;
+          }
         }
 
         const roomTypes: string[] = hotelData?.roomType ?? [];
         const bookingKey: string = hotelData?.BookingKey ?? "";
         const boardBasis: string[] = hotelData?.board_basis ?? [];
-        const totalPrice: number = hotelData?.price ?? 0;
+        // Use the search-quoted rate; fall back to the detail rate for
+        // backward compatibility when no search `price` was available.
+        const totalPrice: number =
+          searchRate > 0 ? searchRate : (hotelData?.price ?? 0);
 
         if (roomTypes.length > 0) {
           availableRooms.value = roomTypes.map((type) => ({
@@ -475,6 +497,10 @@ export const useHotelBookingStore = defineStore(
     ): Promise<boolean> {
       const { createBooking } = useHotelService();
 
+      if (bookingReference.value) {
+        return true;
+      }
+
       if (!selectedRoom.value) {
         status.value = "error";
         errorMessage.value =
@@ -495,8 +521,6 @@ export const useHotelBookingStore = defineStore(
         const payload = buildBookingPayload(overrideAmount);
         const result = await createBooking(payload);
 
-        // The booking code is returned by the create-booking API on success.
-        // Accept several common field names to remain backward compatible.
         bookingReference.value =
           (result as any)?.booking_code ||
           (result as any)?.booking_reference ||
@@ -515,12 +539,59 @@ export const useHotelBookingStore = defineStore(
     }
 
     function generateInvoice() {
-      invoiceNumber.value = `HTL-${Date.now().toString(36).toUpperCase()}`;
-      invoiceDate.value = new Date().toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
+
+      if (!invoiceNumber.value) {
+        invoiceNumber.value = `HTL-${Date.now().toString(36).toUpperCase()}`;
+      }
+      if (!invoiceDate.value) {
+        invoiceDate.value = new Date().toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+      }
+    }
+
+    function hydrateFromStorage() {
+      if (typeof window === "undefined") return;
+      // Already hydrated (e.g. SPA-internal navigation): leave state untouched.
+      if (selectedRoom.value || bookingReference.value) return;
+
+      try {
+        const raw = window.localStorage.getItem("pinia:hotelBooking");
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== "object") return;
+
+        // Restore the persisted fields that the unstorage plugin stores
+        const persisted: Record<string, { value: unknown }> = {
+          hotel,
+          sessionCode,
+          sessionId,
+          searchParams,
+          selectedRoom,
+          guests,
+          contactEmail,
+          contactPhone,
+          isLoggedIn,
+          accountName,
+          invoiceNumber,
+          invoiceDate,
+          bookingReference,
+          voucherUrl,
+          status,
+          errorMessage,
+          step,
+          prebookedRoomsKey,
+          preBookTotalRate,
+          bookingAfterPrice,
+        };
+        for (const key of Object.keys(persisted)) {
+          if (data[key] != null) persisted[key].value = data[key];
+        }
+      } catch {
+        // Ignore malformed / legacy storage.
+      }
     }
 
     function reset() {
@@ -609,6 +680,7 @@ export const useHotelBookingStore = defineStore(
       buildBookingPayload,
       submitGuests,
       generateInvoice,
+      hydrateFromStorage,
       reset,
     };
   },

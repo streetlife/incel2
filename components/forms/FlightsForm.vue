@@ -4,10 +4,12 @@ import AirportSelect from "../AirportSelect.vue";
 import DateInput from "./DateInput.vue";
 import PassengerSelect from "./PassengerSelect.vue";
 import { navigateTo, useRoute } from "nuxt/app";
-import { useFlights } from "../../composables/useFlights";
+import { useFlightStore } from "../../stores/flight";
 
 const route = useRoute();
-const { hasSearched, showSearchForm } = useFlights();
+const flightStore = useFlightStore();
+const hasSearched = computed({ get: () => flightStore.hasSearched, set: (v) => { flightStore.hasSearched = v } })
+const showSearchForm = computed({ get: () => flightStore.showSearchForm, set: (v) => { flightStore.showSearchForm = v } })
 
 const emit = defineEmits<{
   search: [searchData: any];

@@ -41,10 +41,11 @@ export function parseApiError(err: unknown): AppApiError {
     return new AppApiError({ message, status, errors: b.errors }, status);
   }
 
-  const message =
-    err instanceof Error
-      ? err.message
-      : "Something went wrong. Please try again.";
+  const message = isNetworkError(err)
+    ? "Unable to reach the server. Please check your connection and try again."
+    : err instanceof Error
+    ? err.message
+    : "Something went wrong. Please try again.";
   return new AppApiError({ message, status }, status);
 }
 
@@ -131,8 +132,22 @@ export function useApi() {
   return instance;
 }
 
+function isNetworkError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return (
+    msg.includes("failed to fetch") ||
+    msg.includes("network error") ||
+    msg.includes("no response") ||
+    msg.includes("err_failed") ||
+    msg.includes("load failed")
+  );
+}
+
 export function normaliseError(err: unknown): string {
   if (err instanceof AppApiError) return err.userMessage;
+  if (isNetworkError(err))
+    return "Unable to reach the server. Please check your connection and try again.";
   if (err instanceof Error) return err.message;
   return "Something went wrong. Please try again.";
 }

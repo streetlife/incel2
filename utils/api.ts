@@ -90,11 +90,10 @@ export function useApi() {
 
       const body: ApiError = {
         message: isServerError
-          ? data?.message ||
-            "An unexpected error occurred. Please try again later."
+          ? "Something went wrong on our end. Please try again later."
           : Object.values(data?.errors ?? {}).flat()[0] ||
-            data?.message ||
-            "An unexpected error occurred.",
+          data?.message ||
+          "An unexpected error occurred.",
         status,
         errors: isServerError ? undefined : data?.errors,
       };

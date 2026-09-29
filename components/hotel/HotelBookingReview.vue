@@ -184,9 +184,7 @@ function proceed() {
               <span
                 class="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full"
                 :class="
-                  store.selectedRoom?.cancellationPolicy.includes(
-                    'Non-refundable',
-                  )
+                  store.isNonRefundable
                     ? 'bg-red-50 text-red-600'
                     : 'bg-teal-50 text-teal-700'
                 "
@@ -197,20 +195,14 @@ function proceed() {
                   viewBox="0 0 24 24"
                   fill="none"
                   :stroke="
-                    store.selectedRoom?.cancellationPolicy.includes(
-                      'Non-refundable',
-                    )
+                    store.isNonRefundable
                       ? '#dc2626'
                       : '#0d9488'
                   "
                   stroke-width="2.5"
                 >
                   <path
-                    v-if="
-                      !store.selectedRoom?.cancellationPolicy.includes(
-                        'Non-refundable',
-                      )
-                    "
+                    v-if="!store.isNonRefundable"
                     d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
                   />
                   <template v-else>
@@ -218,7 +210,7 @@ function proceed() {
                     <line x1="6" y1="6" x2="18" y2="18" />
                   </template>
                 </svg>
-                {{ store.selectedRoom?.cancellationPolicy }}
+                {{ store.cancellationPolicyText || store.selectedRoom?.cancellationPolicy }}
               </span>
               <span
                 class="inline-flex items-center text-[11px] font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-700"
@@ -286,6 +278,84 @@ function proceed() {
             </p>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Hotel fees paid at check-in -->
+    <div
+      v-if="store.hotelFees.length > 0"
+      class="bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden"
+    >
+      <div class="px-5 py-3.5 border-b border-amber-200 flex items-center gap-2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <p class="text-sm font-semibold text-amber-800">Additional Hotel Fees</p>
+      </div>
+      <div class="px-5 py-4 space-y-2">
+        <p class="text-xs text-amber-700 mb-3">
+          The following fees are paid directly to the hotel at check-in and are <strong>not included</strong> in the amount charged by us:
+        </p>
+        <div
+          v-for="(fee, i) in store.hotelFees"
+          :key="i"
+          class="flex justify-between text-sm"
+        >
+          <span class="text-amber-800">{{ fee.description }}</span>
+          <span class="font-semibold text-amber-900">{{ fee.amount }} {{ fee.currency }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cancellation Policy & Terms -->
+    <div
+      v-if="store.preBookCancellationInfo"
+      class="rounded-2xl overflow-hidden border"
+      :class="store.isNonRefundable ? 'border-red-200 bg-red-50' : 'border-teal-200 bg-teal-50'"
+    >
+      <div
+        class="px-5 py-3.5 border-b flex items-center gap-2"
+        :class="store.isNonRefundable ? 'border-red-200' : 'border-teal-200'"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+          :stroke="store.isNonRefundable ? '#dc2626' : '#0d9488'"
+          stroke-width="2"
+        >
+          <path
+            v-if="!store.isNonRefundable"
+            d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+          />
+          <template v-else>
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </template>
+        </svg>
+        <p
+          class="text-sm font-semibold"
+          :class="store.isNonRefundable ? 'text-red-800' : 'text-teal-800'"
+        >
+          Cancellation Policy
+        </p>
+      </div>
+      <div class="px-5 py-4 space-y-2">
+        <p
+          class="text-sm font-medium"
+          :class="store.isNonRefundable ? 'text-red-800' : 'text-teal-800'"
+        >
+          {{ store.cancellationPolicyText }}
+        </p>
+        <template v-if="store.preBookCancellationInfo.chargeType && store.preBookCancellationInfo.chargeAmount">
+          <div class="flex gap-4 text-xs mt-2" :class="store.isNonRefundable ? 'text-red-700' : 'text-teal-700'">
+            <span v-if="store.preBookCancellationInfo.chargeAmount">Cancellation charge: <strong>{{ store.preBookCancellationInfo.chargeAmount }}{{ store.preBookCancellationInfo.chargeType === 'Percentage' ? '%' : (' ' + store.preBookCancellationInfo.currency) }}</strong></span>
+            <span v-if="store.preBookCancellationInfo.startDate">From: {{ store.preBookCancellationInfo.startDate }}</span>
+            <span v-if="store.preBookCancellationInfo.endDate">To: {{ store.preBookCancellationInfo.endDate }}</span>
+          </div>
+        </template>
+        <p v-if="store.preBookCancellationInfo.terms" class="text-xs mt-2 leading-relaxed" :class="store.isNonRefundable ? 'text-red-600' : 'text-teal-600'">
+          {{ store.preBookCancellationInfo.terms }}
+        </p>
       </div>
     </div>
 

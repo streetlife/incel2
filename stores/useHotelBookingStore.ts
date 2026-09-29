@@ -25,6 +25,8 @@ export interface SelectedRoom {
   pricePerNight: number;
   totalPrice: number;
   cancellationPolicy: string;
+  cancellationFee?: string;
+  termsAndConditions?: string;
   amenities: string[];
   rawRates: string;
 }
@@ -91,13 +93,25 @@ export const useHotelBookingStore = defineStore(
       updatedRate: number;
       currency: string;
     } | null>(null);
+    // Hotel fees that must be paid directly to the hotel at check-in (not charged by us).
+    const hotelFees = ref<{ amount: string; currency: string; description: string }[]>([]);
+    // Cancellation policy info returned from the pre-book response.
+    const preBookCancellationInfo = ref<{
+      policy: string;
+      chargeType: string;
+      chargeAmount: string;
+      currency: string;
+      startDate: string;
+      endDate: string;
+      terms: string;
+    } | null>(null);
 
     const nights = computed(() => {
       const { checkInStart, checkInEnd } = searchParams.value;
       if (!checkInStart || !checkInEnd) return 1;
       const diff = Math.ceil(
         (new Date(checkInEnd).getTime() - new Date(checkInStart).getTime()) /
-          86_400_000,
+        86_400_000,
       );
       return diff > 0 ? diff : 1;
     });
@@ -106,12 +120,15 @@ export const useHotelBookingStore = defineStore(
       // Prefer the confirmed updated rate (from the pre-book `afterPrice` /
       // `<BookingAfterPrice>` response) over the originally quoted room price,
       // so the summary, review and payment all reflect the accepted price.
+      // NOTE: `totalPrice` is already the total for all rooms — do NOT multiply
+      // by room count again.
       const confirmed = Number(bookingAfterPrice.value);
       const base =
         bookingAfterPrice.value && Number.isFinite(confirmed)
           ? confirmed
-          : (selectedRoom.value?.totalPrice ?? 0) * searchParams.value.totalRooms;
-      const baseNgn = Math.round(base);
+          : (selectedRoom.value?.totalPrice ?? 0);
+      // Always round UP to the nearest whole number (feedback #3).
+      const baseNgn = Math.ceil(base);
       const tax = Math.round(baseNgn * TAX_RATE);
       const total = baseNgn + tax;
       return { baseUsd: base, baseNgn, tax, total };
@@ -119,6 +136,8 @@ export const useHotelBookingStore = defineStore(
 
     // Per-room-per-night rate, reflecting the confirmed updated price when the
     // user has accepted a rate change (otherwise the quoted price).
+    // totalPrice is already the grand total for all rooms, so divide by rooms
+    // and nights to get the per-room-per-night figure.
     const effectivePricePerNight = computed(() => {
       const confirmed = Number(bookingAfterPrice.value);
       if (bookingAfterPrice.value && Number.isFinite(confirmed)) {
@@ -204,6 +223,8 @@ export const useHotelBookingStore = defineStore(
         preBookTotalRate.value = "";
         bookingAfterPrice.value = "";
         rateChange.value = null;
+        hotelFees.value = [];
+        preBookCancellationInfo.value = null;
         // Clear completed-booking artifacts so a new search starts fresh
         // (keeps the idempotent submitGuests guard from skipping a new
         // booking due to stale state).
@@ -249,14 +270,21 @@ export const useHotelBookingStore = defineStore(
           searchRate > 0 ? searchRate : (hotelData?.price ?? 0);
 
         if (roomTypes.length > 0) {
+          const roomCount = searchParams.value.totalRooms || 1;
           availableRooms.value = roomTypes.map((type) => ({
             rezliveRoomId: bookingKey,
             roomName: type,
             boardType: extractBoardType(boardBasis.join(", ")),
+            // totalPrice is the total for all rooms from the search response.
+            // Divide by rooms and nights to get per-room-per-night rate.
             pricePerNight:
-              nights.value > 0 ? totalPrice / nights.value : totalPrice,
+              nights.value > 0 && roomCount > 0
+                ? totalPrice / roomCount / nights.value
+                : totalPrice,
             totalPrice,
-            cancellationPolicy: "Free cancellation",
+            // Cancellation policy is not available at room-list stage; real data
+            // comes from the pre-book response (stored in preBookCancellationInfo).
+            cancellationPolicy: "See cancellation policy",
             amenities: boardBasis,
             rawRates: String(totalPrice),
           }));
@@ -308,6 +336,8 @@ export const useHotelBookingStore = defineStore(
       // stale confirmed/declined price from a previous room selection.
       rateChange.value = null;
       bookingAfterPrice.value = "";
+      hotelFees.value = [];
+      preBookCancellationInfo.value = null;
 
       try {
         // ── Validate required payload fields before sending ──
@@ -374,6 +404,13 @@ export const useHotelBookingStore = defineStore(
         preBookResult.value = result;
         prebookedRoomsKey.value = roomsKey;
         preBookTotalRate.value = totalRate;
+
+        // ── Extract cancellation policy from pre-book response ──
+        const cancInfo = extractCancellationInfo(result);
+        preBookCancellationInfo.value = cancInfo;
+
+        // ── Extract hotel fees (paid at check-in, not charged by us) ──
+        hotelFees.value = extractHotelFees(result);
 
         // ── Rate change detection via `<BookingAfterPrice>` ──
         // The pre-book response may carry an updated rate that differs from the
@@ -491,6 +528,46 @@ export const useHotelBookingStore = defineStore(
       rateChange.value = null;
       bookingAfterPrice.value = "";
     }
+
+    // Computed: whether the cancellation policy is non-refundable
+    const isNonRefundable = computed(() => {
+      if (preBookCancellationInfo.value) {
+        const policy = preBookCancellationInfo.value.policy.toLowerCase();
+        return (
+          policy.includes("non-refundable") ||
+          policy.includes("nonrefundable") ||
+          (preBookCancellationInfo.value.chargeType === "Percentage" &&
+            Number(preBookCancellationInfo.value.chargeAmount) >= 100)
+        );
+      }
+      // Fall back to the selected room's policy if pre-book info not yet available
+      if (selectedRoom.value?.cancellationPolicy) {
+        return selectedRoom.value.cancellationPolicy
+          .toLowerCase()
+          .includes("non-refundable");
+      }
+      return false;
+    });
+
+    // Human-readable cancellation policy string
+    const cancellationPolicyText = computed(() => {
+      if (preBookCancellationInfo.value) {
+        const info = preBookCancellationInfo.value;
+        if (
+          info.chargeType === "Percentage" &&
+          Number(info.chargeAmount) >= 100
+        ) {
+          return "Non-refundable (100% cancellation fee)";
+        }
+        if (info.policy && info.policy !== "") {
+          return info.policy;
+        }
+        if (info.terms && info.terms !== "") {
+          return info.terms;
+        }
+      }
+      return selectedRoom.value?.cancellationPolicy ?? "";
+    });
 
     async function submitGuests(
       overrideAmount?: number | string,
@@ -618,6 +695,8 @@ export const useHotelBookingStore = defineStore(
       bookingAfterPrice.value = "";
       rateChange.value = null;
       preBookError.value = "";
+      hotelFees.value = [];
+      preBookCancellationInfo.value = null;
       searchParams.value = {
         country: "",
         city: "",
@@ -668,6 +747,10 @@ export const useHotelBookingStore = defineStore(
       preBookTotalRate,
       bookingAfterPrice,
       rateChange,
+      hotelFees,
+      preBookCancellationInfo,
+      isNonRefundable,
+      cancellationPolicyText,
       nights,
       priceBreakdown,
       effectivePricePerNight,
@@ -804,4 +887,86 @@ function extractAmenities(desc: string): string[] {
     .split(",")
     .map((a: string) => a.trim())
     .filter(Boolean);
+}
+
+/**
+ * Extract cancellation policy information from the pre-book response.
+ * Handles both flat and nested response shapes from rezlive.
+ */
+function extractCancellationInfo(result: any): {
+  policy: string;
+  chargeType: string;
+  chargeAmount: string;
+  currency: string;
+  startDate: string;
+  endDate: string;
+  terms: string;
+} | null {
+  // The cancellationInformations can be nested: result.cancellationInformations or
+  // result.room.cancellationInformations (from some pre-book response shapes).
+  const raw =
+    result?.cancellationInformations ??
+    result?.room?.cancellationInformations ??
+    result?.CancellationInformation ??
+    result?.room?.CancellationInformation;
+
+  if (!raw) return null;
+
+  // Unwrap nested `.cancellationInformation` object if present
+  const info = raw?.cancellationInformation ?? raw;
+  const infoText: string = raw?.info ?? result?.room?.terms ?? "";
+
+  if (!info && !infoText) return null;
+
+  return {
+    policy: infoText || info?.chargeType || "",
+    chargeType: info?.chargeType ?? "",
+    chargeAmount: String(info?.chargeAmount ?? ""),
+    currency: info?.currency ?? "",
+    startDate: info?.startDate ?? "",
+    endDate: info?.endDate ?? "",
+    terms: infoText,
+  };
+}
+
+/**
+ * Extract extra hotel fees that are paid at check-in (not charged by us).
+ * These are surfaced in the pre-book response under fields like `hotelFees`,
+ * `hotel_fees`, or similar keys depending on the rezlive response shape.
+ */
+function extractHotelFees(
+  result: any,
+): { amount: string; currency: string; description: string }[] {
+  const fees: { amount: string; currency: string; description: string }[] = [];
+
+  // Check common fee locations in the response
+  const rawFees =
+    result?.hotelFees ??
+    result?.hotel_fees ??
+    result?.HotelFees ??
+    result?.room?.hotelFees ??
+    result?.room?.hotel_fees;
+
+  if (Array.isArray(rawFees)) {
+    for (const f of rawFees) {
+      if (f && (f.amount || f.Amount)) {
+        fees.push({
+          amount: String(f.amount ?? f.Amount ?? ""),
+          currency: f.currency ?? f.Currency ?? "",
+          description: f.description ?? f.Description ?? f.type ?? f.Type ?? "Hotel fee",
+        });
+      }
+    }
+  } else if (rawFees && typeof rawFees === "object") {
+    // Some responses return a single fee object
+    if (rawFees.amount || rawFees.Amount) {
+      fees.push({
+        amount: String(rawFees.amount ?? rawFees.Amount ?? ""),
+        currency: rawFees.currency ?? rawFees.Currency ?? "",
+        description: rawFees.description ?? rawFees.Description ?? "Hotel fee",
+      });
+    }
+  }
+
+  return fees;
 }

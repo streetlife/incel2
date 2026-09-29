@@ -177,17 +177,24 @@ onMounted(() => {
                   :stroke="
                     room.cancellationPolicy.includes('Non-refundable')
                       ? '#ef4444'
-                      : '#16a34a'
+                      : room.cancellationPolicy.includes('See cancellation')
+                        ? '#64748b'
+                        : '#16a34a'
                   "
                   stroke-width="2"
                 >
                   <path
-                    v-if="!room.cancellationPolicy.includes('Non-refundable')"
+                    v-if="!room.cancellationPolicy.includes('Non-refundable') && !room.cancellationPolicy.includes('See cancellation')"
                     d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
                   />
-                  <template v-else>
+                  <template v-else-if="room.cancellationPolicy.includes('Non-refundable')">
                     <line x1="18" y1="6" x2="6" y2="18" />
                     <line x1="6" y1="6" x2="18" y2="18" />
+                  </template>
+                  <template v-else>
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
                   </template>
                 </svg>
                 <p
@@ -195,7 +202,9 @@ onMounted(() => {
                   :class="
                     room.cancellationPolicy.includes('Non-refundable')
                       ? 'text-red-600'
-                      : 'text-green-700'
+                      : room.cancellationPolicy.includes('See cancellation')
+                        ? 'text-slate-500'
+                        : 'text-green-700'
                   "
                 >
                   {{ room.cancellationPolicy }}
@@ -211,9 +220,9 @@ onMounted(() => {
                 × {{ store.nights }} nights
               </p>
               <p class="text-2xl font-bold text-slate-900">
-                {{ format(room.totalPrice * store.searchParams.totalRooms) }}
+                {{ format(room.totalPrice) }}
               </p>
-              <p class="text-xs text-slate-400 mb-3">excl. taxes</p>
+              <p class="text-xs text-slate-400 mb-3">excl. taxes · total all rooms</p>
               <button
                 type="button"
                 class="w-full sm:w-auto px-6 py-2.5 bg-primary hover:opacity-90 active:scale-95 text-white text-sm font-bold rounded-xl border-none cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-60"

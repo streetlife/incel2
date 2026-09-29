@@ -119,16 +119,14 @@ const guestBreakdown = computed(() => {
           viewBox="0 0 24 24"
           fill="none"
           :stroke="
-            store.selectedRoom.cancellationPolicy.includes('Non-refundable')
+            store.isNonRefundable
               ? '#ef4444'
               : '#16a34a'
           "
           stroke-width="2"
         >
           <path
-            v-if="
-              !store.selectedRoom.cancellationPolicy.includes('Non-refundable')
-            "
+            v-if="!store.isNonRefundable"
             d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
           />
           <template v-else>
@@ -139,12 +137,12 @@ const guestBreakdown = computed(() => {
         <p
           class="text-xs"
           :class="
-            store.selectedRoom.cancellationPolicy.includes('Non-refundable')
+            store.isNonRefundable
               ? 'text-red-600'
               : 'text-green-700'
           "
         >
-          {{ store.selectedRoom.cancellationPolicy }}
+          {{ store.cancellationPolicyText || store.selectedRoom.cancellationPolicy }}
         </p>
       </div>
     </div>
@@ -185,6 +183,23 @@ const guestBreakdown = computed(() => {
           <p class="text-xs text-slate-400">incl. VAT</p>
         </div>
       </div>
+    </div>
+
+    <!-- Hotel fees (paid at check-in) -->
+    <div
+      v-if="store.hotelFees.length > 0"
+      class="mx-5 mb-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 space-y-1"
+    >
+      <p class="text-xs font-semibold text-amber-800 mb-1.5">Fees at check-in:</p>
+      <div
+        v-for="(fee, i) in store.hotelFees"
+        :key="i"
+        class="flex justify-between text-xs text-amber-700"
+      >
+        <span>{{ fee.description }}</span>
+        <span class="font-semibold">{{ fee.amount }} {{ fee.currency }}</span>
+      </div>
+      <p class="text-[10px] text-amber-600 mt-1">Paid directly to the hotel</p>
     </div>
 
     <div

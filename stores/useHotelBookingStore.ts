@@ -271,6 +271,12 @@ export const useHotelBookingStore = defineStore(
 
         if (roomTypes.length > 0) {
           const roomCount = searchParams.value.totalRooms || 1;
+
+          const cancPolicy: string =
+            (hotelData?.cancellation_policy as string | undefined) ||
+            (hotel.value?.cancellation_policy as string | undefined) ||
+            "See cancellation policy";
+
           availableRooms.value = roomTypes.map((type) => ({
             rezliveRoomId: bookingKey,
             roomName: type,
@@ -282,9 +288,7 @@ export const useHotelBookingStore = defineStore(
                 ? totalPrice / roomCount / nights.value
                 : totalPrice,
             totalPrice,
-            // Cancellation policy is not available at room-list stage; real data
-            // comes from the pre-book response (stored in preBookCancellationInfo).
-            cancellationPolicy: "See cancellation policy",
+            cancellationPolicy: cancPolicy,
             amenities: boardBasis,
             rawRates: String(totalPrice),
           }));
@@ -532,28 +536,39 @@ export const useHotelBookingStore = defineStore(
       bookingAfterPrice.value = "";
     }
 
+    // Helper: check if a raw policy string indicates non-refundable
+    function policyIsNonRefundable(policy: string): boolean {
+      const p = policy.toLowerCase();
+      return (
+        p.includes("non-refundable") ||
+        p.includes("non refundable") ||
+        p.includes("nonrefundable") ||
+        p.includes("no refund") ||
+        p.includes("100%")
+      );
+    }
+
     // Computed: whether the cancellation policy is non-refundable
     const isNonRefundable = computed(() => {
+      // Priority 1: pre-book response (most accurate, comes after room selection)
       if (preBookCancellationInfo.value) {
         const policy = preBookCancellationInfo.value.policy.toLowerCase();
         return (
-          policy.includes("non-refundable") ||
-          policy.includes("nonrefundable") ||
+          policyIsNonRefundable(policy) ||
           (preBookCancellationInfo.value.chargeType === "Percentage" &&
             Number(preBookCancellationInfo.value.chargeAmount) >= 100)
         );
       }
-      // Fall back to the selected room's policy if pre-book info not yet available
+      // Priority 2: cancellation_policy from the search/detail API on the selected room
       if (selectedRoom.value?.cancellationPolicy) {
-        return selectedRoom.value.cancellationPolicy
-          .toLowerCase()
-          .includes("non-refundable");
+        return policyIsNonRefundable(selectedRoom.value.cancellationPolicy);
       }
       return false;
     });
 
     // Human-readable cancellation policy string
     const cancellationPolicyText = computed(() => {
+      // Priority 1: pre-book response (most authoritative)
       if (preBookCancellationInfo.value) {
         const info = preBookCancellationInfo.value;
         if (
@@ -569,8 +584,17 @@ export const useHotelBookingStore = defineStore(
           return info.terms;
         }
       }
+      // Priority 2: cancellation_policy from the search/detail API
+      // (available at room-list stage, before pre-book completes)
+      if (
+        selectedRoom.value?.cancellationPolicy &&
+        selectedRoom.value.cancellationPolicy !== "See cancellation policy"
+      ) {
+        return selectedRoom.value.cancellationPolicy;
+      }
       return selectedRoom.value?.cancellationPolicy ?? "";
     });
+
 
     async function submitGuests(
       overrideAmount?: number | string,

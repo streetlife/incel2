@@ -25,6 +25,7 @@ export interface HotelResult {
   price: number;
   room_count: number;
   board_basis: string[];
+  cancellation_policy?: string;
 }
 
 export interface HotelSearchMeta {
@@ -116,6 +117,7 @@ export interface HotelByIdDetail {
   roomsAdult: number[];
   roomsChildren: number[];
   roomsChildrenAges: number[][];
+  cancellation_policy?: string;
 }
 
 export interface CreateBookingData {

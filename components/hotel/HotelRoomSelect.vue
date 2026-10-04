@@ -10,6 +10,23 @@ const route = useRoute();
 const store = useHotelBookingStore();
 const { format } = useCurrency();
 
+/** Returns true for any policy string that means "no refund". */
+function roomPolicyIsNonRefundable(policy: string): boolean {
+  const p = policy.toLowerCase();
+  return (
+    p.includes("non-refundable") ||
+    p.includes("non refundable") ||
+    p.includes("nonrefundable") ||
+    p.includes("no refund") ||
+    p.includes("100%")
+  );
+}
+
+/** Returns true for the placeholder shown before the real policy is known. */
+function roomPolicyIsUnknown(policy: string): boolean {
+  return policy === "See cancellation policy" || policy === "";
+}
+
 const choosingRoomId = ref<string | null>(null);
 
 async function choose(room: SelectedRoom) {

@@ -15,6 +15,13 @@ export interface HotelSearchParams {
   totalRooms: number;
 }
 
+export interface CancellationPolicyObject {
+  Refundable?: string;
+  TillDate?: string;
+}
+
+export type CancellationPolicyInput = string | CancellationPolicyObject | null;
+
 export interface HotelResult {
   hotel_id: string;
   hotel_name: string;
@@ -25,7 +32,9 @@ export interface HotelResult {
   price: number;
   room_count: number;
   board_basis: string[];
-  cancellation_policy?: string;
+  cancellation_policy?: CancellationPolicyInput;
+  roomType?: string[];
+  BookingKey?: string;
 }
 
 export interface HotelSearchMeta {
@@ -117,7 +126,7 @@ export interface HotelByIdDetail {
   roomsAdult: number[];
   roomsChildren: number[];
   roomsChildrenAges: number[][];
-  cancellation_policy?: string;
+  cancellation_policy?: CancellationPolicyInput;
 }
 
 export interface CreateBookingData {

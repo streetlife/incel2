@@ -252,6 +252,8 @@ export const useHotelBookingStore = defineStore(
         // search, room pricing and pre-book stay consistent.
         const searchRate: number = Number(hotel.value?.price) || 0;
 
+        const searchCancellationPolicy = hotel.value?.cancellation_bpolicy;
+
         // Persist the full hotel detail
         if (hotelData?.hotel_id) {
           hotel.value = { ...hotel.value, ...hotelData };
@@ -272,10 +274,12 @@ export const useHotelBookingStore = defineStore(
         if (roomTypes.length > 0) {
           const roomCount = searchParams.value.totalRooms || 1;
 
-          const cancPolicy: string =
-            (hotelData?.cancellation_policy as string | undefined) ||
-            (hotel.value?.cancellation_policy as string | undefined) ||
-            "See cancellation policy";
+          // Prefer the search response's policy (source of truth for what the
+          // user was shown), then fall back to the hotel-detail response.
+          const cancPolicy: string = normalizeCancellationPolicy(
+            searchCancellationPolicy,
+            hotelData?.cancellation_policy,
+          );
 
           availableRooms.value = roomTypes.map((type) => ({
             rezliveRoomId: bookingKey,
@@ -894,6 +898,49 @@ function distributeRates(
   const last = arr.length - 1;
   arr[last] = round2(arr[last] + (total - per * count));
   return arr.join("|");
+}
+
+/**
+ * Normalise a cancellation policy into a display string.
+ *
+ * The search response returns `cancellation_policy` as an object:
+ *   { Refundable: "No" }
+ *   { Refundable: "Yes", TillDate: "09/10/2026" }
+ * The hotel-detail response may return a plain string, or a generic
+ * "See cancellation policy" placeholder which we deliberately skip so a real
+ * value from an earlier candidate can win.
+ */
+function normalizeCancellationPolicy(...candidates: unknown[]): string {
+  for (const raw of candidates) {
+    if (raw === null || raw === undefined) continue;
+
+    if (typeof raw === "string") {
+      const value = raw.trim();
+      if (value && value.toLowerCase() !== "see cancellation policy") {
+        return value;
+      }
+      continue;
+    }
+
+    if (typeof raw === "object") {
+      const policy = raw as { Refundable?: unknown; TillDate?: unknown };
+      const refundable = String(policy.Refundable ?? "")
+        .trim()
+        .toLowerCase();
+      const tillDate = String(policy.TillDate ?? "").trim();
+
+      if (refundable === "no" || refundable === "false") {
+        return "Non-refundable";
+      }
+      if (refundable === "yes" || refundable === "true") {
+        return tillDate
+          ? `Free cancellation until ${tillDate}`
+          : "Free cancellation";
+      }
+    }
+  }
+
+  return "See cancellation policy";
 }
 
 function extractBoardType(desc: string): string {

@@ -48,7 +48,7 @@ const TAX_RATE = 0.075;
 export const useHotelBookingStore = defineStore(
   "hotelBooking",
   () => {
-    const hotel = ref<any | null>(null);
+    const hotel = ref<any>(null);
     const sessionCode = ref<string>("");
     const sessionId = ref<string>("");
     const searchParams = ref<BookingSearchParams>({
@@ -82,7 +82,7 @@ export const useHotelBookingStore = defineStore(
 
     const preBookLoading = ref<boolean>(false);
     const preBookError = ref<string>("");
-    const preBookResult = ref<any | null>(null);
+    const preBookResult = ref<any>(null);
     const prebookedRoomsKey = ref<string>("");
     const preBookTotalRate = ref<string>("");
     // Updated rate received from the pre-book response `<BookingAfterPrice>` tag.
@@ -252,7 +252,22 @@ export const useHotelBookingStore = defineStore(
         // search, room pricing and pre-book stay consistent.
         const searchRate: number = Number(hotel.value?.price) || 0;
 
-        const searchCancellationPolicy = hotel.value?.cancellation_bpolicy;
+        // The cancellation policy shown to the user comes from the search
+        // response. The hotel-detail response often echoes a generic
+        // placeholder ("See cancellation policy") which would otherwise
+        // overwrite the real search value once we merge the detail below, so
+        // capture the search value first (same reasoning as `searchRate`).
+        //
+        // `hotel.value` is normally hydrated from the persisted store (or from
+        // `selectedHotel` in sessionStorage) before this runs, but a child
+        // component's `onMounted` can fire before the parent page restores
+        // state, so fall back to sessionStorage when it is not available yet.
+        // Normalising here also discards the generic placeholder so it can
+        // never mask a real value from either source.
+        const searchCancellationPolicy = normalizeCancellationPolicy(
+          hotel.value?.cancellation_policy,
+          readSearchCancellationPolicy(),
+        );
 
         // Persist the full hotel detail
         if (hotelData?.hotel_id) {
@@ -541,17 +556,6 @@ export const useHotelBookingStore = defineStore(
     }
 
     // Helper: check if a raw policy string indicates non-refundable
-    function policyIsNonRefundable(policy: string): boolean {
-      const p = policy.toLowerCase();
-      return (
-        p.includes("non-refundable") ||
-        p.includes("non refundable") ||
-        p.includes("nonrefundable") ||
-        p.includes("no refund") ||
-        p.includes("100%")
-      );
-    }
-
     // Computed: whether the cancellation policy is non-refundable
     const isNonRefundable = computed(() => {
       // Priority 1: pre-book response (most accurate, comes after room selection)
@@ -743,7 +747,7 @@ export const useHotelBookingStore = defineStore(
       // Remove the persisted key so no empty booking state lingers in
       // localStorage (the unstorage plugin re-writes state on every mutation,
       // so this must run after that write flushes).
-      nextTick(() => {
+      void nextTick(() => {
         if (typeof window !== "undefined") {
           window.localStorage.removeItem("pinia:hotelBooking");
         }
@@ -900,6 +904,63 @@ function distributeRates(
   return arr.join("|");
 }
 
+const UNKNOWN_CANCELLATION_POLICY = "See cancellation policy";
+
+/** Check if a raw policy string indicates the booking is non-refundable. */
+function policyIsNonRefundable(policy: string): boolean {
+  const p = policy.toLowerCase();
+  return (
+    p.includes("non-refundable") ||
+    p.includes("non refundable") ||
+    p.includes("nonrefundable") ||
+    p.includes("no refund") ||
+    p.includes("100%")
+  );
+}
+
+function asTrimmedString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/** Convert `{ Refundable, TillDate }` into a readable policy, or "" if unknown. */
+function cancellationPolicyObjectToString(
+  raw: Record<string, unknown>,
+): string {
+  const refundable = asTrimmedString(raw.Refundable).toLowerCase();
+  const tillDate = asTrimmedString(raw.TillDate);
+
+  if (refundable === "no" || refundable === "false") {
+    return "Non-refundable";
+  }
+  if (refundable === "yes" || refundable === "true") {
+    return tillDate
+      ? `Free cancellation until ${tillDate}`
+      : "Free cancellation";
+  }
+  return "";
+}
+
+/** Normalise a string policy, unwrapping JSON-encoded objects. "" if unknown. */
+function cancellationPolicyStringToString(value: string): string {
+  const trimmed = value.trim();
+  const isUnknown =
+    !trimmed ||
+    trimmed.toLowerCase() === UNKNOWN_CANCELLATION_POLICY.toLowerCase();
+  if (isUnknown) {
+    return "";
+  }
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      const fromObject = cancellationPolicyObjectToString(parsed);
+      if (fromObject) return fromObject;
+    } catch {
+      // not JSON — treat it as a plain string below
+    }
+  }
+  return trimmed;
+}
+
 /**
  * Normalise a cancellation policy into a display string.
  *
@@ -912,35 +973,36 @@ function distributeRates(
  */
 function normalizeCancellationPolicy(...candidates: unknown[]): string {
   for (const raw of candidates) {
-    if (raw === null || raw === undefined) continue;
-
     if (typeof raw === "string") {
-      const value = raw.trim();
-      if (value && value.toLowerCase() !== "see cancellation policy") {
-        return value;
-      }
-      continue;
-    }
-
-    if (typeof raw === "object") {
-      const policy = raw as { Refundable?: unknown; TillDate?: unknown };
-      const refundable = String(policy.Refundable ?? "")
-        .trim()
-        .toLowerCase();
-      const tillDate = String(policy.TillDate ?? "").trim();
-
-      if (refundable === "no" || refundable === "false") {
-        return "Non-refundable";
-      }
-      if (refundable === "yes" || refundable === "true") {
-        return tillDate
-          ? `Free cancellation until ${tillDate}`
-          : "Free cancellation";
-      }
+      const value = cancellationPolicyStringToString(raw);
+      if (value) return value;
+    } else if (raw && typeof raw === "object") {
+      const value = cancellationPolicyObjectToString(
+        raw as Record<string, unknown>,
+      );
+      if (value) return value;
     }
   }
 
-  return "See cancellation policy";
+  return UNKNOWN_CANCELLATION_POLICY;
+}
+
+/**
+ * Read the cancellation policy captured by the search page from the
+ * `selectedHotel` sessionStorage entry. Used as a fallback when the store's
+ * `hotel` is not hydrated yet (child `onMounted` can run before the parent
+ * page restores state).
+ */
+function readSearchCancellationPolicy(): unknown {
+  if (typeof sessionStorage === "undefined") return undefined;
+  try {
+    const raw = sessionStorage.getItem("selectedHotel");
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw);
+    return parsed?.hotel?.cancellation_policy;
+  } catch {
+    return undefined;
+  }
 }
 
 function extractBoardType(desc: string): string {

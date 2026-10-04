@@ -373,6 +373,9 @@ export const useHotelBookingStore = defineStore(
             : [],
         );
 
+        const roomCount = searchParams.value.totalRooms || searchParams.value.rooms.length || 1;
+        const perRoomRate = room.totalPrice / roomCount;
+
         const payload: PreBookingData = {
           search_session_id: sessionId.value,
           arrival_date: searchParams.value.checkInStart,
@@ -387,7 +390,7 @@ export const useHotelBookingStore = defineStore(
           rooms_children_ages: roomsChildrenAges,
           room_type: room.roomName,
           booking_key: room.rezliveRoomId,
-          total_rate: room.totalPrice,
+          total_rate: perRoomRate,
         };
 
         const result = await preBooking(payload);

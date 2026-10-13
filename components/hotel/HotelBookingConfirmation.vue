@@ -281,6 +281,21 @@ async function copyBookingCode() {
         </div>
       </div>
 
+      <!-- Room Terms & Conditions, rendered exactly as returned by the API -->
+      <div v-if="store.roomTerms" class="px-5 py-4 border-b border-slate-100">
+        <p
+          class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3"
+        >
+          Terms &amp; Conditions
+        </p>
+        <div class="max-h-60 overflow-y-auto">
+          <div
+            class="hotel-terms-html text-xs text-slate-600 leading-relaxed"
+            v-html="store.roomTerms"
+          />
+        </div>
+      </div>
+
       <div class="px-5 py-4 border-b border-slate-100">
         <p
           class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3"
@@ -420,3 +435,28 @@ async function copyBookingCode() {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Normalise the API HTML content rendered via v-html */
+.hotel-terms-html :deep(ul) {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0.25rem 0;
+}
+.hotel-terms-html :deep(ol) {
+  list-style: decimal;
+  padding-left: 1.25rem;
+  margin: 0.25rem 0;
+}
+.hotel-terms-html :deep(li) {
+  margin-bottom: 0.25rem;
+}
+.hotel-terms-html :deep(p) {
+  margin: 0.25rem 0;
+}
+.hotel-terms-html :deep(b),
+.hotel-terms-html :deep(strong) {
+  font-weight: 600;
+  color: #334155;
+}
+</style>

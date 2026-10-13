@@ -100,7 +100,8 @@ interface IHotelRooms {
   CancellationPolicy: {
     Refundable: string;
   };
-  TermsAndConditions: [];
+  /** Room fine print, returned as an (HTML) string by the supplier. */
+  TermsAndConditions?: string;
 }
 
 export interface HotelByIdResponse {

@@ -340,6 +340,9 @@ export const useHotelBookingStore = defineStore(
     }
 
     function selectRoom(room: SelectedRoom) {
+      // Reset any terms left over from a previously selected room so a stale
+      // value can never be shown before the new pre-book response arrives.
+      room.termsAndConditions = "";
       selectedRoom.value = room;
       guests.value = buildGuestList(searchParams.value.rooms);
       errorMessage.value = "";
@@ -361,6 +364,9 @@ export const useHotelBookingStore = defineStore(
       bookingAfterPrice.value = "";
       hotelFees.value = [];
       preBookCancellationInfo.value = null;
+      if (selectedRoom.value) {
+        selectedRoom.value.termsAndConditions = "";
+      }
 
       try {
         // ── Validate required payload fields before sending ──
@@ -437,6 +443,14 @@ export const useHotelBookingStore = defineStore(
 
         // ── Extract hotel fees (paid at check-in, not charged by us) ──
         hotelFees.value = extractHotelFees(result);
+
+        // ── Capture room Terms & Conditions exactly as returned ──
+        // The pre-book response carries the room's fine print under
+        // `room.terms` (an HTML string). Store it verbatim so the booking
+        // pages can render it as-is.
+        if (selectedRoom.value) {
+          selectedRoom.value.termsAndConditions = extractRoomTerms(result);
+        }
 
         // ── Rate change detection via `<BookingAfterPrice>` ──
         // The pre-book response may carry an updated rate that differs from the
@@ -603,6 +617,11 @@ export const useHotelBookingStore = defineStore(
       return selectedRoom.value?.cancellationPolicy ?? "";
     });
 
+    // Full room Terms & Conditions returned by the pre-book API
+    // (`room.terms`). Rendered verbatim on the booking pages.
+    const roomTerms = computed(
+      () => selectedRoom.value?.termsAndConditions?.trim() ?? "",
+    );
 
     async function submitGuests(
       overrideAmount?: number | string,
@@ -786,6 +805,7 @@ export const useHotelBookingStore = defineStore(
       preBookCancellationInfo,
       isNonRefundable,
       cancellationPolicyText,
+      roomTerms,
       nights,
       priceBreakdown,
       effectivePricePerNight,
@@ -1050,7 +1070,7 @@ function extractCancellationInfo(result: any): {
 
   // Unwrap nested `.cancellationInformation` object if present
   const info = raw?.cancellationInformation ?? raw;
-  const infoText: string = raw?.info ?? result?.room?.terms ?? "";
+  const infoText: string = raw?.info ?? "";
 
   if (!info && !infoText) return null;
 
@@ -1063,6 +1083,39 @@ function extractCancellationInfo(result: any): {
     endDate: info?.endDate ?? "",
     terms: infoText,
   };
+}
+
+/**
+ * Extract the room Terms & Conditions from the pre-book response.
+ *
+ * The supplier returns the room's fine print as an HTML string under
+ * `room.terms` (see the `PreBookResponse` contract). A few alternate shapes
+ * are probed as a safety net (camel/Pascal keys, or an array of items), and
+ * the value is returned verbatim so the UI can render it exactly as supplied.
+ */
+function extractRoomTerms(result: any): string {
+  const raw =
+    result?.room?.terms ??
+    result?.room?.TermsAndConditions ??
+    result?.room?.termsAndConditions ??
+    result?.terms ??
+    result?.TermsAndConditions ??
+    result?.termsAndConditions;
+
+  if (raw === null || raw === undefined) return "";
+
+  if (Array.isArray(raw)) {
+    return raw
+      .map((item) =>
+        typeof item === "string"
+          ? item
+          : (item?.text ?? item?.Text ?? item?.Description ?? item?.Name ?? ""),
+      )
+      .filter(Boolean)
+      .join("");
+  }
+
+  return typeof raw === "string" ? raw.trim() : "";
 }
 
 /**

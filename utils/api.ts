@@ -19,6 +19,103 @@ export class AppApiError extends Error {
   }
 }
 
+/**
+ * Human-friendly messages shown to users.
+ *
+ * Raw transport errors from the API client (ofetch), for example
+ * `[POST] "https://...": <no response> Failed to fetch`, must never reach the
+ * UI, so every failure is mapped to one of these messages.
+ */
+const NETWORK_ERROR_MESSAGE =
+  "We couldn't reach our servers. Please check your internet connection and try again.";
+const SERVER_ERROR_MESSAGE =
+  "Something went wrong on our end. Please try again later.";
+const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
+
+/** Map an HTTP status code to a friendly, non-technical message. */
+function friendlyHttpMessage(status: number): string {
+  switch (status) {
+    case 400:
+      return "We couldn't process that request. Please check your details and try again.";
+    case 401:
+      return "Your session has expired. Please log in again.";
+    case 403:
+      return "You don't have permission to do that.";
+    case 404:
+      return "We couldn't find what you were looking for.";
+    case 408:
+    case 504:
+      return "The request took too long. Please try again.";
+    case 409:
+      return "There was a conflict with your request. Please refresh and try again.";
+    case 419:
+      return "Your session expired. Please refresh the page and try again.";
+    case 422:
+      return "Some of the details you entered aren't valid. Please review and try again.";
+    case 429:
+      return "Too many requests. Please wait a moment and try again.";
+    default:
+      return status >= 500 ? SERVER_ERROR_MESSAGE : GENERIC_ERROR_MESSAGE;
+  }
+}
+
+/**
+ * Detect a request that never produced an HTTP response (offline, DNS
+ * failure, CORS, connection reset, …).
+ */
+export function isNetworkError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return (
+    msg.includes("failed to fetch") ||
+    msg.includes("failed to load") ||
+    msg.includes("network error") ||
+    msg.includes("networkerror") ||
+    msg.includes("network request failed") ||
+    msg.includes("fetch failed") ||
+    msg.includes("no response") ||
+    msg.includes("err_failed") ||
+    msg.includes("load failed") ||
+    msg.includes("offline")
+  );
+}
+
+/** Detect user/browser initiated request aborts, which must not be masked. */
+function isAbortError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return (
+    err.name === "AbortError" ||
+    (err as any).code === 20 ||
+    (err as any).code === "ABORT_ERR"
+  );
+}
+
+/**
+ * Convert any thrown value into an {@link AppApiError} carrying a friendly,
+ * user-safe message. Abort errors are returned untouched so callers can still
+ * detect them, and non-API errors (e.g. local validation) are left as-is.
+ *
+ * This is the single funnel that keeps raw `FetchError` output
+ * (`[POST] "…": <no response> Failed to fetch`) out of the UI.
+ */
+export function toFriendlyApiError(err: unknown): unknown {
+  if (err instanceof AppApiError) return err;
+  if (isAbortError(err)) return err;
+
+  if (isNetworkError(err)) {
+    return new AppApiError(NETWORK_ERROR_MESSAGE, 0);
+  }
+
+  const status = Number(
+    (err as any)?.status ?? (err as any)?.response?.status ?? 0,
+  );
+  if (Number.isFinite(status) && status >= 400) {
+    return new AppApiError({ message: friendlyHttpMessage(status), status }, status);
+  }
+
+  return err;
+}
+
 export function parseApiError(err: unknown): AppApiError {
   if (err instanceof AppApiError) return err;
 
@@ -37,15 +134,15 @@ export function parseApiError(err: unknown): AppApiError {
     const message =
       fieldMessages[0] ??
       b.message ??
-      "Something went wrong. Please try again.";
+      friendlyHttpMessage(status);
     return new AppApiError({ message, status, errors: b.errors }, status);
   }
 
   const message = isNetworkError(err)
-    ? "Unable to reach the server. Please check your connection and try again."
+    ? NETWORK_ERROR_MESSAGE
     : err instanceof Error
-    ? err.message
-    : "Something went wrong. Please try again.";
+      ? err.message
+      : GENERIC_ERROR_MESSAGE;
   return new AppApiError({ message, status }, status);
 }
 
@@ -89,12 +186,13 @@ export function useApi() {
 
       const isServerError = status >= 500;
 
+      const serverMessage =
+        Object.values(data?.errors ?? {}).flat()[0] || data?.message;
+
       const body: ApiError = {
         message: isServerError
-          ? "Something went wrong on our end. Please try again later."
-          : Object.values(data?.errors ?? {}).flat()[0] ||
-          data?.message ||
-          "An unexpected error occurred.",
+          ? SERVER_ERROR_MESSAGE
+          : serverMessage || friendlyHttpMessage(status),
         status,
         errors: isServerError ? undefined : data?.errors,
       };
@@ -129,25 +227,24 @@ export function useApi() {
     },
   } satisfies FetchOptions);
 
-  return instance;
-}
+  const api = async <T = unknown>(
+    request: string,
+    options?: FetchOptions,
+  ): Promise<T> => {
+    try {
+      return await instance<T>(request, options as any);
+    } catch (error) {
+      throw toFriendlyApiError(error);
+    }
+  };
 
-function isNetworkError(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
-  const msg = err.message.toLowerCase();
-  return (
-    msg.includes("failed to fetch") ||
-    msg.includes("network error") ||
-    msg.includes("no response") ||
-    msg.includes("err_failed") ||
-    msg.includes("load failed")
-  );
+  return api as unknown as typeof instance;
 }
 
 export function normaliseError(err: unknown): string {
   if (err instanceof AppApiError) return err.userMessage;
-  if (isNetworkError(err))
-    return "Unable to reach the server. Please check your connection and try again.";
-  if (err instanceof Error) return err.message;
-  return "Something went wrong. Please try again.";
+  if (isAbortError(err)) return "The request was cancelled.";
+  if (isNetworkError(err)) return NETWORK_ERROR_MESSAGE;
+  if (err instanceof Error && err.message) return err.message;
+  return GENERIC_ERROR_MESSAGE;
 }

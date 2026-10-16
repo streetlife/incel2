@@ -7,6 +7,7 @@ import { useHotelService } from "../../../services/hotel.service";
 import type { HotelSearchParams, RoomConfig } from "../../../types/hotel";
 import { useCurrency } from "../../../composables/useCurrency";
 import { useHotelSearchStore } from "../../../stores/hotel";
+import { normaliseError } from "../../../utils/api";
 
 const route = useRoute();
 const router = useRouter();
@@ -19,6 +20,8 @@ const ITEMS_PER_PAGE = 25;
 const isLoading = ref(false);
 const searchError = ref("");
 const showSearchForm = ref(true);
+// Parameters of the most recent failed search, so "Try Again" can re-run it.
+const failedParams = ref<HotelSearchParams | null>(null);
 
 const paginatedResults = computed(() => {
   const start = (store.currentPage - 1) * ITEMS_PER_PAGE;
@@ -142,8 +145,13 @@ const performSearch = async (params?: HotelSearchParams) => {
   }
 
   try {
+    // Drop any hotels from a previous search before the new request runs, so
+    // a slow or failed search can never leave stale results on screen.
+    store.clearResultsData();
+
     if (!sp.city) {
       searchError.value = `We don't have a city code for "${sp.city}" yet. Please contact support or try another city.`;
+      failedParams.value = sp;
       isLoading.value = false;
       return;
     }
@@ -159,6 +167,7 @@ const performSearch = async (params?: HotelSearchParams) => {
       sp,
     );
 
+    failedParams.value = null;
     sessionStorage.setItem("hotelSessionCode", result.session_code);
     sessionStorage.setItem("hotelSessionId", result.search_session_id);
 
@@ -171,12 +180,27 @@ const performSearch = async (params?: HotelSearchParams) => {
       100,
     );
   } catch (err: any) {
-    searchError.value =
-      err?.message ?? "An unexpected error occurred. Please try again.";
+    searchError.value = normaliseError(err);
+    failedParams.value = sp;
+    // Never keep showing hotels from an earlier search after a failure.
+    store.clearResultsData();
   } finally {
     isLoading.value = false;
   }
 };
+
+// Re-run the search that just failed (e.g. after a transient network error).
+function retrySearch() {
+  performSearch(failedParams.value ?? undefined);
+}
+
+// Bring the search form back into view so the user can adjust their criteria.
+function openSearchForm() {
+  showSearchForm.value = true;
+  document
+    .getElementById("hotel-search-form")
+    ?.scrollIntoView({ behavior: "smooth" });
+}
 
 function viewHotelDetails(hotel: any) {
   // Signal that this is intentional fresh navigation, not a page refresh
@@ -366,7 +390,11 @@ onMounted(() => {
               />
             </svg>
           </button>
-          <div v-show="!store.hasSearched || showSearchForm" class="p-6 md:p-8">
+          <div
+            id="hotel-search-form"
+            v-show="!store.hasSearched || showSearchForm"
+            class="p-6 md:p-8"
+          >
             <HotelsForm @search="handleHotelSearch" />
           </div>
         </div>
@@ -379,17 +407,6 @@ onMounted(() => {
       class="py-10 px-4 md:px-6 min-h-[60vh]"
     >
       <div class="max-w-6xl mx-auto">
-        <div
-          v-if="searchError"
-          class="mb-8 flex items-start gap-3 p-5 bg-red-50 border border-red-200 rounded-xl"
-        >
-          <span class="text-red-500 text-xl mt-0.5 flex-shrink-0">⚠</span>
-          <div>
-            <p class="font-semibold text-red-700">Search failed</p>
-            <p class="text-sm text-red-600 mt-1">{{ searchError }}</p>
-          </div>
-        </div>
-
         <div v-if="isLoading" class="py-14 text-center">
           <div
             class="inline-block w-12 h-12 rounded-full border-[3px] border-stone-200 border-t-primary animate-spin"
@@ -404,6 +421,50 @@ onMounted(() => {
               class="h-44 rounded-xl bg-stone-200 animate-pulse"
               :style="{ animationDelay: `${n * 100}ms` }"
             />
+          </div>
+        </div>
+
+        <div
+          v-else-if="searchError"
+          class="max-w-md mx-auto mt-16 text-center px-8 py-12 bg-white rounded-2xl border border-stone-200 shadow-sm"
+        >
+          <div
+            class="mx-auto w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4"
+          >
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#dc2626"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-stone-800 mb-2">
+            We couldn't complete your search
+          </h3>
+          <p class="text-stone-500 text-sm leading-relaxed mb-7">
+            {{ searchError }}
+          </p>
+          <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              type="button"
+              class="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white text-sm font-semibold rounded-lg transition-colors border-none cursor-pointer"
+              @click="retrySearch"
+            >
+              Try Again
+            </button>
+            <button
+              type="button"
+              class="px-6 py-2.5 bg-white border border-stone-200 text-stone-600 text-sm font-semibold rounded-lg hover:bg-stone-50 transition-colors cursor-pointer"
+              @click="openSearchForm"
+            >
+              Modify Search
+            </button>
           </div>
         </div>
 
@@ -680,7 +741,7 @@ onMounted(() => {
         </template>
 
         <div
-          v-else-if="!isLoading && !searchError && !store.results?.length"
+          v-else
           class="max-w-sm mx-auto mt-20 text-center px-10 py-14 bg-white rounded-2xl border border-stone-200 shadow-sm"
         >
           <h3 class="text-2xl font-bold text-stone-800 mb-3">
@@ -692,25 +753,7 @@ onMounted(() => {
           </p>
           <button
             class="px-8 py-2.5 bg-primary hover:bg-primary/10 text-white text-sm font-semibold rounded-lg transition-colors border-none cursor-pointer"
-            @click="toggleSearchForm"
-          >
-            Modify Search
-          </button>
-        </div>
-
-        <div
-          v-else-if="searchError"
-          class="max-w-sm mx-auto mt-20 text-center px-10 py-14 bg-white rounded-2xl border border-stone-200 shadow-sm"
-        >
-          <h3 class="text-xl font-bold text-stone-800 mb-3">
-            An error occurred while fetching hotels.
-          </h3>
-          <p class="text-stone-500 text-sm leading-relaxed mb-5">
-            {{ searchError }}
-          </p>
-          <button
-            class="px-8 py-2.5 bg-primary hover:bg-primary/10 text-white text-sm font-semibold rounded-lg transition-colors border-none cursor-pointer"
-            @click="toggleSearchForm"
+            @click="openSearchForm"
           >
             Modify Search
           </button>

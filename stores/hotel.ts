@@ -84,6 +84,21 @@ export const useHotelSearchStore = defineStore(
       currentPage.value = 1;
     }
 
+    /**
+     * Discard the current result set (hotels, meta, filters, session) while
+     * keeping the store in its "searched" state. Used before a new search
+     * starts and after a failure so hotels from a previous search are never
+     * shown alongside a fresh search or an error.
+     */
+    function clearResultsData() {
+      results.value = [];
+      searchMeta.value = null;
+      filters.value = null;
+      sessionCode.value = "";
+      sessionId.value = "";
+      currentPage.value = 1;
+    }
+
     function clearResults() {
       results.value = [];
       searchMeta.value = null;
@@ -121,6 +136,7 @@ export const useHotelSearchStore = defineStore(
       setPage,
       setSortKey,
       clearResults,
+      clearResultsData,
     };
   },
 

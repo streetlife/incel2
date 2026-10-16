@@ -7,6 +7,7 @@ import type {
   RoomConfig,
 } from "../types/hotel";
 import { normalizeChildAge } from "../utils/hotel";
+import { normaliseError } from "../utils/api";
 
 export interface GuestDetail {
   type: "adult" | "child";
@@ -333,7 +334,7 @@ export const useHotelBookingStore = defineStore(
           });
         }
       } catch (e: any) {
-        roomsError.value = e?.message || "Failed to load rooms";
+        roomsError.value = normaliseError(e) || "Failed to load rooms";
       } finally {
         roomsLoading.value = false;
       }
@@ -475,7 +476,7 @@ export const useHotelBookingStore = defineStore(
         return true;
       } catch (e: any) {
         preBookError.value =
-          e?.message || "Pre-booking failed. Please try again.";
+          normaliseError(e) || "Pre-booking failed. Please try again.";
         return false;
       } finally {
         preBookLoading.value = false;
@@ -664,7 +665,8 @@ export const useHotelBookingStore = defineStore(
         return true;
       } catch (e: any) {
         status.value = "error";
-        errorMessage.value = e?.message || "Booking failed. Please try again.";
+        errorMessage.value =
+          normaliseError(e) || "Booking failed. Please try again.";
         return false;
       }
     }

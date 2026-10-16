@@ -3,6 +3,7 @@ import { ref, computed } from "vue";
 import { useHotelBookingStore } from "../../stores/useHotelBookingStore";
 import { useHotelService } from "../../services/hotel.service";
 import { useCurrency } from "../../composables/useCurrency";
+import { normaliseError } from "../../utils/api";
 
 const store = useHotelBookingStore();
 const { paystackPayment, flutterwavePayment } = useHotelService();
@@ -77,7 +78,8 @@ async function handlePay() {
     globalThis.location.href = paymentLink;
   } catch (e: any) {
     error.value =
-      e?.message ?? "Could not connect to payment gateway. Please try again.";
+      normaliseError(e) ||
+      "Could not connect to payment gateway. Please try again.";
     loading.value = false;
   }
 }

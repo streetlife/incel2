@@ -4,6 +4,7 @@ import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import HotelBookingConfirmation from '../../../../components/hotel/HotelBookingConfirmation.vue'
 import { useHotelBookingStore } from '../../../../stores/useHotelBookingStore'
 import { useHotelSearchStore } from '../../../../stores/hotel'
+import { normaliseError } from '../../../../utils/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -61,7 +62,7 @@ onMounted(async () => {
     }
   } catch (e: any) {
     status.value  = 'failed'
-    message.value = e.message ?? 'Could not verify payment. Contact support.'
+    message.value = normaliseError(e) || 'Could not verify payment. Contact support.'
   }
 })
 </script>

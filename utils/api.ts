@@ -26,11 +26,27 @@ export class AppApiError extends Error {
  * `[POST] "https://...": <no response> Failed to fetch`, must never reach the
  * UI, so every failure is mapped to one of these messages.
  */
+const OFFLINE_ERROR_MESSAGE =
+  "You appear to be offline. Please check your internet connection and try again.";
 const NETWORK_ERROR_MESSAGE =
-  "We couldn't reach our servers. Please check your internet connection and try again.";
+  "We're having trouble connecting to our servers. Please try again in a moment.";
 const SERVER_ERROR_MESSAGE =
   "Something went wrong on our end. Please try again later.";
 const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
+
+/**
+ * Choose the right wording for a transport failure.
+ *
+ * A 5xx response that is missing CORS headers is reported by the browser as
+ * `net::ERR_FAILED` and is unreadable by JS, so we treat it as "can't connect".
+ * Only claim the user is offline when the browser actually says so.
+ */
+function networkErrorMessage(): string {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return OFFLINE_ERROR_MESSAGE;
+  }
+  return NETWORK_ERROR_MESSAGE;
+}
 
 /** Map an HTTP status code to a friendly, non-technical message. */
 function friendlyHttpMessage(status: number): string {
@@ -76,6 +92,9 @@ export function isNetworkError(err: unknown): boolean {
     msg.includes("no response") ||
     msg.includes("err_failed") ||
     msg.includes("load failed") ||
+    msg.includes("net::err") ||
+    msg.includes("access to fetch") ||
+    msg.includes("cors") ||
     msg.includes("offline")
   );
 }
@@ -103,7 +122,7 @@ export function toFriendlyApiError(err: unknown): unknown {
   if (isAbortError(err)) return err;
 
   if (isNetworkError(err)) {
-    return new AppApiError(NETWORK_ERROR_MESSAGE, 0);
+    return new AppApiError(networkErrorMessage(), 0);
   }
 
   const status = Number(
@@ -114,6 +133,61 @@ export function toFriendlyApiError(err: unknown): unknown {
   }
 
   return err;
+}
+
+/**
+ * Heuristic for spotting machine-facing error text: request dumps, URLs,
+ * browser/network internals, raw server errors, etc. These must never be
+ * rendered to users.
+ */
+function looksTechnical(message: string): boolean {
+  const m = message.toLowerCase().trim();
+  if (!m) return false;
+  return (
+    /^\[(get|post|put|patch|delete)\]/.test(m) ||
+    m.includes("<no response>") ||
+    m.includes("failed to fetch") ||
+    m.includes("failed to load") ||
+    m.includes("networkerror") ||
+    m.includes("net::err") ||
+    m.includes("access to fetch") ||
+    m.includes("cors") ||
+    m.includes("econnrefused") ||
+    m.includes("etimedout") ||
+    m.includes("enotfound") ||
+    m.includes("internal server error") ||
+    m.includes("bad gateway") ||
+    m.includes("service unavailable") ||
+    m.includes("request failed with status code") ||
+    /https?:\/\//.test(m)
+  );
+}
+
+/**
+ * Resolve any thrown value into a message that is always safe to render.
+ *
+ * This is the final safety net for UI code: even if a raw technical error
+ * bypasses the API client (or arrives from a browser-level failure such as a
+ * CORS-blocked 500), the user only ever sees friendly copy.
+ */
+export function toDisplayMessage(
+  err: unknown,
+  fallback: string = GENERIC_ERROR_MESSAGE,
+): string {
+  if (isAbortError(err)) return "The request was cancelled.";
+
+  const friendly = toFriendlyApiError(err);
+  if (friendly instanceof AppApiError) {
+    return friendly.userMessage || fallback;
+  }
+  if (
+    friendly instanceof Error &&
+    friendly.message &&
+    !looksTechnical(friendly.message)
+  ) {
+    return friendly.message;
+  }
+  return fallback;
 }
 
 export function parseApiError(err: unknown): AppApiError {
@@ -131,18 +205,20 @@ export function parseApiError(err: unknown): AppApiError {
   if (body && typeof body === "object") {
     const b = body as Partial<ApiError>;
     const fieldMessages = Object.values(b.errors ?? {}).flat();
+    const candidate = fieldMessages[0] ?? b.message;
     const message =
-      fieldMessages[0] ??
-      b.message ??
-      friendlyHttpMessage(status);
+      candidate && !looksTechnical(candidate)
+        ? candidate
+        : friendlyHttpMessage(status);
     return new AppApiError({ message, status, errors: b.errors }, status);
   }
 
+  const raw = err instanceof Error ? err.message : "";
   const message = isNetworkError(err)
-    ? NETWORK_ERROR_MESSAGE
-    : err instanceof Error
-      ? err.message
-      : GENERIC_ERROR_MESSAGE;
+    ? networkErrorMessage()
+    : raw && !looksTechnical(raw)
+      ? raw
+      : friendlyHttpMessage(status);
   return new AppApiError({ message, status }, status);
 }
 
@@ -186,8 +262,13 @@ export function useApi() {
 
       const isServerError = status >= 500;
 
-      const serverMessage =
+      const rawServerMessage =
         Object.values(data?.errors ?? {}).flat()[0] || data?.message;
+      const serverMessage =
+        typeof rawServerMessage === "string" &&
+        !looksTechnical(rawServerMessage)
+          ? rawServerMessage
+          : "";
 
       const body: ApiError = {
         message: isServerError
@@ -242,9 +323,8 @@ export function useApi() {
 }
 
 export function normaliseError(err: unknown): string {
-  if (err instanceof AppApiError) return err.userMessage;
+  if (err instanceof AppApiError) return err.userMessage || GENERIC_ERROR_MESSAGE;
   if (isAbortError(err)) return "The request was cancelled.";
-  if (isNetworkError(err)) return NETWORK_ERROR_MESSAGE;
-  if (err instanceof Error && err.message) return err.message;
-  return GENERIC_ERROR_MESSAGE;
+  if (isNetworkError(err)) return networkErrorMessage();
+  return toDisplayMessage(err);
 }

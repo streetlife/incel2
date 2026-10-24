@@ -30,6 +30,7 @@ export interface HotelSearchRoom {
   description: string[];
   type: string[];
   total_rooms: string;
+  /** Per-room rates for the stay, pipe-delimited (e.g. "268.53|268.53"). */
   price: string;
   cancellation_policy: CancellationPolicyObject;
 }

@@ -275,7 +275,8 @@ export const useHotelBookingStore = defineStore(
           );
 
           availableRooms.value = searchRooms.map((room: any) => {
-            const roomPrice = Number(room.price ?? room.Price ?? 0);
+            const rawRoomPrice = room.price ?? room.Price;
+            const roomPrice = sumRates(parseRateParts(rawRoomPrice));
             const roomKey = room.booking_key ?? room.BookingKey ?? bookingKey;
             const roomTypes: string[] = room.type ?? room.Type ?? [];
             const roomName = Array.isArray(roomTypes)

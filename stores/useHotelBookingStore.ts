@@ -226,9 +226,6 @@ export const useHotelBookingStore = defineStore(
         rateChange.value = null;
         hotelFees.value = [];
         preBookCancellationInfo.value = null;
-        // Clear completed-booking artifacts so a new search starts fresh
-        // (keeps the idempotent submitGuests guard from skipping a new
-        // booking due to stale state).
         bookingReference.value = "";
         invoiceNumber.value = "";
         invoiceDate.value = "";
@@ -244,31 +241,16 @@ export const useHotelBookingStore = defineStore(
       try {
         const res = await getHotelById(code, hotelId);
         const hotelData = res?.hotel ?? (res as any);
-
-        // The rate quoted in the search response (`hotel.price`) is what the
-        // user was shown and accepted. The hotel-detail response can carry a
-        // different `price`, which previously caused the pre-book `total_rate`
-        // to diverge from the search rate. Capture the search rate before
-        // merging the detail and keep it as the canonical quoted rate so
-        // search, room pricing and pre-book stay consistent.
         const searchRate: number = Number(hotel.value?.price) || 0;
-
-        // The cancellation policy shown to the user comes from the search
-        // response. The hotel-detail response often echoes a generic
-        // placeholder ("See cancellation policy") which would otherwise
-        // overwrite the real search value once we merge the detail below, so
-        // capture the search value first (same reasoning as `searchRate`).
-        //
-        // `hotel.value` is normally hydrated from the persisted store (or from
-        // `selectedHotel` in sessionStorage) before this runs, but a child
-        // component's `onMounted` can fire before the parent page restores
-        // state, so fall back to sessionStorage when it is not available yet.
-        // Normalising here also discards the generic placeholder so it can
-        // never mask a real value from either source.
         const searchCancellationPolicy = normalizeCancellationPolicy(
           hotel.value?.cancellation_policy,
           readSearchCancellationPolicy(),
         );
+
+        const searchRooms: any[] =
+          (hotel.value?.rooms ?? []).length > 0
+            ? hotel.value.rooms
+            : (hotelData?.rooms ?? []);
 
         // Persist the full hotel detail
         if (hotelData?.hotel_id) {
@@ -277,61 +259,108 @@ export const useHotelBookingStore = defineStore(
           if (searchRate > 0) {
             hotel.value.price = searchRate;
           }
+          // Restore the search rooms array if the detail response wiped it.
+          if (searchRooms.length > 0 && !hotel.value.rooms?.length) {
+            hotel.value.rooms = searchRooms;
+          }
         }
 
-        const roomTypes: string[] = hotelData?.roomType ?? [];
         const bookingKey: string = hotelData?.BookingKey ?? "";
         const boardBasis: string[] = hotelData?.board_basis ?? [];
-        // Use the search-quoted rate; fall back to the detail rate for
-        // backward compatibility when no search `price` was available.
-        const totalPrice: number =
-          searchRate > 0 ? searchRate : (hotelData?.price ?? 0);
 
-        if (roomTypes.length > 0) {
-          const roomCount = searchParams.value.totalRooms || 1;
-
-          // Prefer the search response's policy (source of truth for what the
-          // user was shown), then fall back to the hotel-detail response.
+        if (searchRooms.length > 0) {
           const cancPolicy: string = normalizeCancellationPolicy(
             searchCancellationPolicy,
             hotelData?.cancellation_policy,
           );
 
-          availableRooms.value = roomTypes.map((type) => ({
-            rezliveRoomId: bookingKey,
-            roomName: type,
-            boardType: extractBoardType(boardBasis.join(", ")),
-            // totalPrice is the total for all rooms from the search response.
-            // Divide by rooms and nights to get per-room-per-night rate.
-            pricePerNight:
-              nights.value > 0 && roomCount > 0
-                ? totalPrice / roomCount / nights.value
-                : totalPrice,
-            totalPrice,
-            cancellationPolicy: cancPolicy,
-            amenities: boardBasis,
-            rawRates: String(totalPrice),
-          }));
-        } else {
-          // Fallback: legacy rooms array (backward compat)
-          const rooms: any[] = (res as any)?.rooms ?? [];
-          availableRooms.value = rooms.map((room: any) => {
-            const rates = room.TotalRate.split("|").map(Number);
-            const tp = rates.reduce((s: number, r: number) => s + r, 0);
+          availableRooms.value = searchRooms.map((room: any) => {
+            const roomPrice = Number(room.price ?? room.Price ?? 0);
+            const roomKey = room.booking_key ?? room.BookingKey ?? bookingKey;
+            const roomTypes: string[] = room.type ?? room.Type ?? [];
+            const roomName = Array.isArray(roomTypes)
+              ? roomTypes[0] ?? ""
+              : String(roomTypes);
+            const roomBoardBasis: string[] =
+              room.description ?? room.Description ?? boardBasis;
+            const roomCount = searchParams.value.totalRooms || 1;
+
+            // Per-room policy (new API carries it per room)
+            const rawPolicy = room.cancellation_policy ?? room.CancellationPolicy;
+            const roomPolicy =
+              rawPolicy?.Refundable === "No" || rawPolicy?.refundable === false
+                ? "Non-refundable"
+                : rawPolicy?.TillDate || rawPolicy?.till_date
+                  ? `Free cancellation until ${rawPolicy.TillDate ?? rawPolicy.till_date}`
+                  : cancPolicy;
+
             return {
-              rezliveRoomId: room.BookingKey,
-              roomName: room.Type.split("|")[0],
-              boardType: extractBoardType(room.RoomDescription),
-              pricePerNight: tp / nights.value,
-              totalPrice: tp,
-              cancellationPolicy:
-                room.CancellationPolicy?.Refundable === "No"
-                  ? "Non-refundable"
-                  : `Free cancellation until ${room.CancellationPolicy?.TillDate ?? ""}`,
-              amenities: extractAmenities(room.RoomDescription),
-              rawRates: room.TotalRate ?? "",
+              rezliveRoomId: roomKey,
+              roomName,
+              boardType: extractBoardType(
+                Array.isArray(roomBoardBasis)
+                  ? roomBoardBasis.join(", ")
+                  : String(roomBoardBasis),
+              ),
+              pricePerNight:
+                nights.value > 0 && roomCount > 0
+                  ? roomPrice / roomCount / nights.value
+                  : roomPrice,
+              totalPrice: roomPrice,
+              cancellationPolicy: roomPolicy,
+              amenities: Array.isArray(roomBoardBasis)
+                ? roomBoardBasis
+                : [String(roomBoardBasis)],
+              rawRates: String(roomPrice),
             };
           });
+        } else {
+          // ── Old/fallback format: flat roomType[] + single hotel-level price ──
+          const roomTypes: string[] = hotelData?.roomType ?? [];
+          const totalPrice: number =
+            searchRate > 0 ? searchRate : (hotelData?.price ?? 0);
+
+          if (roomTypes.length > 0) {
+            const roomCount = searchParams.value.totalRooms || 1;
+            const cancPolicy: string = normalizeCancellationPolicy(
+              searchCancellationPolicy,
+              hotelData?.cancellation_policy,
+            );
+
+            availableRooms.value = roomTypes.map((type) => ({
+              rezliveRoomId: bookingKey,
+              roomName: type,
+              boardType: extractBoardType(boardBasis.join(", ")),
+              pricePerNight:
+                nights.value > 0 && roomCount > 0
+                  ? totalPrice / roomCount / nights.value
+                  : totalPrice,
+              totalPrice,
+              cancellationPolicy: cancPolicy,
+              amenities: boardBasis,
+              rawRates: String(totalPrice),
+            }));
+          } else {
+            // Fallback: legacy rooms array (backward compat)
+            const rooms: any[] = (res as any)?.rooms ?? [];
+            availableRooms.value = rooms.map((room: any) => {
+              const rates = room.TotalRate.split("|").map(Number);
+              const tp = rates.reduce((s: number, r: number) => s + r, 0);
+              return {
+                rezliveRoomId: room.BookingKey,
+                roomName: room.Type.split("|")[0],
+                boardType: extractBoardType(room.RoomDescription),
+                pricePerNight: tp / nights.value,
+                totalPrice: tp,
+                cancellationPolicy:
+                  room.CancellationPolicy?.Refundable === "No"
+                    ? "Non-refundable"
+                    : `Free cancellation until ${room.CancellationPolicy?.TillDate ?? ""}`,
+                amenities: extractAmenities(room.RoomDescription),
+                rawRates: room.TotalRate ?? "",
+              };
+            });
+          }
         }
       } catch (e: any) {
         roomsError.value = normaliseError(e) || "Failed to load rooms";

@@ -17,10 +17,22 @@ export interface HotelSearchParams {
 
 export interface CancellationPolicyObject {
   Refundable?: string;
+  refundable?: boolean;
   TillDate?: string;
+  till_date?: string;
 }
 
 export type CancellationPolicyInput = string | CancellationPolicyObject | null;
+
+/** A single room option returned inside each hotel in the new search response. */
+export interface HotelSearchRoom {
+  booking_key: string;
+  description: string[];
+  type: string[];
+  total_rooms: string;
+  price: string;
+  cancellation_policy: CancellationPolicyObject;
+}
 
 export interface HotelResult {
   hotel_id: string;
@@ -35,6 +47,8 @@ export interface HotelResult {
   cancellation_policy?: CancellationPolicyInput;
   roomType?: string[];
   BookingKey?: string;
+  /** Per-room options with individual pricing (new API format). */
+  rooms?: HotelSearchRoom[];
 }
 
 export interface HotelSearchMeta {
@@ -52,6 +66,7 @@ export interface HotelSearchFilters {
   prices: number[];
   cities: string[];
   boardbasis: string[];
+  roomtypes?: string[];
 }
 
 export interface HotelSearchResponse {
@@ -128,6 +143,8 @@ export interface HotelByIdDetail {
   roomsChildren: number[];
   roomsChildrenAges: number[][];
   cancellation_policy?: CancellationPolicyInput;
+  /** Per-room options with individual pricing (carried from new search response). */
+  rooms?: HotelSearchRoom[];
 }
 
 export interface CreateBookingData {

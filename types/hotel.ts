@@ -22,7 +22,42 @@ export interface CancellationPolicyObject {
   till_date?: string;
 }
 
-export type CancellationPolicyInput = string | CancellationPolicyObject | null;
+export interface HotelFeeAttributes {
+  type?: string;
+  description?: string;
+  amounttype?: string;
+  amountType?: string;
+  currency?: string;
+  amount?: string;
+  [key: string]: unknown;
+}
+
+export interface HotelFee {
+  "@attributes"?: HotelFeeAttributes;
+  [key: string]: unknown;
+}
+
+export interface HotelFees {
+  Fee?: HotelFee | HotelFee[];
+  [key: string]: unknown;
+}
+
+/**
+ * Shape returned by the newer search API. Everything for a rate is nested
+ * under `cancellation_policy`.
+ */
+export interface HotelCancellationPolicy {
+  policy?: CancellationPolicyObject | string | null;
+  terms_and_conditions?: string | string[] | null;
+  pay_at_hotel_fees?: HotelFees | string | null;
+  [key: string]: unknown;
+}
+
+export type CancellationPolicyInput =
+  | string
+  | CancellationPolicyObject
+  | HotelCancellationPolicy
+  | null;
 
 /** A single room option returned inside each hotel in the new search response. */
 export interface HotelSearchRoom {
@@ -32,7 +67,7 @@ export interface HotelSearchRoom {
   total_rooms: string;
   /** Per-room rates for the stay, pipe-delimited (e.g. "268.53|268.53"). */
   price: string;
-  cancellation_policy: CancellationPolicyObject;
+  cancellation_policy: CancellationPolicyInput;
 }
 
 export interface HotelResult {
@@ -216,6 +251,23 @@ export interface PreBookingData {
   total_rate: number;
 }
 
+export interface CancellationPolicyEntry {
+  startDate?: string;
+  endDate?: string;
+  chargeType?: string;
+  chargeAmount?: string;
+  currency?: string;
+  [key: string]: unknown;
+}
+
+export interface CancellationInformations {
+  cancellationInformation?:
+    | CancellationPolicyEntry
+    | CancellationPolicyEntry[];
+  info?: string;
+  [key: string]: unknown;
+}
+
 export interface PreBookResponse {
   status: boolean;
   message: string;
@@ -234,16 +286,20 @@ export interface PreBookResponse {
   beforePrice?: string | number;
   afterPrice?: string | number;
   priceDifference?: string | number;
-  cancellationInformations: {
-    cancellationInformation: {
-      startDate: string;
-      endDate: string;
-      chargeType: string;
-      chargeAmount: string;
-      currency: string;
-    };
-    info: string;
-  };
+  /**
+   * Detailed cancellation schedule. The supplier may return a single entry or
+   * an array, and some backends pass the raw XML/JSON through as a string.
+   * Kept optional because many rates simply do not carry a schedule.
+   */
+  cancellationInformations?:
+    | CancellationInformations
+    | CancellationInformations[]
+    | string
+    | null;
+  /** Extra fees payable directly to the hotel at check-in. */
+  PayAtHotelFees?: unknown;
+  payAtHotelFees?: unknown;
+  pay_at_hotel_fees?: unknown;
 }
 
 export interface IRoomDetail {

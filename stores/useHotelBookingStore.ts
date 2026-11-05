@@ -2,11 +2,21 @@ import { defineStore } from "pinia";
 import { ref, computed, nextTick } from "vue";
 import { useHotelService } from "../services/hotel.service";
 import type {
+  CancellationPolicyEntry,
   CreateBookingData,
   PreBookingData,
   RoomConfig,
 } from "../types/hotel";
-import { normalizeChildAge } from "../utils/hotel";
+import {
+  cancellationPolicyToText,
+  extractPayAtHotelFees,
+  extractTermsAndConditions,
+  normalizeChildAge,
+  parseXmlAttributes,
+  pickField,
+  unescapeXmlEntities,
+  xmlText,
+} from "../utils/hotel";
 import { normaliseError } from "../utils/api";
 
 export interface GuestDetail {
@@ -28,6 +38,8 @@ export interface SelectedRoom {
   cancellationPolicy: string;
   cancellationFee?: string;
   termsAndConditions?: string;
+  /** Fees payable directly to the hotel at check-in for this room. */
+  payAtHotelFees?: { amount: string; currency: string; description: string }[];
   amenities: string[];
   rawRates: string;
 }
@@ -105,6 +117,12 @@ export const useHotelBookingStore = defineStore(
       startDate: string;
       endDate: string;
       terms: string;
+    } | null>(null);
+    // Full cancellation schedule from the pre-book response, including every
+    // cancellation window the supplier returned (one entry per period).
+    const preBookCancellationDetails = ref<{
+      info: string;
+      entries: CancellationPolicyEntry[];
     } | null>(null);
 
     const nights = computed(() => {
@@ -226,6 +244,7 @@ export const useHotelBookingStore = defineStore(
         rateChange.value = null;
         hotelFees.value = [];
         preBookCancellationInfo.value = null;
+        preBookCancellationDetails.value = null;
         bookingReference.value = "";
         invoiceNumber.value = "";
         invoiceDate.value = "";
@@ -286,14 +305,12 @@ export const useHotelBookingStore = defineStore(
               room.description ?? room.Description ?? boardBasis;
             const roomCount = searchParams.value.totalRooms || 1;
 
-            // Per-room policy (new API carries it per room)
+            // Per-room policy (new API carries it per room, nested under
+            // `cancellation_policy.policy`).
             const rawPolicy = room.cancellation_policy ?? room.CancellationPolicy;
-            const roomPolicy =
-              rawPolicy?.Refundable === "No" || rawPolicy?.refundable === false
-                ? "Non-refundable"
-                : rawPolicy?.TillDate || rawPolicy?.till_date
-                  ? `Free cancellation until ${rawPolicy.TillDate ?? rawPolicy.till_date}`
-                  : cancPolicy;
+            const roomPolicy = normalizeCancellationPolicy(rawPolicy, cancPolicy);
+            const roomTerms = extractTermsAndConditions(room);
+            const roomFees = extractPayAtHotelFees(room);
 
             return {
               rezliveRoomId: roomKey,
@@ -309,6 +326,8 @@ export const useHotelBookingStore = defineStore(
                   : roomPrice,
               totalPrice: roomPrice,
               cancellationPolicy: roomPolicy,
+              termsAndConditions: roomTerms,
+              payAtHotelFees: roomFees,
               amenities: Array.isArray(roomBoardBasis)
                 ? roomBoardBasis
                 : [String(roomBoardBasis)],
@@ -327,6 +346,11 @@ export const useHotelBookingStore = defineStore(
               searchCancellationPolicy,
               hotelData?.cancellation_policy,
             );
+            const hotelPolicy =
+              hotel.value?.cancellation_policy ??
+              hotelData?.cancellation_policy;
+            const hotelTerms = extractTermsAndConditions(hotelPolicy);
+            const hotelPayFees = extractPayAtHotelFees(hotelPolicy);
 
             availableRooms.value = roomTypes.map((type) => ({
               rezliveRoomId: bookingKey,
@@ -338,6 +362,8 @@ export const useHotelBookingStore = defineStore(
                   : totalPrice,
               totalPrice,
               cancellationPolicy: cancPolicy,
+              termsAndConditions: hotelTerms,
+              payAtHotelFees: hotelPayFees,
               amenities: boardBasis,
               rawRates: String(totalPrice),
             }));
@@ -353,10 +379,11 @@ export const useHotelBookingStore = defineStore(
                 boardType: extractBoardType(room.RoomDescription),
                 pricePerNight: tp / nights.value,
                 totalPrice: tp,
-                cancellationPolicy:
-                  room.CancellationPolicy?.Refundable === "No"
-                    ? "Non-refundable"
-                    : `Free cancellation until ${room.CancellationPolicy?.TillDate ?? ""}`,
+                cancellationPolicy: normalizeCancellationPolicy(
+                  room.CancellationPolicy,
+                ),
+                termsAndConditions: extractTermsAndConditions(room),
+                payAtHotelFees: extractPayAtHotelFees(room),
                 amenities: extractAmenities(room.RoomDescription),
                 rawRates: room.TotalRate ?? "",
               };
@@ -371,10 +398,13 @@ export const useHotelBookingStore = defineStore(
     }
 
     function selectRoom(room: SelectedRoom) {
-      // Reset any terms left over from a previously selected room so a stale
-      // value can never be shown before the new pre-book response arrives.
-      room.termsAndConditions = "";
-      selectedRoom.value = room;
+      // Clone so pre-book enrichment (terms/fees) never mutates the room list,
+      // and re-selecting the room restores its quoted values.
+      selectedRoom.value = { ...room };
+      // Surface any pay-at-hotel fees immediately, before the pre-book call.
+      hotelFees.value = room.payAtHotelFees?.length
+        ? room.payAtHotelFees
+        : extractHotelFees(hotel.value);
       guests.value = buildGuestList(searchParams.value.rooms);
       errorMessage.value = "";
       status.value = "idle";
@@ -393,11 +423,13 @@ export const useHotelBookingStore = defineStore(
       // stale confirmed/declined price from a previous room selection.
       rateChange.value = null;
       bookingAfterPrice.value = "";
-      hotelFees.value = [];
+      // Keep the fees/terms captured from the search result until the
+      // pre-book response provides richer values.
+      hotelFees.value = selectedRoom.value?.payAtHotelFees?.length
+        ? selectedRoom.value.payAtHotelFees
+        : extractHotelFees(hotel.value);
       preBookCancellationInfo.value = null;
-      if (selectedRoom.value) {
-        selectedRoom.value.termsAndConditions = "";
-      }
+      preBookCancellationDetails.value = null;
 
       try {
         // ── Validate required payload fields before sending ──
@@ -468,19 +500,28 @@ export const useHotelBookingStore = defineStore(
         prebookedRoomsKey.value = roomsKey;
         preBookTotalRate.value = totalRate;
 
-        // ── Extract cancellation policy from pre-book response ──
-        const cancInfo = extractCancellationInfo(result);
-        preBookCancellationInfo.value = cancInfo;
+        // ── Extract detailed cancellation policy from the pre-book response ──
+        const cancellationDetails = extractCancellationDetails(result);
+        preBookCancellationDetails.value = cancellationDetails;
+        preBookCancellationInfo.value = cancellationDetails
+          ? cancellationInfoFromDetails(cancellationDetails)
+          : null;
 
         // ── Extract hotel fees (paid at check-in, not charged by us) ──
-        hotelFees.value = extractHotelFees(result);
+        // Merge with any fees already captured from the search result.
+        hotelFees.value = mergeHotelFees(
+          hotelFees.value,
+          extractHotelFees(result),
+        );
 
         // ── Capture room Terms & Conditions exactly as returned ──
         // The pre-book response carries the room's fine print under
-        // `room.terms` (an HTML string). Store it verbatim so the booking
-        // pages can render it as-is.
-        if (selectedRoom.value) {
-          selectedRoom.value.termsAndConditions = extractRoomTerms(result);
+        // `room.terms` (an HTML string). Search results may already carry
+        // `cancellation_policy.terms_and_conditions`; only override when the
+        // pre-book response actually provides terms.
+        const prebookTerms = extractRoomTerms(result);
+        if (selectedRoom.value && prebookTerms) {
+          selectedRoom.value.termsAndConditions = prebookTerms;
         }
 
         // ── Rate change detection via `<BookingAfterPrice>` ──
@@ -748,6 +789,9 @@ export const useHotelBookingStore = defineStore(
           prebookedRoomsKey,
           preBookTotalRate,
           bookingAfterPrice,
+          hotelFees,
+          preBookCancellationInfo,
+          preBookCancellationDetails,
         };
         for (const key of Object.keys(persisted)) {
           if (data[key] != null) persisted[key].value = data[key];
@@ -783,6 +827,7 @@ export const useHotelBookingStore = defineStore(
       preBookError.value = "";
       hotelFees.value = [];
       preBookCancellationInfo.value = null;
+      preBookCancellationDetails.value = null;
       searchParams.value = {
         country: "",
         city: "",
@@ -835,6 +880,7 @@ export const useHotelBookingStore = defineStore(
       rateChange,
       hotelFees,
       preBookCancellationInfo,
+      preBookCancellationDetails,
       isNonRefundable,
       cancellationPolicyText,
       roomTerms,
@@ -878,6 +924,9 @@ export const useHotelBookingStore = defineStore(
         "prebookedRoomsKey",
         "preBookTotalRate",
         "bookingAfterPrice",
+        "hotelFees",
+        "preBookCancellationInfo",
+        "preBookCancellationDetails",
       ],
     },
   },
@@ -970,70 +1019,18 @@ function policyIsNonRefundable(policy: string): boolean {
   );
 }
 
-function asTrimmedString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-/** Convert `{ Refundable, TillDate }` into a readable policy, or "" if unknown. */
-function cancellationPolicyObjectToString(
-  raw: Record<string, unknown>,
-): string {
-  const refundable = asTrimmedString(raw.Refundable).toLowerCase();
-  const tillDate = asTrimmedString(raw.TillDate);
-
-  if (refundable === "no" || refundable === "false") {
-    return "Non-refundable";
-  }
-  if (refundable === "yes" || refundable === "true") {
-    return tillDate
-      ? `Free cancellation until ${tillDate}`
-      : "Free cancellation";
-  }
-  return "";
-}
-
-/** Normalise a string policy, unwrapping JSON-encoded objects. "" if unknown. */
-function cancellationPolicyStringToString(value: string): string {
-  const trimmed = value.trim();
-  const isUnknown =
-    !trimmed ||
-    trimmed.toLowerCase() === UNKNOWN_CANCELLATION_POLICY.toLowerCase();
-  if (isUnknown) {
-    return "";
-  }
-  if (trimmed.startsWith("{")) {
-    try {
-      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
-      const fromObject = cancellationPolicyObjectToString(parsed);
-      if (fromObject) return fromObject;
-    } catch {
-      // not JSON — treat it as a plain string below
-    }
-  }
-  return trimmed;
-}
-
 /**
  * Normalise a cancellation policy into a display string.
  *
- * The search response returns `cancellation_policy` as an object:
- *   { Refundable: "No" }
- *   { Refundable: "Yes", TillDate: "09/10/2026" }
- * The hotel-detail response may return a plain string, or a generic
- * "See cancellation policy" placeholder which we deliberately skip so a real
- * value from an earlier candidate can win.
+ * Handles the legacy flat shape `{ Refundable, TillDate }`, the newer search
+ * shape `{ policy: { Refundable, TillDate }, ... }`, plain strings and
+ * JSON-encoded objects. The generic "See cancellation policy" placeholder is
+ * skipped so a real value from an earlier candidate can win.
  */
 function normalizeCancellationPolicy(...candidates: unknown[]): string {
   for (const raw of candidates) {
-    if (typeof raw === "string") {
-      const value = cancellationPolicyStringToString(raw);
-      if (value) return value;
-    } else if (raw && typeof raw === "object") {
-      const value = cancellationPolicyObjectToString(
-        raw as Record<string, unknown>,
-      );
-      if (value) return value;
-    }
+    const value = cancellationPolicyToText(raw);
+    if (value) return value;
   }
 
   return UNKNOWN_CANCELLATION_POLICY;
@@ -1077,11 +1074,160 @@ function extractAmenities(desc: string): string[] {
     .filter(Boolean);
 }
 
+function normalizeCancellationEntry(raw: any): CancellationPolicyEntry {
+  return {
+    startDate: pickField(raw, [
+      "startDate",
+      "from",
+      "dateFrom",
+      "fromDate",
+      "start",
+    ]),
+    endDate: pickField(raw, ["endDate", "to", "dateTo", "toDate", "end"]),
+    chargeType: pickField(raw, [
+      "chargeType",
+      "type",
+      "penaltyType",
+      "amountType",
+    ]),
+    chargeAmount: pickField(raw, [
+      "chargeAmount",
+      "amount",
+      "penaltyAmount",
+      "value",
+    ]),
+    currency: pickField(raw, ["currency", "currencyCode"]),
+  };
+}
+
+function cancellationEntryHasData(entry: CancellationPolicyEntry): boolean {
+  return Boolean(
+    entry.startDate || entry.endDate || entry.chargeAmount || entry.chargeType,
+  );
+}
+
 /**
- * Extract cancellation policy information from the pre-book response.
- * Handles both flat and nested response shapes from rezlive.
+ * Recursively collect cancellation entries from nested containers such as
+ * `{ cancellationInformation: { policy: [ ... ] } }`.
  */
-function extractCancellationInfo(result: any): {
+function collectCancellationEntries(value: any): any[] {
+  const results: any[] = [];
+
+  const visit = (node: any) => {
+    if (!node) return;
+    if (Array.isArray(node)) {
+      node.forEach(visit);
+      return;
+    }
+    if (typeof node !== "object") return;
+
+    // If the node itself looks like a cancellation entry, keep it.
+    if (
+      pickField(node, [
+        "startDate",
+        "from",
+        "dateFrom",
+        "chargeAmount",
+        "amount",
+        "chargeType",
+        "penaltyType",
+      ])
+    ) {
+      results.push(node);
+      return;
+    }
+
+    // Otherwise descend into nested objects/arrays. Only entry-like nodes are
+    // kept, so this safely handles keyed or differently-named containers.
+    for (const child of Object.values(node)) {
+      if (child && typeof child === "object") visit(child);
+    }
+  };
+
+  visit(value);
+  return results;
+}
+
+/**
+ * Extract the full cancellation schedule from the pre-book response.
+ *
+ * Supports the JSON shapes the API may return (`cancellationInformations`
+ * with a single `cancellationInformation` or an array of them, under `room`
+ * or top level) as well as raw XML/JSON strings forwarded from the supplier.
+ */
+function extractCancellationDetails(
+  result: any,
+): { info: string; entries: CancellationPolicyEntry[] } | null {
+  let raw =
+    result?.cancellationInformations ??
+    result?.room?.cancellationInformations ??
+    result?.CancellationInformations ??
+    result?.room?.CancellationInformations ??
+    result?.cancellationInformation ??
+    result?.room?.cancellationInformation ??
+    result?.CancellationInformation ??
+    result?.room?.CancellationInformation ??
+    result?.cancellationPolicies ??
+    result?.room?.cancellationPolicies ??
+    result?.cancellationPolicy ??
+    result?.room?.cancellationPolicy ??
+    result?.CancellationPolicy ??
+    result?.room?.CancellationPolicy;
+
+  if (raw === null || raw === undefined || raw === "") return null;
+
+  // Some backends forward the supplier XML (or a JSON string) verbatim.
+  if (typeof raw === "string") {
+    const text = unescapeXmlEntities(raw).trim();
+    if (text.startsWith("{") || text.startsWith("[")) {
+      try {
+        raw = JSON.parse(text);
+      } catch {
+        // Fall through and try the XML parser.
+      }
+    }
+    if (typeof raw === "string") {
+      if (!text.includes("<")) return null;
+      const entries = parseXmlAttributes(text, [
+        "CancellationInformation",
+        "CancellationInformations",
+        "CancellationPolicy",
+        "Cancellation",
+        "Policy",
+        "Fee",
+      ])
+        .map(normalizeCancellationEntry)
+        .filter(cancellationEntryHasData);
+      const info = xmlText(text, ["Info", "Description", "Text"]);
+      if (!info && entries.length === 0) return null;
+      return { info, entries };
+    }
+  }
+
+  const info =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? pickField(raw, [
+          "info",
+          "description",
+          "text",
+          "policy",
+          "policyDescription",
+        ])
+      : "";
+
+  const entries = collectCancellationEntries(raw)
+    .map(normalizeCancellationEntry)
+    .filter(cancellationEntryHasData);
+
+  if (!info && entries.length === 0) return null;
+  return { info, entries };
+}
+
+/** Build the compact summary used by the existing one-line UI/sidebar. */
+function cancellationInfoFromDetails(details: {
+  info: string;
+  entries: CancellationPolicyEntry[];
+}): {
   policy: string;
   chargeType: string;
   chargeAmount: string;
@@ -1089,105 +1235,64 @@ function extractCancellationInfo(result: any): {
   startDate: string;
   endDate: string;
   terms: string;
-} | null {
-  // The cancellationInformations can be nested: result.cancellationInformations or
-  // result.room.cancellationInformations (from some pre-book response shapes).
-  const raw =
-    result?.cancellationInformations ??
-    result?.room?.cancellationInformations ??
-    result?.CancellationInformation ??
-    result?.room?.CancellationInformation;
-
-  if (!raw) return null;
-
-  // Unwrap nested `.cancellationInformation` object if present
-  const info = raw?.cancellationInformation ?? raw;
-  const infoText: string = raw?.info ?? "";
-
-  if (!info && !infoText) return null;
-
+} {
+  const first = details.entries[0];
   return {
-    policy: infoText || info?.chargeType || "",
-    chargeType: info?.chargeType ?? "",
-    chargeAmount: String(info?.chargeAmount ?? ""),
-    currency: info?.currency ?? "",
-    startDate: info?.startDate ?? "",
-    endDate: info?.endDate ?? "",
-    terms: infoText,
+    policy: details.info || "",
+    chargeType: first?.chargeType ?? "",
+    chargeAmount: String(first?.chargeAmount ?? ""),
+    currency: first?.currency ?? "",
+    startDate: first?.startDate ?? "",
+    endDate: first?.endDate ?? "",
+    terms: details.info,
   };
 }
 
 /**
- * Extract the room Terms & Conditions from the pre-book response.
- *
- * The supplier returns the room's fine print as an HTML string under
- * `room.terms` (see the `PreBookResponse` contract). A few alternate shapes
- * are probed as a safety net (camel/Pascal keys, or an array of items), and
- * the value is returned verbatim so the UI can render it exactly as supplied.
+ * Extract the room Terms & Conditions from any response shape. The supplier
+ * returns them under `room.terms`; the search API nests them inside
+ * `cancellation_policy.terms_and_conditions`.
  */
 function extractRoomTerms(result: any): string {
-  const raw =
-    result?.room?.terms ??
-    result?.room?.TermsAndConditions ??
-    result?.room?.termsAndConditions ??
-    result?.terms ??
-    result?.TermsAndConditions ??
-    result?.termsAndConditions;
-
-  if (raw === null || raw === undefined) return "";
-
-  if (Array.isArray(raw)) {
-    return raw
-      .map((item) =>
-        typeof item === "string"
-          ? item
-          : (item?.text ?? item?.Text ?? item?.Description ?? item?.Name ?? ""),
-      )
-      .filter(Boolean)
-      .join("");
-  }
-
-  return typeof raw === "string" ? raw.trim() : "";
+  return extractTermsAndConditions(result);
 }
 
 /**
- * Extract extra hotel fees that are paid at check-in (not charged by us).
- * These are surfaced in the pre-book response under fields like `hotelFees`,
- * `hotel_fees`, or similar keys depending on the rezlive response shape.
+ * Extract extra fees that are paid directly to the hotel at check-in (not
+ * charged by us). Supports the nested `cancellation_policy.pay_at_hotel_fees`
+ * shape, legacy `hotelFees` arrays, parsed objects and raw XML/JSON strings.
  */
 function extractHotelFees(
   result: any,
 ): { amount: string; currency: string; description: string }[] {
-  const fees: { amount: string; currency: string; description: string }[] = [];
+  const candidates = [
+    result?.room,
+    result,
+    result?.cancellation_policy,
+    result?.room?.cancellation_policy,
+  ];
 
-  // Check common fee locations in the response
-  const rawFees =
-    result?.hotelFees ??
-    result?.hotel_fees ??
-    result?.HotelFees ??
-    result?.room?.hotelFees ??
-    result?.room?.hotel_fees;
+  return mergeHotelFees(
+    ...candidates.map((candidate) => extractPayAtHotelFees(candidate)),
+  );
+}
 
-  if (Array.isArray(rawFees)) {
-    for (const f of rawFees) {
-      if (f && (f.amount || f.Amount)) {
-        fees.push({
-          amount: String(f.amount ?? f.Amount ?? ""),
-          currency: f.currency ?? f.Currency ?? "",
-          description: f.description ?? f.Description ?? f.type ?? f.Type ?? "Hotel fee",
-        });
-      }
-    }
-  } else if (rawFees && typeof rawFees === "object") {
-    // Some responses return a single fee object
-    if (rawFees.amount || rawFees.Amount) {
-      fees.push({
-        amount: String(rawFees.amount ?? rawFees.Amount ?? ""),
-        currency: rawFees.currency ?? rawFees.Currency ?? "",
-        description: rawFees.description ?? rawFees.Description ?? "Hotel fee",
-      });
+/** De-duplicate and merge fee lists from multiple sources. */
+function mergeHotelFees(
+  ...lists: { amount: string; currency: string; description: string }[][]
+): { amount: string; currency: string; description: string }[] {
+  const merged: { amount: string; currency: string; description: string }[] =
+    [];
+  const seen = new Set<string>();
+
+  for (const list of lists) {
+    for (const fee of list) {
+      const key = `${fee.description}|${fee.amount}|${fee.currency}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(fee);
     }
   }
 
-  return fees;
+  return merged;
 }

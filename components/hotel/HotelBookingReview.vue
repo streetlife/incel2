@@ -50,6 +50,40 @@ const guestBreakdown = computed(() => {
 
 const isSubmitting = computed(() => store.status === "submitting");
 
+const cancellationEntries = computed(
+  () => store.preBookCancellationDetails?.entries ?? [],
+);
+
+/** Human-readable charge for one cancellation window. */
+function formatCancellationCharge(entry: {
+  chargeType?: string;
+  chargeAmount?: string;
+  currency?: string;
+}): string {
+  const amount = entry.chargeAmount?.trim();
+  if (!amount) return "No charge";
+  const type = (entry.chargeType ?? "").toLowerCase();
+  if (type.includes("percent")) return `${amount}%`;
+  if (type.includes("night")) {
+    return `${amount} night${amount === "1" ? "" : "s"}`;
+  }
+  const currency = entry.currency?.trim();
+  return currency ? `${currency} ${amount}` : amount;
+}
+
+/** Human-readable date range for one cancellation window. */
+function formatCancellationPeriod(entry: {
+  startDate?: string;
+  endDate?: string;
+}): string {
+  if (entry.startDate && entry.endDate) {
+    return `${entry.startDate} – ${entry.endDate}`;
+  }
+  if (entry.startDate) return `From ${entry.startDate}`;
+  if (entry.endDate) return `Until ${entry.endDate}`;
+  return "Any time";
+}
+
 function proceed() {
   store.generateInvoice();
   toast.success("Proceeding to payment…");
@@ -292,11 +326,11 @@ function proceed() {
           <line x1="12" y1="8" x2="12" y2="12" />
           <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
-        <p class="text-sm font-semibold text-amber-800">Additional Hotel Fees</p>
+        <p class="text-sm font-semibold text-amber-800">Payable at the Hotel</p>
       </div>
       <div class="px-5 py-4 space-y-2">
         <p class="text-xs text-amber-700 mb-3">
-          The following fees are paid directly to the hotel at check-in and are <strong>not included</strong> in the amount charged by us:
+          The following fees are paid directly to the hotel at check-in and are <strong>not included</strong> in the total charged on this website:
         </p>
         <div
           v-for="(fee, i) in store.hotelFees"
@@ -309,9 +343,9 @@ function proceed() {
       </div>
     </div>
 
-    <!-- Cancellation Policy & Terms -->
+    <!-- Detailed Cancellation Policy (from the pre-book response) -->
     <div
-      v-if="store.preBookCancellationInfo"
+      v-if="store.preBookCancellationDetails || store.preBookCancellationInfo"
       class="rounded-2xl overflow-hidden border"
       :class="store.isNonRefundable ? 'border-red-200 bg-red-50' : 'border-teal-200 bg-teal-50'"
     >
@@ -339,22 +373,81 @@ function proceed() {
           Cancellation Policy
         </p>
       </div>
-      <div class="px-5 py-4 space-y-2">
+
+      <div class="px-5 py-4 space-y-3">
+        <!-- When there is no schedule, fall back to the summary line. -->
         <p
+          v-if="!cancellationEntries.length"
           class="text-sm font-medium"
           :class="store.isNonRefundable ? 'text-red-800' : 'text-teal-800'"
         >
           {{ store.cancellationPolicyText }}
         </p>
-        <template v-if="store.preBookCancellationInfo.chargeType && store.preBookCancellationInfo.chargeAmount">
-          <div class="flex gap-4 text-xs mt-2" :class="store.isNonRefundable ? 'text-red-700' : 'text-teal-700'">
-            <span v-if="store.preBookCancellationInfo.chargeAmount">Cancellation charge: <strong>{{ store.preBookCancellationInfo.chargeAmount }}{{ store.preBookCancellationInfo.chargeType === 'Percentage' ? '%' : (' ' + store.preBookCancellationInfo.currency) }}</strong></span>
+
+        <template v-if="store.preBookCancellationDetails">
+          <p
+            v-if="cancellationEntries.length && store.preBookCancellationDetails.info"
+            class="text-xs leading-relaxed"
+            :class="store.isNonRefundable ? 'text-red-700' : 'text-teal-700'"
+          >
+            {{ store.preBookCancellationDetails.info }}
+          </p>
+
+          <!-- Full schedule returned by the pre-book response -->
+          <div
+            v-if="cancellationEntries.length"
+            class="overflow-hidden rounded-lg border bg-white/60"
+            :class="store.isNonRefundable ? 'border-red-200' : 'border-teal-200'"
+          >
+            <div
+              class="grid grid-cols-[1fr_auto] gap-3 px-3 py-2 text-[10px] font-bold uppercase tracking-widest"
+              :class="store.isNonRefundable ? 'bg-red-100/70 text-red-700' : 'bg-teal-100/70 text-teal-700'"
+            >
+              <span>Cancellation period</span>
+              <span class="text-right">Charge</span>
+            </div>
+            <div
+              v-for="(entry, i) in cancellationEntries"
+              :key="i"
+              class="grid grid-cols-[1fr_auto] gap-3 px-3 py-2 text-xs border-t"
+              :class="[
+                store.isNonRefundable ? 'border-red-100 text-red-700' : 'border-teal-100 text-teal-700',
+                i % 2 === 1
+                  ? (store.isNonRefundable ? 'bg-red-50/50' : 'bg-teal-50/50')
+                  : '',
+              ]"
+            >
+              <span>{{ formatCancellationPeriod(entry) }}</span>
+              <span class="font-semibold text-right">
+                {{ formatCancellationCharge(entry) }}
+              </span>
+            </div>
+          </div>
+        </template>
+
+        <!-- Fallback for APIs that only provide the summary fields -->
+        <template v-else-if="store.preBookCancellationInfo">
+          <div
+            v-if="store.preBookCancellationInfo.chargeType && store.preBookCancellationInfo.chargeAmount"
+            class="flex flex-wrap gap-x-4 gap-y-1 text-xs"
+            :class="store.isNonRefundable ? 'text-red-700' : 'text-teal-700'"
+          >
+            <span>Cancellation charge: <strong>{{ store.preBookCancellationInfo.chargeAmount }}{{ store.preBookCancellationInfo.chargeType === 'Percentage' ? '%' : (' ' + store.preBookCancellationInfo.currency) }}</strong></span>
             <span v-if="store.preBookCancellationInfo.startDate">From: {{ store.preBookCancellationInfo.startDate }}</span>
             <span v-if="store.preBookCancellationInfo.endDate">To: {{ store.preBookCancellationInfo.endDate }}</span>
           </div>
+          <p v-if="store.preBookCancellationInfo.terms" class="text-xs leading-relaxed" :class="store.isNonRefundable ? 'text-red-600' : 'text-teal-600'">
+            {{ store.preBookCancellationInfo.terms }}
+          </p>
         </template>
-        <p v-if="store.preBookCancellationInfo.terms" class="text-xs mt-2 leading-relaxed" :class="store.isNonRefundable ? 'text-red-600' : 'text-teal-600'">
-          {{ store.preBookCancellationInfo.terms }}
+
+        <p
+          v-if="!cancellationEntries.length && !store.preBookCancellationDetails?.info"
+          class="text-[11px] leading-relaxed"
+          :class="store.isNonRefundable ? 'text-red-600/80' : 'text-teal-600/80'"
+        >
+          Please review the hotel's cancellation terms above before confirming.
+          Charges apply according to the hotel's policy.
         </p>
       </div>
     </div>

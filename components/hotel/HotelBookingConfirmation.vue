@@ -42,6 +42,38 @@ const guestLabels = computed(() => {
   });
 });
 
+const cancellationEntries = computed(
+  () => store.preBookCancellationDetails?.entries ?? [],
+);
+
+function formatCancellationCharge(entry: {
+  chargeType?: string;
+  chargeAmount?: string;
+  currency?: string;
+}): string {
+  const amount = entry.chargeAmount?.trim();
+  if (!amount) return "No charge";
+  const type = (entry.chargeType ?? "").toLowerCase();
+  if (type.includes("percent")) return `${amount}%`;
+  if (type.includes("night")) {
+    return `${amount} night${amount === "1" ? "" : "s"}`;
+  }
+  const currency = entry.currency?.trim();
+  return currency ? `${currency} ${amount}` : amount;
+}
+
+function formatCancellationPeriod(entry: {
+  startDate?: string;
+  endDate?: string;
+}): string {
+  if (entry.startDate && entry.endDate) {
+    return `${entry.startDate} – ${entry.endDate}`;
+  }
+  if (entry.startDate) return `From ${entry.startDate}`;
+  if (entry.endDate) return `Until ${entry.endDate}`;
+  return "Any time";
+}
+
 function bookAnother() {
   store.reset();
   searchStore.clearResults();
@@ -278,6 +310,74 @@ async function copyBookingCode() {
           >
             {{ store.selectedRoom?.cancellationPolicy }}
           </span>
+        </div>
+      </div>
+
+      <!-- Detailed Cancellation Policy (from the pre-book response) -->
+      <div
+        v-if="cancellationEntries.length || store.preBookCancellationDetails?.info"
+        class="px-5 py-4 border-b border-slate-100"
+      >
+        <p
+          class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3"
+        >
+          Cancellation Policy
+        </p>
+        <p
+          v-if="store.preBookCancellationDetails?.info"
+          class="text-xs text-slate-600 leading-relaxed mb-3"
+        >
+          {{ store.preBookCancellationDetails.info }}
+        </p>
+        <div
+          v-if="cancellationEntries.length"
+          class="overflow-hidden rounded-lg border border-slate-200"
+        >
+          <div
+            class="grid grid-cols-[1fr_auto] gap-3 px-3 py-2 bg-slate-50 text-[10px] font-bold uppercase tracking-widest text-slate-400"
+          >
+            <span>Cancellation period</span>
+            <span class="text-right">Charge</span>
+          </div>
+          <div
+            v-for="(entry, i) in cancellationEntries"
+            :key="i"
+            class="grid grid-cols-[1fr_auto] gap-3 px-3 py-2 text-xs text-slate-600 border-t border-slate-100"
+            :class="i % 2 === 1 ? 'bg-slate-50/60' : ''"
+          >
+            <span>{{ formatCancellationPeriod(entry) }}</span>
+            <span class="font-semibold text-right text-slate-700">{{
+              formatCancellationCharge(entry)
+            }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fees payable directly at the hotel -->
+      <div
+        v-if="store.hotelFees.length"
+        class="px-5 py-4 border-b border-slate-100"
+      >
+        <p
+          class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2"
+        >
+          Payable at the Hotel
+        </p>
+        <p class="text-[11px] text-slate-500 leading-relaxed mb-2">
+          These fees are paid directly to the hotel at check-in and are not
+          included in the total paid.
+        </p>
+        <div class="space-y-1.5">
+          <div
+            v-for="(fee, i) in store.hotelFees"
+            :key="i"
+            class="flex justify-between text-xs text-slate-600"
+          >
+            <span>{{ fee.description }}</span>
+            <span class="font-semibold text-slate-700"
+              >{{ fee.amount }} {{ fee.currency }}</span
+            >
+          </div>
         </div>
       </div>
 

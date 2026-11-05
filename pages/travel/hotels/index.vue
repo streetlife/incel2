@@ -8,6 +8,7 @@ import type { HotelSearchParams, RoomConfig } from "../../../types/hotel";
 import { useCurrency } from "../../../composables/useCurrency";
 import { useHotelSearchStore } from "../../../stores/hotel";
 import { normaliseError } from "../../../utils/api";
+import { extractPayAtHotelFees } from "../../../utils/hotel";
 
 const route = useRoute();
 const router = useRouter();
@@ -27,6 +28,46 @@ const paginatedResults = computed(() => {
   const start = (store.currentPage - 1) * ITEMS_PER_PAGE;
   return store.sortedResults.slice(start, start + ITEMS_PER_PAGE);
 });
+
+/** Pay-at-hotel fees per hotel, aggregated from the hotel & its room rates. */
+const hotelFeesById = computed<
+  Record<string, { amount: string; currency: string; description: string }[]>
+>(() => {
+  const map: Record<
+    string,
+    { amount: string; currency: string; description: string }[]
+  > = {};
+
+  for (const hotel of paginatedResults.value) {
+    const candidates = [
+      hotel.cancellation_policy,
+      ...(hotel.rooms ?? []).map((room) => room?.cancellation_policy),
+    ];
+    const seen = new Set<string>();
+    const fees: { amount: string; currency: string; description: string }[] = [];
+
+    for (const candidate of candidates) {
+      for (const fee of extractPayAtHotelFees(candidate)) {
+        const key = `${fee.description}|${fee.amount}|${fee.currency}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        fees.push(fee);
+      }
+    }
+
+    map[hotel.hotel_id] = fees;
+  }
+
+  return map;
+});
+
+function formatHotelFees(
+  fees: { amount: string; currency: string; description: string }[],
+): string {
+  return fees
+    .map((fee) => `${fee.currency} ${fee.amount} ${fee.description}`.trim())
+    .join(" · ");
+}
 
 const popularDestinations = [
   {
@@ -711,6 +752,14 @@ onMounted(() => {
                       >/night</span
                     >
                   </span>
+                  <p
+                    v-if="hotelFeesById[hotel.hotel_id]?.length"
+                    class="text-[11px] leading-snug text-amber-600 mt-2"
+                  >
+                    +
+                    {{ formatHotelFees(hotelFeesById[hotel.hotel_id]) }}
+                    payable at hotel
+                  </p>
                 </div>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary hover:bg-primary/60 text-white text-sm font-semibold transition-all duration-150 hover:-translate-y-px border-none cursor-pointer shadow-sm"

@@ -190,7 +190,7 @@ const guestBreakdown = computed(() => {
       v-if="store.hotelFees.length > 0"
       class="mx-5 mb-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 space-y-1"
     >
-      <p class="text-xs font-semibold text-amber-800 mb-1.5">Fees at check-in:</p>
+      <p class="text-xs font-semibold text-amber-800 mb-1.5">Payable at the hotel:</p>
       <div
         v-for="(fee, i) in store.hotelFees"
         :key="i"
@@ -199,7 +199,7 @@ const guestBreakdown = computed(() => {
         <span>{{ fee.description }}</span>
         <span class="font-semibold">{{ fee.amount }} {{ fee.currency }}</span>
       </div>
-      <p class="text-[10px] text-amber-600 mt-1">Paid directly to the hotel</p>
+      <p class="text-[10px] text-amber-600 mt-1">Not included in the total · paid at check-in</p>
     </div>
 
     <div

@@ -58,8 +58,13 @@ function formatCancellationCharge(entry: {
   if (type.includes("night")) {
     return `${amount} night${amount === "1" ? "" : "s"}`;
   }
-  const currency = entry.currency?.trim();
-  return currency ? `${currency} ${amount}` : amount;
+
+  // Amount charges follow the selected display currency (symbol + conversion).
+  const numeric = Number(amount.replace(/,/g, ""));
+  if (Number.isFinite(numeric)) {
+    return format(numeric, entry.currency?.trim() || "USD");
+  }
+  return amount;
 }
 
 function formatCancellationPeriod(entry: {

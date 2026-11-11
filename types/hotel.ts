@@ -291,6 +291,11 @@ export interface PreBookResponse {
    * an array, and some backends pass the raw XML/JSON through as a string.
    * Kept optional because many rates simply do not carry a schedule.
    */
+  cancellationInformation?:
+    | CancellationInformations
+    | CancellationInformations[]
+    | string
+    | null;
   cancellationInformations?:
     | CancellationInformations
     | CancellationInformations[]
@@ -311,7 +316,8 @@ export interface IRoomDetail {
   totalRooms: string;
   totalRate: string;
   boardBasis?: string;
-  terms: string;
+  terms?: string;
+  termsAndConditions?: string;
   BookingAfterPrice?: string | number;
   beforePrice?: string | number;
   afterPrice?: string | number;

@@ -9,13 +9,10 @@ import type {
 } from "../types/hotel";
 import {
   cancellationPolicyToText,
+  extractCancellationDetails,
   extractPayAtHotelFees,
   extractTermsAndConditions,
   normalizeChildAge,
-  parseXmlAttributes,
-  pickField,
-  unescapeXmlEntities,
-  xmlText,
 } from "../utils/hotel";
 import { normaliseError } from "../utils/api";
 
@@ -649,7 +646,7 @@ export const useHotelBookingStore = defineStore(
         const policy = preBookCancellationInfo.value.policy.toLowerCase();
         return (
           policyIsNonRefundable(policy) ||
-          (preBookCancellationInfo.value.chargeType === "Percentage" &&
+          (/percent/i.test(preBookCancellationInfo.value.chargeType) &&
             Number(preBookCancellationInfo.value.chargeAmount) >= 100)
         );
       }
@@ -666,7 +663,7 @@ export const useHotelBookingStore = defineStore(
       if (preBookCancellationInfo.value) {
         const info = preBookCancellationInfo.value;
         if (
-          info.chargeType === "Percentage" &&
+          /percent/i.test(info.chargeType) &&
           Number(info.chargeAmount) >= 100
         ) {
           return "Non-refundable (100% cancellation fee)";
@@ -1074,155 +1071,6 @@ function extractAmenities(desc: string): string[] {
     .filter(Boolean);
 }
 
-function normalizeCancellationEntry(raw: any): CancellationPolicyEntry {
-  return {
-    startDate: pickField(raw, [
-      "startDate",
-      "from",
-      "dateFrom",
-      "fromDate",
-      "start",
-    ]),
-    endDate: pickField(raw, ["endDate", "to", "dateTo", "toDate", "end"]),
-    chargeType: pickField(raw, [
-      "chargeType",
-      "type",
-      "penaltyType",
-      "amountType",
-    ]),
-    chargeAmount: pickField(raw, [
-      "chargeAmount",
-      "amount",
-      "penaltyAmount",
-      "value",
-    ]),
-    currency: pickField(raw, ["currency", "currencyCode"]),
-  };
-}
-
-function cancellationEntryHasData(entry: CancellationPolicyEntry): boolean {
-  return Boolean(
-    entry.startDate || entry.endDate || entry.chargeAmount || entry.chargeType,
-  );
-}
-
-/**
- * Recursively collect cancellation entries from nested containers such as
- * `{ cancellationInformation: { policy: [ ... ] } }`.
- */
-function collectCancellationEntries(value: any): any[] {
-  const results: any[] = [];
-
-  const visit = (node: any) => {
-    if (!node) return;
-    if (Array.isArray(node)) {
-      node.forEach(visit);
-      return;
-    }
-    if (typeof node !== "object") return;
-
-    // If the node itself looks like a cancellation entry, keep it.
-    if (
-      pickField(node, [
-        "startDate",
-        "from",
-        "dateFrom",
-        "chargeAmount",
-        "amount",
-        "chargeType",
-        "penaltyType",
-      ])
-    ) {
-      results.push(node);
-      return;
-    }
-
-    // Otherwise descend into nested objects/arrays. Only entry-like nodes are
-    // kept, so this safely handles keyed or differently-named containers.
-    for (const child of Object.values(node)) {
-      if (child && typeof child === "object") visit(child);
-    }
-  };
-
-  visit(value);
-  return results;
-}
-
-/**
- * Extract the full cancellation schedule from the pre-book response.
- *
- * Supports the JSON shapes the API may return (`cancellationInformations`
- * with a single `cancellationInformation` or an array of them, under `room`
- * or top level) as well as raw XML/JSON strings forwarded from the supplier.
- */
-function extractCancellationDetails(
-  result: any,
-): { info: string; entries: CancellationPolicyEntry[] } | null {
-  let raw =
-    result?.cancellationInformations ??
-    result?.room?.cancellationInformations ??
-    result?.CancellationInformations ??
-    result?.room?.CancellationInformations ??
-    result?.cancellationInformation ??
-    result?.room?.cancellationInformation ??
-    result?.CancellationInformation ??
-    result?.room?.CancellationInformation ??
-    result?.cancellationPolicies ??
-    result?.room?.cancellationPolicies ??
-    result?.cancellationPolicy ??
-    result?.room?.cancellationPolicy ??
-    result?.CancellationPolicy ??
-    result?.room?.CancellationPolicy;
-
-  if (raw === null || raw === undefined || raw === "") return null;
-
-  // Some backends forward the supplier XML (or a JSON string) verbatim.
-  if (typeof raw === "string") {
-    const text = unescapeXmlEntities(raw).trim();
-    if (text.startsWith("{") || text.startsWith("[")) {
-      try {
-        raw = JSON.parse(text);
-      } catch {
-        // Fall through and try the XML parser.
-      }
-    }
-    if (typeof raw === "string") {
-      if (!text.includes("<")) return null;
-      const entries = parseXmlAttributes(text, [
-        "CancellationInformation",
-        "CancellationInformations",
-        "CancellationPolicy",
-        "Cancellation",
-        "Policy",
-        "Fee",
-      ])
-        .map(normalizeCancellationEntry)
-        .filter(cancellationEntryHasData);
-      const info = xmlText(text, ["Info", "Description", "Text"]);
-      if (!info && entries.length === 0) return null;
-      return { info, entries };
-    }
-  }
-
-  const info =
-    raw && typeof raw === "object" && !Array.isArray(raw)
-      ? pickField(raw, [
-          "info",
-          "description",
-          "text",
-          "policy",
-          "policyDescription",
-        ])
-      : "";
-
-  const entries = collectCancellationEntries(raw)
-    .map(normalizeCancellationEntry)
-    .filter(cancellationEntryHasData);
-
-  if (!info && entries.length === 0) return null;
-  return { info, entries };
-}
-
 /** Build the compact summary used by the existing one-line UI/sidebar. */
 function cancellationInfoFromDetails(details: {
   info: string;
@@ -1237,10 +1085,26 @@ function cancellationInfoFromDetails(details: {
   terms: string;
 } {
   const first = details.entries[0];
+  const isPercentage = /percent/i.test(first?.chargeType ?? "");
+  const amount = String(first?.chargeAmount ?? "").trim();
+
+  // Keep the one-line label concise; the full `info` is rendered separately.
+  let policy = "";
+  if (first) {
+    if (isPercentage && Number(amount) >= 100) {
+      policy = "Non-refundable (100% cancellation fee)";
+    } else if (amount) {
+      const currency = first.currency?.trim();
+      policy = isPercentage
+        ? `${amount}% cancellation charge`
+        : `${currency ? `${currency} ` : ""}${amount} cancellation charge`;
+    }
+  }
+
   return {
-    policy: details.info || "",
+    policy: policy || details.info || "",
     chargeType: first?.chargeType ?? "",
-    chargeAmount: String(first?.chargeAmount ?? ""),
+    chargeAmount: amount,
     currency: first?.currency ?? "",
     startDate: first?.startDate ?? "",
     endDate: first?.endDate ?? "",

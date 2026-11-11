@@ -54,6 +54,30 @@ const cancellationEntries = computed(
   () => store.preBookCancellationDetails?.entries ?? [],
 );
 
+/**
+ * Cancellation line shown in the selected-room badge and fallback. Amount
+ * charges use the currency composable so symbol/amount follow the selected
+ * currency; percentage/night charges are currency-independent.
+ */
+const cancellationPolicyLabel = computed(() => {
+  const info = store.preBookCancellationInfo;
+  if (info?.chargeAmount) {
+    const type = (info.chargeType ?? "").toLowerCase();
+    if (!type.includes("percent") && !type.includes("night")) {
+      const numeric = Number(String(info.chargeAmount).replace(/,/g, ""));
+      if (Number.isFinite(numeric)) {
+        return `${format(numeric, info.currency || "USD")} cancellation charge`;
+      }
+    }
+  }
+
+  return (
+    store.cancellationPolicyText ||
+    store.selectedRoom?.cancellationPolicy ||
+    ""
+  );
+});
+
 /** Human-readable charge for one cancellation window. */
 function formatCancellationCharge(entry: {
   chargeType?: string;
@@ -67,8 +91,13 @@ function formatCancellationCharge(entry: {
   if (type.includes("night")) {
     return `${amount} night${amount === "1" ? "" : "s"}`;
   }
-  const currency = entry.currency?.trim();
-  return currency ? `${currency} ${amount}` : amount;
+
+  // Amount charges follow the selected display currency (symbol + conversion).
+  const numeric = Number(amount.replace(/,/g, ""));
+  if (Number.isFinite(numeric)) {
+    return format(numeric, entry.currency?.trim() || "USD");
+  }
+  return amount;
 }
 
 /** Human-readable date range for one cancellation window. */
@@ -244,7 +273,7 @@ function proceed() {
                     <line x1="6" y1="6" x2="18" y2="18" />
                   </template>
                 </svg>
-                {{ store.cancellationPolicyText || store.selectedRoom?.cancellationPolicy }}
+                {{ cancellationPolicyLabel }}
               </span>
               <span
                 class="inline-flex items-center text-[11px] font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-700"
@@ -381,7 +410,7 @@ function proceed() {
           class="text-sm font-medium"
           :class="store.isNonRefundable ? 'text-red-800' : 'text-teal-800'"
         >
-          {{ store.cancellationPolicyText }}
+          {{ cancellationPolicyLabel }}
         </p>
 
         <template v-if="store.preBookCancellationDetails">
@@ -432,7 +461,7 @@ function proceed() {
             class="flex flex-wrap gap-x-4 gap-y-1 text-xs"
             :class="store.isNonRefundable ? 'text-red-700' : 'text-teal-700'"
           >
-            <span>Cancellation charge: <strong>{{ store.preBookCancellationInfo.chargeAmount }}{{ store.preBookCancellationInfo.chargeType === 'Percentage' ? '%' : (' ' + store.preBookCancellationInfo.currency) }}</strong></span>
+            <span>Cancellation charge: <strong>{{ formatCancellationCharge(store.preBookCancellationInfo) }}</strong></span>
             <span v-if="store.preBookCancellationInfo.startDate">From: {{ store.preBookCancellationInfo.startDate }}</span>
             <span v-if="store.preBookCancellationInfo.endDate">To: {{ store.preBookCancellationInfo.endDate }}</span>
           </div>

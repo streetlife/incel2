@@ -1,3 +1,5 @@
+import type { CancellationPolicyEntry } from "../types/hotel";
+
 /**
  * Normalise a child's age for the backend hotel API.
  *
@@ -365,4 +367,160 @@ export function cancellationPolicyToText(raw: any): string {
   }
 
   return "";
+}
+
+export interface CancellationDetails {
+  info: string;
+  entries: CancellationPolicyEntry[];
+}
+
+function normalizeCancellationEntry(raw: any): CancellationPolicyEntry {
+  return {
+    startDate: pickField(raw, [
+      "startDate",
+      "from",
+      "dateFrom",
+      "fromDate",
+      "start",
+    ]),
+    endDate: pickField(raw, ["endDate", "to", "dateTo", "toDate", "end"]),
+    chargeType: pickField(raw, [
+      "chargeType",
+      "type",
+      "penaltyType",
+      "amountType",
+    ]),
+    chargeAmount: pickField(raw, [
+      "chargeAmount",
+      "amount",
+      "penaltyAmount",
+      "value",
+    ]),
+    currency: pickField(raw, ["currency", "currencyCode"]),
+  };
+}
+
+function cancellationEntryHasData(entry: CancellationPolicyEntry): boolean {
+  return Boolean(
+    entry.startDate || entry.endDate || entry.chargeAmount || entry.chargeType,
+  );
+}
+
+/**
+ * Recursively collect cancellation entries from nested containers such as
+ * `{ cancellationInformation: { policies: [ ... ] } }`.
+ */
+function collectCancellationEntries(value: any): any[] {
+  const results: any[] = [];
+
+  const visit = (node: any) => {
+    if (!node) return;
+    if (Array.isArray(node)) {
+      node.forEach(visit);
+      return;
+    }
+    if (typeof node !== "object") return;
+
+    // If the node itself looks like a cancellation entry, keep it.
+    if (
+      pickField(node, [
+        "startDate",
+        "from",
+        "dateFrom",
+        "chargeAmount",
+        "amount",
+        "chargeType",
+        "penaltyType",
+      ])
+    ) {
+      results.push(node);
+      return;
+    }
+
+    // Otherwise descend into nested objects/arrays. Only entry-like nodes are
+    // kept, so this safely handles keyed or differently-named containers.
+    for (const child of Object.values(node)) {
+      if (child && typeof child === "object") visit(child);
+    }
+  };
+
+  visit(value);
+  return results;
+}
+
+/**
+ * Extract the full cancellation schedule from the pre-book response.
+ *
+ * Supports the current shape:
+ *   `cancellationInformation: { policies: [ { startDate, endDate,
+ *   chargeType, chargeAmount, currency } ], info }`
+ * as well as `cancellationInformations` (plural), a single policy object,
+ * `room`-nested variants and raw XML/JSON strings.
+ */
+export function extractCancellationDetails(
+  result: any,
+): CancellationDetails | null {
+  let raw =
+    result?.cancellationInformation ??
+    result?.room?.cancellationInformation ??
+    result?.CancellationInformation ??
+    result?.room?.CancellationInformation ??
+    result?.cancellationInformations ??
+    result?.room?.cancellationInformations ??
+    result?.CancellationInformations ??
+    result?.room?.CancellationInformations ??
+    result?.cancellationPolicies ??
+    result?.room?.cancellationPolicies ??
+    result?.cancellationPolicy ??
+    result?.room?.cancellationPolicy ??
+    result?.CancellationPolicy ??
+    result?.room?.CancellationPolicy;
+
+  if (raw === null || raw === undefined || raw === "") return null;
+
+  // Some backends forward the supplier XML (or a JSON string) verbatim.
+  if (typeof raw === "string") {
+    const text = unescapeXmlEntities(raw).trim();
+    if (text.startsWith("{") || text.startsWith("[")) {
+      try {
+        raw = JSON.parse(text);
+      } catch {
+        // Fall through and try the XML parser.
+      }
+    }
+    if (typeof raw === "string") {
+      if (!text.includes("<")) return null;
+      const entries = parseXmlAttributes(text, [
+        "CancellationInformation",
+        "CancellationInformations",
+        "CancellationPolicy",
+        "Cancellation",
+        "Policy",
+        "Fee",
+      ])
+        .map(normalizeCancellationEntry)
+        .filter(cancellationEntryHasData);
+      const info = xmlText(text, ["Info", "Description", "Text"]);
+      if (!info && entries.length === 0) return null;
+      return { info, entries };
+    }
+  }
+
+  const info =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? pickField(raw, [
+          "info",
+          "description",
+          "text",
+          "policy",
+          "policyDescription",
+        ])
+      : "";
+
+  const entries = collectCancellationEntries(raw)
+    .map(normalizeCancellationEntry)
+    .filter(cancellationEntryHasData);
+
+  if (!info && entries.length === 0) return null;
+  return { info, entries };
 }

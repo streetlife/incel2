@@ -24,6 +24,30 @@ const guestBreakdown = computed(() => {
   const children = rooms.reduce((s, r) => s + (r.children ?? 0), 0);
   return { adults, children };
 });
+
+/**
+ * Cancellation line for the sidebar. Amount-based charges go through the
+ * currency composable so the symbol/amount follow the selected currency;
+ * percentage and night-based charges are currency-independent.
+ */
+const cancellationPolicyLabel = computed(() => {
+  const info = store.preBookCancellationInfo;
+  if (info?.chargeAmount) {
+    const type = (info.chargeType ?? "").toLowerCase();
+    if (!type.includes("percent") && !type.includes("night")) {
+      const numeric = Number(String(info.chargeAmount).replace(/,/g, ""));
+      if (Number.isFinite(numeric)) {
+        return `${format(numeric, info.currency || "USD")} cancellation charge`;
+      }
+    }
+  }
+
+  return (
+    store.cancellationPolicyText ||
+    store.selectedRoom?.cancellationPolicy ||
+    ""
+  );
+});
 </script>
 
 <template>
@@ -142,7 +166,7 @@ const guestBreakdown = computed(() => {
               : 'text-green-700'
           "
         >
-          {{ store.cancellationPolicyText || store.selectedRoom.cancellationPolicy }}
+          {{ cancellationPolicyLabel }}
         </p>
       </div>
     </div>

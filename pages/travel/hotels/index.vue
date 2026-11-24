@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import HotelsForm from "../../../components/forms/HotelsForm.vue";
 import Pagination from "../../../components/Pagination.vue";
@@ -23,6 +23,74 @@ const searchError = ref("");
 const showSearchForm = ref(true);
 // Parameters of the most recent failed search, so "Try Again" can re-run it.
 const failedParams = ref<HotelSearchParams | null>(null);
+
+// Hotel searches can be slow when the supplier is under load. Cap how long we
+// keep the request open so the UI can never spin forever.
+const HOTEL_SEARCH_TIMEOUT_MS = 180_000;
+// After this long, reassure the user and offer a cancel action.
+const SLOW_SEARCH_HINT_SECONDS = 20;
+
+const searchAbortController = ref<AbortController | null>(null);
+const searchInFlightKey = ref("");
+const elapsedSeconds = ref(0);
+const searchCancelled = ref(false);
+let elapsedTimer: ReturnType<typeof setInterval> | null = null;
+
+const isSlowSearch = computed(
+  () => isLoading.value && elapsedSeconds.value >= SLOW_SEARCH_HINT_SECONDS,
+);
+
+/** Stable signature for a search, used to dedupe identical requests. */
+function buildSearchKey(sp: HotelSearchParams): string {
+  return JSON.stringify({
+    country: sp.country,
+    city: sp.city,
+    nationality: sp.nationality,
+    checkInStart: sp.checkInStart,
+    checkInEnd: sp.checkInEnd,
+    rooms: (sp.rooms ?? []).map((room) => ({
+      adults: room.adults ?? 1,
+      children: room.children ?? 0,
+      childAges: room.childAges ?? [],
+    })),
+    totalGuests: sp.totalGuests,
+    totalRooms: sp.totalRooms,
+  });
+}
+
+function startElapsedTimer() {
+  stopElapsedTimer();
+  elapsedSeconds.value = 0;
+  const startedAt = Date.now();
+  elapsedTimer = setInterval(() => {
+    elapsedSeconds.value = Math.floor((Date.now() - startedAt) / 1000);
+  }, 1000);
+}
+
+function stopElapsedTimer() {
+  if (elapsedTimer) {
+    clearInterval(elapsedTimer);
+    elapsedTimer = null;
+  }
+}
+
+/** Stop the current search and return to the form/error state. */
+function cancelSearch() {
+  const controller = searchAbortController.value;
+  searchAbortController.value = null;
+  searchInFlightKey.value = "";
+  controller?.abort();
+  isLoading.value = false;
+  searchCancelled.value = true;
+  stopElapsedTimer();
+  searchError.value =
+    "Search cancelled. Adjust your search and try again when you're ready.";
+}
+
+onBeforeUnmount(() => {
+  searchAbortController.value?.abort();
+  stopElapsedTimer();
+});
 
 const paginatedResults = computed(() => {
   const start = (store.currentPage - 1) * ITEMS_PER_PAGE;
@@ -157,11 +225,6 @@ function buildRoomsFromQuery(): RoomConfig[] {
 const isSearchView = computed(() => store.hasSearched || isLoading.value);
 
 const performSearch = async (params?: HotelSearchParams) => {
-  isLoading.value = true;
-  searchError.value = "";
-
-  store.hasSearched = true;
-
   const sp: HotelSearchParams = params ?? {
     country: (route.query.country as string) || "",
     city: (route.query.city as string) || "",
@@ -173,17 +236,48 @@ const performSearch = async (params?: HotelSearchParams) => {
     totalRooms: Number.parseInt(route.query.rooms as string) || 1,
   };
 
-  if (
-    store.hasSearched &&
-    !params &&
-    store.lastParams?.city === sp.city &&
-    store.lastParams?.checkInStart === sp.checkInStart &&
-    store.lastParams?.checkInEnd === sp.checkInEnd
-  ) {
-    showSearchForm.value = false;
-    isLoading.value = false;
+  const key = buildSearchKey(sp);
+
+  // Ignore an identical search that is already in flight. This absorbs the
+  // double trigger from HotelsForm.submit() (emit + router.replace) and any
+  // duplicate query watcher notifications.
+  if (isLoading.value && searchInFlightKey.value === key) {
     return;
   }
+
+  // Reuse the persisted results when the exact same search is requested
+  // again (e.g. returning to the page or a back/forward navigation).
+  if (
+    !params &&
+    store.lastParams &&
+    store.results.length > 0 &&
+    buildSearchKey(store.lastParams) === key
+  ) {
+    showSearchForm.value = false;
+    return;
+  }
+
+  // Abort any older request that is still running so it cannot overwrite the
+  // results of this search or keep consuming backend capacity.
+  searchAbortController.value?.abort();
+  const controller = new AbortController();
+  searchAbortController.value = controller;
+  searchInFlightKey.value = key;
+
+  isLoading.value = true;
+  searchError.value = "";
+  searchCancelled.value = false;
+  failedParams.value = sp;
+  store.hasSearched = true;
+  startElapsedTimer();
+
+  // ofetch ignores its `timeout` option when a signal is supplied, so enforce
+  // the cap on our controller instead.
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, HOTEL_SEARCH_TIMEOUT_MS);
 
   try {
     // Drop any hotels from a previous search before the new request runs, so
@@ -192,12 +286,13 @@ const performSearch = async (params?: HotelSearchParams) => {
 
     if (!sp.city) {
       searchError.value = `We don't have a city code for "${sp.city}" yet. Please contact support or try another city.`;
-      failedParams.value = sp;
-      isLoading.value = false;
       return;
     }
 
-    const result = await searchHotel(sp);
+    const result = await searchHotel(sp, { signal: controller.signal });
+
+    // A newer search (or a cancel) replaced this one — do not apply the result.
+    if (controller.signal.aborted) return;
 
     store.setResults(
       result.hotels ?? [],
@@ -221,12 +316,32 @@ const performSearch = async (params?: HotelSearchParams) => {
       100,
     );
   } catch (err: any) {
+    if (controller.signal.aborted) {
+      // A timeout (as opposed to a cancel or a newer search) should surface a
+      // friendly message so the user knows what happened.
+      if (timedOut) {
+        searchError.value =
+          "The hotel search is taking too long right now. Please try again, or adjust your search (a smaller city or fewer rooms can help).";
+        failedParams.value = sp;
+        store.clearResultsData();
+      }
+      return;
+    }
+
+    if (err?.name === "AbortError") return;
+
     searchError.value = normaliseError(err);
-    failedParams.value = sp;
     // Never keep showing hotels from an earlier search after a failure.
     store.clearResultsData();
   } finally {
-    isLoading.value = false;
+    clearTimeout(timeoutId);
+    // Only the request that is still current may clear the loading state.
+    if (searchAbortController.value === controller) {
+      searchAbortController.value = null;
+      searchInFlightKey.value = "";
+      isLoading.value = false;
+      stopElapsedTimer();
+    }
   }
 };
 
@@ -348,12 +463,13 @@ const toggleSearchForm = () => {
 watch(
   () => route.query,
   (q) => {
+    // Never run the initial search during SSR: the client would run it again
+    // after hydration, doubling the supplier's load and delaying the page.
+    if (!import.meta.client) return;
+
     // Skip when a form-initiated search is already in progress — the
     // HotelsForm emit→performSearch() path handles the search directly.
-    // Without this guard, router.replace() in HotelsForm.submit() triggers
-    // a duplicate API call that races with and can overwrite the real search.
     if (q.city && !isLoading.value) {
-      isLoading.value = true;
       performSearch();
     }
   },
@@ -436,7 +552,7 @@ onMounted(() => {
             v-show="!store.hasSearched || showSearchForm"
             class="p-6 md:p-8"
           >
-            <HotelsForm @search="handleHotelSearch" />
+            <HotelsForm :loading="isLoading" @search="handleHotelSearch" />
           </div>
         </div>
       </div>
@@ -455,6 +571,31 @@ onMounted(() => {
           <p class="mt-4 text-sm text-stone-400 italic">
             Curating the finest hotels for you…
           </p>
+          <p class="mt-2 text-xs text-stone-400">
+            {{ elapsedSeconds }}s elapsed
+          </p>
+
+          <div
+            v-if="isSlowSearch"
+            class="mt-5 max-w-md mx-auto rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left"
+          >
+            <p class="text-sm font-semibold text-amber-800">
+              This is taking longer than usual
+            </p>
+            <p class="text-xs text-amber-700 mt-1 leading-relaxed">
+              The hotel supplier is responding slowly right now. You can keep
+              waiting, or cancel and adjust your search (a smaller city or fewer
+              rooms can help).
+            </p>
+            <button
+              type="button"
+              class="mt-3 px-4 py-2 bg-white border border-amber-300 text-amber-700 text-xs font-semibold rounded-lg hover:bg-amber-100 transition-colors cursor-pointer"
+              @click="cancelSearch"
+            >
+              Cancel search
+            </button>
+          </div>
+
           <div class="mt-10 flex flex-col gap-4">
             <div
               v-for="n in 4"
@@ -486,7 +627,11 @@ onMounted(() => {
             </svg>
           </div>
           <h3 class="text-xl font-bold text-stone-800 mb-2">
-            We couldn't complete your search
+            {{
+              searchCancelled
+                ? "Search cancelled"
+                : "We couldn't complete your search"
+            }}
           </h3>
           <p class="text-stone-500 text-sm leading-relaxed mb-7">
             {{ searchError }}

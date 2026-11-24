@@ -15,6 +15,9 @@ const loadingCities = ref(false)
 const loadingCountries = ref(false)
 
 const emit = defineEmits<{ search: [searchData: any] }>()
+const props = withDefaults(defineProps<{ loading?: boolean }>(), {
+  loading: false,
+})
 
 const form = ref({
   city: '',
@@ -173,6 +176,10 @@ const scrollToFirstError = () =>
   document.querySelector('.border-red-500')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
 const submit = async () => {
+  // Ignore clicks while a search is already running (prevents duplicate
+  // supplier requests from repeated clicks).
+  if (props.loading) return
+
   if (!validateForm()) { scrollToFirstError(); return }
 
   const searchData = {
@@ -269,13 +276,30 @@ const submit = async () => {
 
     <div class="mt-7">
       <button
-        class="btn-primary w-full py-3 px-6 flex items-center justify-center gap-2 transform hover:scale-105 transition"
+        class="btn-primary w-full py-3 px-6 flex items-center justify-center gap-2 transform hover:scale-105 transition disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+        :disabled="loading"
         @click="submit"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          v-if="loading"
+          class="w-5 h-5 animate-spin"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+        </svg>
+        <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
-        Search
+        {{ loading ? "Searching…" : "Search" }}
       </button>
     </div>
   </div>

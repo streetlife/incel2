@@ -30,6 +30,8 @@ const OFFLINE_ERROR_MESSAGE =
   "You appear to be offline. Please check your internet connection and try again.";
 const NETWORK_ERROR_MESSAGE =
   "We're having trouble connecting to our servers. Please try again in a moment.";
+const TIMEOUT_ERROR_MESSAGE =
+  "The request took too long to complete. Please try again in a moment.";
 const SERVER_ERROR_MESSAGE =
   "Something went wrong on our end. Please try again later.";
 const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
@@ -99,6 +101,18 @@ export function isNetworkError(err: unknown): boolean {
   );
 }
 
+/** Detect request timeouts (ofetch aborts with a `TimeoutError`, code 23). */
+function isTimeoutError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return (
+    err.name === "TimeoutError" ||
+    (err as any).code === 23 ||
+    msg.includes("timed out") ||
+    msg.includes("timeout")
+  );
+}
+
 /** Detect user/browser initiated request aborts, which must not be masked. */
 function isAbortError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
@@ -120,6 +134,10 @@ function isAbortError(err: unknown): boolean {
 export function toFriendlyApiError(err: unknown): unknown {
   if (err instanceof AppApiError) return err;
   if (isAbortError(err)) return err;
+
+  if (isTimeoutError(err)) {
+    return new AppApiError(TIMEOUT_ERROR_MESSAGE, 0);
+  }
 
   if (isNetworkError(err)) {
     return new AppApiError(networkErrorMessage(), 0);
@@ -214,11 +232,13 @@ export function parseApiError(err: unknown): AppApiError {
   }
 
   const raw = err instanceof Error ? err.message : "";
-  const message = isNetworkError(err)
-    ? networkErrorMessage()
-    : raw && !looksTechnical(raw)
-      ? raw
-      : friendlyHttpMessage(status);
+  const message = isTimeoutError(err)
+    ? TIMEOUT_ERROR_MESSAGE
+    : isNetworkError(err)
+      ? networkErrorMessage()
+      : raw && !looksTechnical(raw)
+        ? raw
+        : friendlyHttpMessage(status);
   return new AppApiError({ message, status }, status);
 }
 
@@ -325,6 +345,7 @@ export function useApi() {
 export function normaliseError(err: unknown): string {
   if (err instanceof AppApiError) return err.userMessage || GENERIC_ERROR_MESSAGE;
   if (isAbortError(err)) return "The request was cancelled.";
+  if (isTimeoutError(err)) return TIMEOUT_ERROR_MESSAGE;
   if (isNetworkError(err)) return networkErrorMessage();
   return toDisplayMessage(err);
 }

@@ -23,7 +23,10 @@ export function useHotelService() {
   const config = useRuntimeConfig();
 
   return {
-    async searchHotel(params: HotelSearchParams): Promise<HotelSearchResponse> {
+    async searchHotel(
+      params: HotelSearchParams,
+      options?: { signal?: AbortSignal; timeout?: number },
+    ): Promise<HotelSearchResponse> {
       const apiKey = config.public.hotel;
 
       if (!isString(apiKey)) {
@@ -35,6 +38,8 @@ export function useHotelService() {
         method: "POST",
         body: payload,
         headers: { "x-api-key": apiKey },
+        signal: options?.signal,
+        timeout: options?.timeout,
       });
     },
 
